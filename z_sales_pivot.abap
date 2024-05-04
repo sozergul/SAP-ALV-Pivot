@@ -206,7 +206,7 @@ TYPES: END OF ty_table_data.
 
 TYPES: BEGIN OF ty_group_data.
           INCLUDE TYPE ty_table_data.
-TYPES: cell_table TYPE lvc_t_scol.
+TYPES: scol_tab TYPE lvc_t_scol.
 TYPES: menge101 TYPE  zbw_e_menge,
        menge102 TYPE  zbw_e_menge,
        menge103 TYPE  zbw_e_menge,
@@ -375,7 +375,7 @@ DATA: gt_group_key_columns     TYPE TABLE OF ty_fields_key,
 DATA: gt_sheets      TYPE TABLE OF ty_sheets WITH EMPTY KEY.
 
 " Fieldcatalog
-DATA gt_fcat        TYPE lvc_t_fcat.
+DATA: gt_fcat        TYPE lvc_t_fcat.
 
 DATA: go_salv TYPE REF TO cl_salv_table,
       go_tree TYPE REF TO cl_salv_tree.
@@ -386,14 +386,15 @@ FIELD-SYMBOLS: <gs_itab> TYPE ANY TABLE.
 DATA(gv_detail_view) = abap_false.
 DATA(gv_mng_cnv_all) = abap_false.
 DATA(gv_amt_cnv_all) = abap_false.
+DATA(gv_change_locale) = abap_false.
 DATA gv_clgui_enabled TYPE bool.
 DATA gv_iso_week      TYPE bool.
 DATA gv_group_count   TYPE int4.
-DATA gv_max_columns   TYPE int4.
+DATA gv_max_ycolumns  TYPE int4.
 DATA gv_max_xlsheets  TYPE int4.
 DATA gv_alv_title     TYPE c LENGTH 150.
 DATA gv_initial_dir   TYPE string.
-DATA gv_from_addr     TYPE string.
+DATA gv_from_address  TYPE string.
 DATA gv_max_filesize  TYPE int8.
 DATA gv_max_ordernum  TYPE int8.
 
@@ -448,7 +449,7 @@ DATA: ivrm_val_x TYPE vrm_values,
       xvrm_val_x LIKE LINE OF ivrm_val_x,
       vrm_name_x TYPE vrm_id.
 
-" Dropdown curdate
+" Dropdown currency date
 TYPE-POOLS: vrm_c.
 DATA: ivrm_val_c TYPE vrm_values,
       xvrm_val_c LIKE LINE OF ivrm_val_c,
@@ -750,7 +751,6 @@ SELECTION-SCREEN BEGIN OF SCREEN 3100 AS SUBSCREEN.
   SELECT-OPTIONS: s_vkbur  FOR vbak-vkbur,
                   s_vkgrp  FOR vbak-vkgrp,
                   s_auart  FOR vbak-auart,
-                 " s_ktokd  FOR kna1-ktokd,
                   s_kdgrp  FOR vbkd-kdgrp,
                   s_kunnr  FOR vbak-kunnr.
 SELECTION-SCREEN END OF SCREEN 3100.
@@ -995,13 +995,14 @@ ENDLOOP.
 INITIALIZATION.
 
   gv_initial_dir = 'Desktop'.
-  gv_from_addr = 'sapmail@company.com'.
-  gv_max_columns = 53.
+  gv_from_address = 'sapmail@company.com'.
+  gv_max_ycolumns = 53.
   gv_max_ordernum = 500000.
   gv_max_xlsheets = 92.
   gv_max_filesize = 20971520. " 20 MB
   gv_iso_week = abap_false.
-  gv_clgui_enabled = abap_false.  " before steeing true activate screens, status and title below by double-clicking nums
+  gv_change_locale = abap_false.
+  gv_clgui_enabled = abap_false.  " before setting true activate screens, status and title by double-clicking numbers
 
   but02 = icon_next_page.
   but03 = icon_value_help.
@@ -1085,6 +1086,7 @@ CLASS lcl_salv_pop_up DEFINITION .
         end_line       TYPE i DEFAULT 6
         start_column   TYPE i DEFAULT 25
         end_column     TYPE i DEFAULT 50
+        pop_header     TYPE c
         popup          TYPE boolean DEFAULT ' '
         VALUE(t_table) TYPE table .
 
@@ -1383,7 +1385,7 @@ CLASS lcl_main IMPLEMENTATION.
 
     " cell color
     IF s_fnams[] IS NOT INITIAL AND gv_detail_view EQ abap_false.
-        lo_columns->set_color_column( 'CELL_TABLE' ).
+        lo_columns->set_color_column( 'SCOL_TAB' ).
     ENDIF.
 
     " optimize
@@ -1690,9 +1692,10 @@ CLASS lcl_main IMPLEMENTATION.
     lo_settings->set_hierarchy_size( 50 ).
     lo_settings->set_hierarchy_icon( CONV salv_de_tree_image( icon_tree ) ).
     lo_settings->set_hierarchy_header( CONV #( hier_head ) ).
-    DATA: lv_header TYPE char100.
-    lv_header = gv_alv_title.
-    lo_settings->set_header( CONV #( lv_header ) ).
+    "DATA: lv_header TYPE char100.
+    "lv_header = gv_alv_title.
+    "lo_settings->set_header( CONV #( lv_header ) ).
+    lo_settings->set_header( CONV #( gv_alv_title )  ).
 
 
   ENDMETHOD.
@@ -1739,7 +1742,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       CALL METHOD go_grid->set_table_for_first_display
         EXPORTING
-          is_layout                     = VALUE #( zebra = 'X' sel_mode = 'A' info_fname = 'COLOR' ctab_fname = 'CELL_TABLE' )
+          is_layout                     = VALUE #( zebra = 'X' sel_mode = 'A' info_fname = 'COLOR' ctab_fname = 'SCOL_TAB' )
           it_special_groups             = VALUE #( ( sp_group = 01 text = VALUE #( gt_textlist[ sym = 'Y01' ]-text OPTIONAL ) )
                                                    ( sp_group = 02 text = VALUE #( gt_textlist[ sym = 'Y02' ]-text OPTIONAL ) )
                                                    ( sp_group = 03 text = VALUE #( gt_textlist[ sym = 'Y03' ]-text OPTIONAL ) )
@@ -1769,7 +1772,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       CALL METHOD go_grid->set_frontend_layout
         EXPORTING
-          is_layout = VALUE #( zebra = 'X' sel_mode = 'A' info_fname = 'COLOR' ctab_fname = 'CELL_TABLE' ).
+          is_layout = VALUE #( zebra = 'X' sel_mode = 'A' info_fname = 'COLOR' ctab_fname = 'SCOL_TAB' ).
 
       CALL METHOD go_grid->refresh_table_display(
           is_stable      = VALUE lvc_s_stbl( col = 'X' row = 'X' )
@@ -1820,7 +1823,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       CALL METHOD go_grid2->set_table_for_first_display
         EXPORTING
-          is_layout                     = VALUE #( zebra = 'X' sel_mode = 'A' stylefname = 'EDIT' no_rowins = 'X' info_fname = 'COLOR' ctab_fname = 'CELL_TABLE' )
+          is_layout                     = VALUE #( zebra = 'X' sel_mode = 'A' stylefname = 'EDIT' no_rowins = 'X' info_fname = 'COLOR' ctab_fname = 'SCOL_TAB' )
           it_special_groups             = VALUE #( ( sp_group = 01 text = VALUE #( gt_textlist[ sym = 'Y01' ]-text OPTIONAL ) )
                                                    ( sp_group = 02 text = VALUE #( gt_textlist[ sym = 'Y02' ]-text OPTIONAL ) )
                                                    ( sp_group = 03 text = VALUE #( gt_textlist[ sym = 'Y03' ]-text OPTIONAL ) )
@@ -1850,7 +1853,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       CALL METHOD go_grid2->set_frontend_layout
         EXPORTING
-          is_layout = VALUE #( zebra = 'X' sel_mode = 'A' stylefname = 'EDIT' no_rowins = 'X' info_fname = 'COLOR' ctab_fname = 'CELL_TABLE' ).
+          is_layout = VALUE #( zebra = 'X' sel_mode = 'A' stylefname = 'EDIT' no_rowins = 'X' info_fname = 'COLOR' ctab_fname = 'SCOL_TAB' ).
 
       CALL METHOD go_grid2->refresh_table_display(
           is_stable      = VALUE lvc_s_stbl( col = 'X' row = 'X' )
@@ -1913,7 +1916,9 @@ CLASS lcl_main IMPLEMENTATION.
 
       but01 = icon_sum  && VALUE #( gt_textlist[ sym = 'B03' ]-text OPTIONAL ).
 
-      SET LOCALE LANGUAGE p_lang.
+      IF gv_change_locale EQ abap_true.
+        SET LOCALE LANGUAGE p_lang.
+      ENDIF.
 
       DATA: text_val TYPE string.
       CLEAR: ivrm_val, ivrm_val_x, ivrm_val_c, ivrm_val_t, ivrm_val_s, ivrm_val_d.
@@ -2072,11 +2077,11 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
     IF p_wahr IS NOT INITIAL AND p_cur1 IS INITIAL.
-      p_cur1 = 'ST'.
+      p_cur1 = '01'.
     ENDIF.
 
     IF p_wah2 IS NOT INITIAL AND p_cur2 IS INITIAL.
-      p_cur2 = 'FT'.
+      p_cur2 = '03'.
     ENDIF.
 
   ENDMETHOD.
@@ -2148,6 +2153,7 @@ CLASS lcl_main IMPLEMENTATION.
                                           end_line     = 21
                                           start_column = 90
                                           end_column   = 150
+                                          pop_header   = VALUE char100( gt_textlist[ sym = 'TXZ' ]-text OPTIONAL )
                                           t_table = gt_functions  ).
 
         IF gv_clicked_row IS NOT INITIAL.
@@ -2199,6 +2205,7 @@ CLASS lcl_main IMPLEMENTATION.
       WHEN 'FC01'.
         CHECK sy-dynnr = 1000.
 
+        p_vari = ' '.
         gv_variant_changed = abap_true.
         clear_selection( ).
 
@@ -2744,7 +2751,7 @@ CLASS lcl_main IMPLEMENTATION.
                 AND coalesce( mt~kunnr, mtb~kunnr ) IN @s_kunwe
                 AND coalesce( vb~parvw, vbb~parvw, @space ) IN @t_parvw
                 AND coalesce( vb~kunnr, vbb~kunnr, @space ) IN @s_partn
-                "AND bp~ktokd    IN @s_ktokd
+
                 AND ( sk~kwmeng NE 0 OR sk~zmeng NE 0 )
 
                 AND (lv_t_filter)
@@ -2980,12 +2987,6 @@ CLASS lcl_main IMPLEMENTATION.
     " ALV Genel Veri
     " **********************************************
     SELECT
-
-      vd~bzirk,             " SALES DISTRICT
-      bz~bztxt as bzirk_x,
-      vd~kdgrp,             " CUSTOMER GROUP
-      kg~ktext as kdgrp_x,
-
       concat( concat( bd~vbeln, '-' ), bd~posnr ) AS vbelk,
       concat( concat( concat( concat( bd~vkorg, '-' ), bd~vtweg ), '-' ), bd~spart ) AS sdorg,
       CASE WHEN bd~audat IS NOT INITIAL THEN concat( concat( substring( bd~audat, 1, 4 ), '-' ), substring( bd~audat, 5, 2 ) ) END AS vkper,
@@ -3073,12 +3074,16 @@ CLASS lcl_main IMPLEMENTATION.
       sb~bezei AS vkbur_x,                                         " Satış Bürosu Adı
       bd~vkgrp,                                                    " Satış Grubu
       sg~bezei AS vkgrp_x,                                         " Satış Grubu Adı
+      bd~bzirk,                                                    " Satış Bölgesi
+      bz~bztxt as bzirk_x,                                         " Satış Bölgesi Adı
       bd~vstel,                                                    " Sevkiyat Noktası
       bd~werks,                                                    " Üretim Yeri
       bd~lgort,                                                    " Depo Yeri
       tv~vtext AS vstel_x,                                         " Sevkiyat Noktası Adı
       tw~name1 AS werks_x,                                         " Üretim Yeri Adı
       tl~lgobe AS lgort_x,                                         " Depo Yeri Adı
+      bd~kdgrp,                                                    " Müşteri Grubu
+      kg~ktext as kdgrp_x,                                         " Müşteri Grubu Adı
       bd~kunnr,                                                    " Sipariş Veren
       bd~kunre,                                                    " Fatura Edilen
       bd~kunrg,                                                    " Ödeme Yapan
@@ -3112,18 +3117,6 @@ CLASS lcl_main IMPLEMENTATION.
 
       FROM @gt_base_data AS bd
 
-      "
-      LEFT JOIN vbkd AS vd              " Sales District
-             ON vd~vbeln EQ bd~vbeln
-            AND vd~posnr EQ bd~posnr
-      LEFT JOIN t171t AS bz
-             ON bz~spras EQ @sy-langu
-            AND bz~bzirk EQ vd~bzirk
-      LEFT JOIN t151t AS kg
-             ON kg~spras EQ @sy-langu
-            AND kg~kdgrp EQ vd~kdgrp
-
-
       " Şirket Adı
       LEFT JOIN t001 AS bu
              ON bu~bukrs EQ bd~bukrs
@@ -3143,6 +3136,10 @@ CLASS lcl_main IMPLEMENTATION.
       LEFT JOIN tvgrt AS sg
              ON sg~spras EQ @sy-langu
             AND sg~vkgrp EQ bd~vkgrp
+      " Satış Bölgesi
+      LEFT JOIN t171t AS bz
+             ON bz~spras EQ @sy-langu
+            AND bz~bzirk EQ bd~bzirk
       " Malzeme Verileri
       LEFT JOIN mara  AS ma
              ON ma~matnr  EQ bd~matnr
@@ -3182,6 +3179,10 @@ CLASS lcl_main IMPLEMENTATION.
       LEFT JOIN tvm5t AS mg5
              ON mg5~spras EQ @sy-langu
             AND mg5~mvgr5 EQ bd~mvgr5
+      " Müşteri Grubu
+      LEFT JOIN t151t AS kg
+             ON kg~spras EQ @sy-langu
+            AND kg~kdgrp EQ bd~kdgrp
       " Muhatap
       LEFT JOIN kna1 AS bpsv
              ON bpsv~kunnr EQ bd~kunnr
@@ -3665,6 +3666,8 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_items>-spart_x  =  condense( <fs_items>-spart  ) && | - | && <fs_items>-spart_x .
         <fs_items>-vkbur_x  =  condense( <fs_items>-vkbur  ) && | - | && <fs_items>-vkbur_x .
         <fs_items>-vkgrp_x  =  condense( <fs_items>-vkgrp  ) && | - | && <fs_items>-vkgrp_x .
+        <fs_items>-bzirk_x  =  condense( <fs_items>-bzirk  ) && | - | && <fs_items>-bzirk_x .
+        <fs_items>-kdgrp_x  =  condense( <fs_items>-kdgrp  ) && | - | && <fs_items>-kdgrp_x .
         <fs_items>-vstel_x  =  condense( <fs_items>-vstel  ) && | - | && <fs_items>-vstel_x .
         <fs_items>-werks_x  =  condense( <fs_items>-werks  ) && | - | && <fs_items>-werks_x .
         <fs_items>-lgort_x  =  condense( <fs_items>-lgort  ) && | - | && <fs_items>-lgort_x .
@@ -3684,6 +3687,7 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_items>-mvgr5_x  =  condense( <fs_items>-mvgr5  ) && | - | && <fs_items>-mvgr5_x .
         <fs_items>-vkaus_x  =  condense( <fs_items>-vkaus  ) && | - | && <fs_items>-vkaus_x .
         <fs_items>-we_regn  =  condense( <fs_items>-we_regi ) && | - | && <fs_items>-we_regn .
+        <fs_items>-augru_x  =  condense( CONV string( <fs_items>-augru ) ) && | - | && <fs_items>-augru_x .
         <fs_items>-abgru_x  =  condense( CONV string( <fs_items>-abgru ) ) && | - | && <fs_items>-abgru_x .
       ENDIF.
 
@@ -3788,7 +3792,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         " Hiyerarşi ve grup kolonlarını gri renklendir.
         IF abs( max_grup - cur_grup ) EQ 0 OR p_addp IS INITIAL.
-          APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+          APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
           <fs_cellcolor>-color-col = 2.
           <fs_cellcolor>-color-int = 0.
           <fs_cellcolor>-color-inv = 0.
@@ -3796,7 +3800,7 @@ CLASS lcl_main IMPLEMENTATION.
           <fs_cellcolor>-nokeycol = 'X'.
 
           LOOP AT gt_group_key_columns INTO DATA(key_fields_alv) .
-            APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+            APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-color-col = 2.
             <fs_cellcolor>-color-int = 0.
             <fs_cellcolor>-color-inv = 0.
@@ -3830,7 +3834,7 @@ CLASS lcl_main IMPLEMENTATION.
 
           " Negatif değer kırmızı font
           IF <mc_value> LT 0 AND ( p_addp IS INITIAL OR abs( max_grup - cur_grup ) EQ 0 ) .
-            APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+            APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-color-col = 6.
             <fs_cellcolor>-color-int = 0.
             <fs_cellcolor>-color-inv = 1.
@@ -3865,7 +3869,7 @@ CLASS lcl_main IMPLEMENTATION.
               WHEN 12. <fs_group_data>-color = 'C710'.   " k.kiremit FDBB71
             ENDCASE.
 
-            APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+            APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-nokeycol = 'X'.
             <fs_cellcolor>-color-col = <fs_group_data>-color+1(1).
             <fs_cellcolor>-color-int = <fs_group_data>-color+2(1).
@@ -3875,7 +3879,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         IF <fs_group_data>-color IS INITIAL.
           <fs_group_data>-color = 'C000'.
-          APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+          APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
           <fs_cellcolor>-color-col = <fs_group_data>-color+1(1).
           <fs_cellcolor>-color-int = <fs_group_data>-color+2(1).
           <fs_cellcolor>-nokeycol = 'X'.
@@ -3938,7 +3942,7 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD convert_to_pivot.
 
-    " uses gt_group_key_columns, gt_group_data, gt_fieldlist, gv_max_columns
+    " uses gt_group_key_columns, gt_group_data, gt_fieldlist, gv_max_ycolumns
 
     DATA: lv_fields     TYPE string,
           lv_colfield   TYPE string,
@@ -3982,7 +3986,7 @@ CLASS lcl_main IMPLEMENTATION.
 
     DESCRIBE TABLE gt_group_data_columns LINES col_count.
 
-    IF col_count GT gv_max_columns.
+    IF col_count GT gv_max_ycolumns.
       MESSAGE VALUE #( gt_textlist[ sym = 'A02' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
       rd_result = abap_false.
       RETURN.
@@ -4121,7 +4125,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         " Hiyerarşi ve grup kolonlarını gri renklendir.
         IF abs( max_grup - cur_grup ) EQ 0 OR p_addp IS INITIAL.
-          APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+          APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
           <fs_cellcolor>-color-col = 2.
           <fs_cellcolor>-color-int = 0.
           <fs_cellcolor>-color-inv = 0.
@@ -4129,7 +4133,7 @@ CLASS lcl_main IMPLEMENTATION.
           <fs_cellcolor>-nokeycol = 'X'.
 
           LOOP AT gt_group_key_columns INTO DATA(key_fields_alv) .
-            APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+            APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-color-col = 2.
             <fs_cellcolor>-color-int = 0.
             <fs_cellcolor>-color-inv = 0.
@@ -4141,7 +4145,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         fnum = 100.
 
-        DO gv_max_columns TIMES.
+        DO gv_max_ycolumns TIMES.
           fnum = fnum + 1.
           m_name = 'MENGE' && fnum.
           a_name = 'WADIV' && fnum.
@@ -4157,7 +4161,7 @@ CLASS lcl_main IMPLEMENTATION.
           " Negatif değer kırmızı font
           IF p_addp IS INITIAL OR abs( max_grup - cur_grup ) EQ 0.
             IF <mc_value> LT 0.
-              APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+              APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
               <fs_cellcolor>-color-col = 6.
               <fs_cellcolor>-color-int = 0.
               <fs_cellcolor>-color-inv = 1.
@@ -4191,7 +4195,7 @@ CLASS lcl_main IMPLEMENTATION.
               WHEN 12. <fs_group_data>-color = 'C710'.   " k.kiremit FDBB71
             ENDCASE.
 
-            APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+            APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-nokeycol = 'X'.
             <fs_cellcolor>-color-col = <fs_group_data>-color+1(1).
             <fs_cellcolor>-color-int = <fs_group_data>-color+2(1).
@@ -4201,7 +4205,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         IF <fs_group_data>-color IS INITIAL.
           <fs_group_data>-color = 'C000'.
-          APPEND INITIAL LINE TO <fs_group_data>-cell_table ASSIGNING <fs_cellcolor>.
+          APPEND INITIAL LINE TO <fs_group_data>-scol_tab ASSIGNING <fs_cellcolor>.
           <fs_cellcolor>-color-col = <fs_group_data>-color+1(1).
           <fs_cellcolor>-color-int = <fs_group_data>-color+2(1).
           <fs_cellcolor>-nokeycol = 'X'.
@@ -4291,9 +4295,9 @@ CLASS lcl_main IMPLEMENTATION.
                                   r_salv_table   = DATA(salv_table)
                                 CHANGING
                                   t_table        = <table>  ).
-        rt_fcat = cl_salv_controller_metadata=>get_lvc_fieldcatalog(
-            r_columns      = salv_table->get_columns( )      " ALV Filter
-            r_aggregations = salv_table->get_aggregations( ) " ALV Aggregations
+
+        rt_fcat = cl_salv_controller_metadata=>get_lvc_fieldcatalog( r_columns      = salv_table->get_columns( )      " ALV Filter
+                                                                     r_aggregations = salv_table->get_aggregations( ) " ALV Aggregations
                                                                    ).
       CATCH cx_root.
     ENDTRY.
@@ -4548,7 +4552,7 @@ CLASS lcl_main IMPLEMENTATION.
         " Grup kolon dışındakileri sil
         IF ( p_yval IS NOT INITIAL OR VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-cumty OPTIONAL ) IS INITIAL  )
             AND VALUE #( gt_group_key_columns[ fnam = <fs_fcat>-fieldname ]-fnam OPTIONAL ) IS INITIAL
-            AND <fs_fcat>-fieldname NE 'HIERA' AND <fs_fcat>-fieldname NE 'COLOR' AND <fs_fcat>-fieldname NE 'CELL_TABLE'
+            AND <fs_fcat>-fieldname NE 'HIERA' AND <fs_fcat>-fieldname NE 'COLOR' AND <fs_fcat>-fieldname NE 'SCOL_TAB'
             AND <fs_fcat>-fieldname NE 'SHEET' AND <fs_fcat>-fieldname NE 'DUMBE'.
           DELETE rt_fcat WHERE fieldname EQ <fs_fcat>-fieldname.
         ENDIF.
@@ -4601,13 +4605,6 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_fcat>-col_pos   = lv_col_suffix.
 
         <fs_fcat>-fieldname = 'MENGE' && lv_col_suffix.
-
-        <fs_fcat>-ref_field = ' '.
-        <fs_fcat>-lowercase = ' '.
-        <fs_fcat>-no_sign = ' '.
-        <fs_fcat>-no_out = ' '.
-        <fs_fcat>-no_zero = p_zero.
-        <fs_fcat>-no_merging = p_ocds.
 
         IF ( p_addp IS INITIAL AND p_layo EQ ' ' ) .
           IF ( lv_aggrtype = 'Q' OR lv_aggrtype = 'C' OR lv_aggrtype = 'S' OR lv_aggrtype = 'T' ) .
@@ -4921,13 +4918,10 @@ CLASS lcl_main IMPLEMENTATION.
   METHOD clear_selection.
 
     CLEAR: p_blin, p_mein, p_wahr, p_cur1, p_cur2, p_wahr, p_wah2, p_zero, p_twoc, p_ocds, p_cdec, p_yval, p_grp1, p_grp2, p_grp3, p_grp4, p_grp5, p_grp6,
-           p_addp, p_wavg, p_layo, p_layd, p_sort, p_asde, p_colr, p_expo, p_tech, p_disp, p_mail, p_excl, p_xval, p_path, s_parvw, p_body.
+           p_addp, p_wavg, p_layo, p_layd, p_sort, p_asde, p_colr, p_expo, p_tech, p_disp, p_mail, p_excl, p_xval, p_path, s_parvw, p_body, p_info.
     CLEAR: s_fnams, s_auart, s_vkbur, s_audat, s_edatu, s_bldat, s_fkdat, s_vbeln, s_posnr, s_lfbel, s_fkbel, s_abgru, s_vgtyp, s_wbsta, s_fstat, s_partn,
            s_vkorg, s_vtweg, s_spart, s_kunnr, s_kunre, s_kunrg, s_zterm, s_inco1, s_vkaus, s_kunwe, s_kdgrp, s_werks, s_lgort, s_vstel, s_regio, s_augru, s_lfsta,
            s_cntry, s_matnr, s_matkl, s_mtart, s_bwtar, s_charg, s_mvgr1, s_mvgr2, s_mvgr3, s_mvgr4, s_mvgr5, s_mblnr, s_belnr, s_augbl, s_erdat, s_ernam, p_mlto.
-  " REFRESH: s_fnams, s_auart, s_vkbur, s_audat, s_edatu, s_bldat, s_fkdat, s_vbeln, s_posnr, s_lfbel, s_fkbel, s_abgru, s_vgtyp, s_wbsta, s_fstat, s_partn,
-  "          s_vkorg, s_vtweg, s_spart, s_kunnr, s_kunre, s_kunrg, s_zterm, s_inco1, s_vkaus, s_kunwe, s_kdgrp, s_werks, s_lgort, s_vstel, s_regio, s_augru, s_lfsta,
-  "          s_cntry, s_matnr, s_matkl, s_mtart, s_bwtar, s_charg, s_mvgr1, s_mvgr2, s_mvgr3, s_mvgr4, s_mvgr5, s_mblnr, s_belnr, s_augbl, s_erdat, s_ernam, p_mlto.
 
     p_term = 'S'.
     p_disp = '1'.
@@ -5048,8 +5042,8 @@ CLASS lcl_main IMPLEMENTATION.
     display_code = p_layo.
     SELECT text
       FROM ltdxt
-     WHERE relid = 'LT'
-       AND report = @sy-cprog
+     WHERE relid   = 'LT'
+       AND report  = @sy-cprog
        AND variant = @p_layo
     INTO TABLE @DATA(lt_layid).
 
@@ -5404,7 +5398,7 @@ CLASS lcl_main IMPLEMENTATION.
                                                                        t_sort          = ls_meta-t_sort
                                                                        t_filter        = ls_meta-t_filter ).
 
-    " no more ref_field
+    " get rid off ref_field
     LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<fs_fcat>).
       <fs_fcat>-ref_field = ' '.
     ENDLOOP.
@@ -5661,7 +5655,7 @@ CLASS lcl_main IMPLEMENTATION.
     ELSE.
 
       " ***********************************************************
-      " Gruplanmış rapor için ilk kolon bazında itab->xml oluşturur
+      " Gruplanmış rapor için ilk kolon bazında itab->xml oluştur
       " elde edilen sheet'ler ayrı bir zip dosyaya kopyalanır
       " ***********************************************************
 
@@ -5786,7 +5780,7 @@ CLASS lcl_main IMPLEMENTATION.
                 INSERT 'I' INTO TABLE lt_ctyp.   " Integer
               WHEN 'D'.
                 INSERT 'D' INTO TABLE lt_ctyp.   " Date
-              WHEN 'T'. " Time
+              WHEN 'T'.
                 INSERT 'T' INTO TABLE lt_ctyp.   " Time
               WHEN OTHERS.
                 INSERT 'S' INTO TABLE lt_ctyp.   " String
@@ -6128,7 +6122,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       IF p_cdec IS INITIAL.
-        REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.###"| . "|formatCode="#,###.#"| .
+        REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.##0"| .
         " Tutarları da değişken ondalık istersen aşağıdaki satırı aç
         " REPLACE ALL OCCURRENCES OF |numFmtId="4"| IN lv_xml WITH |numFmtId="0"| .
       ENDIF.
@@ -6160,7 +6154,7 @@ CLASS lcl_main IMPLEMENTATION.
           lv_sheet_file = 'worksheets/sheet' && lv_sheet_num && '.xml'.
           CONDENSE lv_sheet_file NO-GAPS.
 
-          "ZIP2 workbook oku
+          "ZIP_NEW workbook oku
           lr_xlzip_new->get( EXPORTING name = 'xl/workbook.xml' IMPORTING content = lv_file ).
           lr_xlfile->parse_xstring( lv_file ).
           lr_xlsheets ?= lr_xlfile->find_node( 'sheets' ).
@@ -6178,7 +6172,7 @@ CLASS lcl_main IMPLEMENTATION.
           lr_xlzip_new->delete( EXPORTING name = 'xl/workbook.xml' ).
           lr_xlzip_new->add( EXPORTING name = 'xl/workbook.xml' content = lv_file ).
 
-          "ZIP2 rels oku
+          "ZIP_NEW rels oku
           lr_xlzip_new->get( EXPORTING name = 'xl/_rels/workbook.xml.rels' IMPORTING content = lv_file ).
           lr_xlfile->parse_xstring( lv_file ).
           lr_xlrels ?= lr_xlfile->find_node( 'Relationships' ).
@@ -6300,9 +6294,17 @@ CLASS lcl_main IMPLEMENTATION.
             DATA(lo_send_request) = cl_bcs=>create_persistent( ).
 
             "Create mail body
-            DATA: lt_body TYPE bcsy_text.
+            DATA:	lv_length	 TYPE SO_OBJ_LEN.
+            DATA: lt_body	TYPE SOLI_TAB. " catsxt_longtext_itab. ?
             DATA: mail_type TYPE c LENGTH 3.
-            APPEND p_info TO lt_body.
+
+            lv_length = strlen( p_info ).
+
+            call function 'SCMS_STRING_TO_FTEXT'
+            exporting
+              text      = p_info
+            tables
+              ftext_tab = lt_body.
 
             IF p_info CA '/>'.
               mail_type = 'HTM'.
@@ -6314,6 +6316,7 @@ CLASS lcl_main IMPLEMENTATION.
             DATA(lo_document) = cl_document_bcs=>create_document(
                                   i_type = mail_type
                                   i_text = lt_body
+                                  i_length  = lv_length
                                   i_subject = CONV #( p_subj ) ).
 
 
@@ -6342,7 +6345,7 @@ CLASS lcl_main IMPLEMENTATION.
             "Set sender
             lo_send_request->set_sender(
               cl_cam_address_bcs=>create_internet_address(
-                i_address_string = CONV #( gv_from_addr )
+                i_address_string = CONV #( gv_from_address )
               )
             ).
 
@@ -6363,11 +6366,10 @@ CLASS lcl_main IMPLEMENTATION.
                 MESSAGE lv_message TYPE 'I'.
                 DELETE p_mlto INDEX sy-tabix.
               ELSE.
-                lo_send_request->add_recipient(
-                  i_recipient = cl_cam_address_bcs=>create_internet_address(
-                                  i_address_string = CONV #( lv_address )
-                                )
-                  i_express   = abap_true ).
+                lo_send_request->add_recipient( i_recipient = cl_cam_address_bcs=>create_internet_address(
+                                                                i_address_string = CONV #( lv_address )
+                                                              )
+                                                i_express   = abap_true ).
               ENDIF.
             ENDLOOP.
 
@@ -6410,8 +6412,8 @@ CLASS lcl_main IMPLEMENTATION.
       IF s_fnams[] IS NOT INITIAL.
         " color cell field tipi svc_t_col değil hatası alındığı için yeniden internal table a alındı
         LOOP AT <fs_itab> ASSIGNING FIELD-SYMBOL(<fs_g_data>).
-          APPEND INITIAL LINE TO gt_group_data ASSIGNING FIELD-SYMBOL(<fs_group>).
-          MOVE-CORRESPONDING <fs_g_data> TO <fs_group>.
+          APPEND INITIAL LINE TO gt_group_data ASSIGNING FIELD-SYMBOL(<fs_group_data>).
+          MOVE-CORRESPONDING <fs_g_data> TO <fs_group_data>.
         ENDLOOP.
         ASSIGN gt_group_data TO <gs_itab>.
       ELSE.
@@ -6439,7 +6441,7 @@ CLASS lcl_main IMPLEMENTATION.
     ' xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision">'
     '<numFmts count="2">'
     '<numFmt numFmtId="180" formatCode="#,##0"/>'
-    '<numFmt numFmtId="169" formatCode="#,##0.000"/>'
+    '<numFmt numFmtId="169" formatCode="#,##0.000"/>'  " #.##0,###
     '<numFmt numFmtId="170" formatCode="#,##0.00"/></numFmts>'
     '<fonts count="5" x14ac:knownFonts="1">'
     '<font><sz val="10"/><name val="Arial"/></font>'
@@ -6638,6 +6640,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         lcl_salv_pop_up=>popup( EXPORTING  start_line = 1
                                            end_line   = 3
+                                           pop_header = VALUE char100( gt_textlist[ sym = 'D01' ]-text OPTIONAL )
                                            t_table    = ct_data  )  .
 
         CASE gv_clicked_row.
@@ -6917,6 +6920,9 @@ CLASS lcl_salv_pop_up IMPLEMENTATION .
     DATA(ob_salv_columns) = ob_salv_table->get_columns( ).
     ob_salv_columns->set_headers_visible( abap_false ).
 
+    DATA(ob_salv_settings) = ob_salv_table->get_display_settings( ).
+    ob_salv_settings->set_list_header( CONV #( pop_header )  ).
+
     ob_salv_table->display( ) .
 
   ENDMETHOD .
@@ -7125,9 +7131,8 @@ FORM get_sel_variant.
   SELECT variant,vtext
     INTO TABLE @DATA(lt_varit)
     FROM varit
-  " WHERE langu  EQ @sy-langu
-  "   AND report EQ @sy-repid.
    WHERE report EQ @sy-repid.
+  "   AND langu  EQ @sy-langu.
 
   CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
     EXPORTING
@@ -7238,7 +7243,7 @@ FORM fill_choice USING pv_only_fill.
 
     CALL FUNCTION 'FIELD_CHOICE'
       EXPORTING
-        maxfields                 = 12  "lines( gt_groupable_fields )
+        maxfields                 = 12
         titel1                    = VALUE #( gt_textlist[ sym = 'TXA' ]-text OPTIONAL )
         titel2                    = VALUE #( gt_textlist[ sym = 'TXB' ]-text OPTIONAL )
       TABLES
@@ -7515,8 +7520,8 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'VGTYP'     techl = 'SIPARISREFTIP'                texts = 'Sip.Ref.Tip'          textl = 'Sipariş Ref. Tip'              emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFBEL'     techl = 'TESLIMATBELGESI'              texts = 'Tsl.Blg'              textl = 'Teslimat Belgesi'              emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFPOS'     techl = 'TESLIMATKALEMI'               texts = 'Tsl.Klm.'             textl = 'Teslimat Kalemi'               emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'LFDAT'     techl = 'TESLIMATTARIHI'               texts = 'Teslimat Tar.'        textl = 'Teslimat Tarihi'               emphs = 'C700' shide = ' ' spgrp = 2 isgrp = '18' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'LFPER'     techl = 'TESLIMATDONEMI'               texts = 'Teslimat Dnm.'        textl = 'Teslimat Dönemi'               emphs = 'C700' shide = 'X' spgrp = 2 isgrp = '19' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'LFDAT'     techl = 'TESLIMATTARIHI'               texts = 'Tsl.Tar.'             textl = 'Teslimat Tarihi'               emphs = 'C700' shide = ' ' spgrp = 2 isgrp = '18' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'LFPER'     techl = 'TESLIMATDONEMI'               texts = 'Tsl.Dnm.'             textl = 'Teslimat Dönemi'               emphs = 'C700' shide = 'X' spgrp = 2 isgrp = '19' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WBSTA'     techl = 'MALHAREKETIDURUMU'            texts = 'MHD'                  textl = 'Mal Hareketi Durumu'           emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BWART'     techl = 'HAREKETTURU'                  texts = 'Har.Türü'             textl = 'Hareket Türü'                  emphs = 'C700' shide = 'X' spgrp = 2 isgrp = '20' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'MBLNR'     techl = 'MALZEMEBELGESI'               texts = 'Malz.Belgesi'         textl = 'Malzeme Belgesi'               emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
@@ -7630,8 +7635,8 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'VP_QUAN'   techl = 'SIPARISKALEMIMIKTARI'         texts = 'Sip.Klm.Mik.'         textl = 'Sipariş Kalem Miktarı'         emphs = 'C700' shide = 'X' spgrp = 6 cumty = ' ' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ZTAGE'     techl = 'VADEGUNSAYISI'                texts = 'Vade Gün'             textl = 'Vade Gün Sayısı'               emphs = 'C100' shide = 'X' spgrp = 1 cumty = 'O' slynr = '21' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA'     techl = 'DURUMU'                       texts = 'Sipariş Drm.'         textl = 'Sipariş Durumu'                emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '62' grpx1 = 'GBSTA_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'GBSTA_D'   techl = 'DURUMTANIMI'                  texts = 'Sipariş Drm. Tnm.'    textl = 'Sipariş Durumu Tanımı'         emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '63' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AUGRU'     techl = 'SIPARISNEDENI'                texts = 'Sipariş Nd.'          textl = 'Sipariş Nedeni'                emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'GBSTA_D'   techl = 'DURUMTANIMI'                  texts = 'Sipariş Drm. Tnm.'    textl = 'Sipariş Durumu Tanımı'         emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' ' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AUGRU'     techl = 'SIPARISNEDENI'                texts = 'Sipariş Nd.'          textl = 'Sipariş Nedeni'                emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '63' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUGRU_X'   techl = 'SIPARISNEDENITANIMI'          texts = 'Sipariş Nedeni Tnm.'  textl = 'Sipariş Nedeni Tanımı'         emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU'     techl = 'RETNEDENI'                    texts = 'Ret Nd.'              textl = 'Ret Nedeni'                    emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RETNEDENITANIMI'              texts = 'Ret Nedeni Tnm.'      textl = 'Ret Nedeni Tanımı'             emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
@@ -7656,10 +7661,10 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'VTWEG_X'   techl = 'DISTRIBUTIONCHANNELNAME'        texts = 'Dist. Ch. Name'       textl = 'Distribution Channel Name'     emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'SPART'     techl = 'DIVISION'                       texts = 'Div.'                 textl = 'Division'                      emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '05' grpx1 = 'SPART_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'SPART_X'   techl = 'DIVISIONNAME'                   texts = 'Div. Name'            textl = 'Division Name'                 emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKBUR'     techl = 'SALESOFFICE'                    texts = 'Sls. Office'          textl = 'Sales Office'                  emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '06' grpx1 = 'VKBUR_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKBUR_X'   techl = 'SALESOFFICENAME'                texts = 'Sls. Office Nm.'      textl = 'Sales Office Name'             emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKGRP'     techl = 'SALESGROUP'                     texts = 'Sls. Group'           textl = 'Sales Group'                   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '07' grpx1 = 'VKGRP_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKGRP_X'   techl = 'SALESGROUPNAME'                 texts = 'Sls. Group Nm.'       textl = 'Sales Group Name'              emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKBUR'     techl = 'SALESOFFICE'                    texts = 'Sales Office'         textl = 'Sales Office'                  emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '06' grpx1 = 'VKBUR_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKBUR_X'   techl = 'SALESOFFICENAME'                texts = 'Sales Office Nm.'     textl = 'Sales Office Name'             emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKGRP'     techl = 'SALESGROUP'                     texts = 'Sales Group'          textl = 'Sales Group'                   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '07' grpx1 = 'VKGRP_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKGRP_X'   techl = 'SALESGROUPNAME'                 texts = 'Sales Group Nm.'      textl = 'Sales Group Name'              emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BZIRK'     techl = 'SALESDISTRICT'                  texts = 'Sales Dist.'          textl = 'Sales District'                emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '08' grpx1 = 'BZIRK_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BZIRK_X'   techl = 'SALESDISTRICTNAME'              texts = 'Sales Dist.Name'      textl = 'Sales District Name'           emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUART'     techl = 'ORDERTYPE'                      texts = 'Order Type'           textl = 'Order Type'                    emphs = 'C500' shide = ' ' spgrp = 1 isgrp = '09' grpx1 = 'AUART_X' ) TO gt_fieldlist.
@@ -7797,8 +7802,8 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'VP_QUAN'   techl = 'ORDERITEMQUANTITY'              texts = 'Ord. Item Qty.'       textl = 'Order Item Quantity'           emphs = 'C700' shide = 'X' spgrp = 6 cumty = ' ' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ZTAGE'     techl = 'PAYMENTTERMSDAYCOUNT'           texts = 'Pay. Terms Day Cnt.'  textl = 'Payment Terms Day Count'       emphs = 'C100' shide = 'X' spgrp = 1 cumty = 'O' slynr = '21' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA'     techl = 'ORDERSTATUS'                    texts = 'Ord. Status'          textl = 'Order Status'                  emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '62' grpx1 = 'GBSTA_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'GBSTA_D'   techl = 'ORDERSTATUSDEFINITION'          texts = 'Ord. Status Def.'     textl = 'Order Status Definition'       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '63' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AUGRU'     techl = 'ORDERREASON'                    texts = 'Order Reason'         textl = 'Order Reason'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'GBSTA_D'   techl = 'ORDERSTATUSDEFINITION'          texts = 'Ord. Status Def.'     textl = 'Order Status Definition'       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' ' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AUGRU'     techl = 'ORDERREASON'                    texts = 'Order Reason'         textl = 'Order Reason'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '63' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUGRU_X'   techl = 'ORDERREASONDEFINITION'          texts = 'Order Reason Def.'    textl = 'Order Reason Definition'       emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU'     techl = 'RETURNREASON'                   texts = 'Return Reason'        textl = 'Return Reason'                 emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RETURNREASONDEFINITION'         texts = 'Return Reason Def.'   textl = 'Return Reason Definition'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
@@ -7822,10 +7827,10 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'VTWEG_X'   techl = 'VERTRIEBSWEGNAME'               texts = 'Vertriebsweg Name'   textl = 'Vertriebswegname'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'SPART'     techl = 'SPARTE'                         texts = 'Sparte'              textl = 'Sparte'                         emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '05' grpx1 = 'SPART_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'SPART_X'   techl = 'SPARTENAME'                     texts = 'Sparte Name'         textl = 'Spartename'                     emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKBUR'     techl = 'VERKAUFSBÜRO'                   texts = 'Verkaufsbüro'        textl = 'Verkaufsbüro'                   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '06' grpx1 = 'VKBUR_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKBUR_X'   techl = 'VERKAUFSBÜRONAME'               texts = 'Verkaufsbüro Name'   textl = 'Verkaufsbüroname'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKGRP'     techl = 'VERKÄUFERGRUPPE'                texts = 'Verkäufergruppe'     textl = 'Verkäufergruppe'                emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '07' grpx1 = 'VKGRP_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'VKGRP_X'   techl = 'VERKÄUFERGRUPPENAME'            texts = 'Verkäufergruppe Nm.' textl = 'Verkäufergruppename'            emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKBUR'     techl = 'VERKAUFSBURO'                   texts = 'Verkaufsbüro'        textl = 'Verkaufsbüro'                   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '06' grpx1 = 'VKBUR_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKBUR_X'   techl = 'VERKAUFSBURONAME'               texts = 'Verkaufsbüro Name'   textl = 'Verkaufsbüroname'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKGRP'     techl = 'VERKAUFERGRUPPE'                texts = 'Verkäufergruppe'     textl = 'Verkäufergruppe'                emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '07' grpx1 = 'VKGRP_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'VKGRP_X'   techl = 'VERKAUFERGRUPPENAME'            texts = 'Verkäufergruppe Nm.' textl = 'Verkäufergruppename'            emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BZIRK'     techl = 'VERKAUFSBEZIRKE'                texts = 'Verkaufsbezirke'      textl = 'Verkaufsbezirke'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '08' grpx1 = 'BZIRK_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BZIRK_X'   techl = 'VERKAUFSBEZIRKEBEZEICHNUNG'     texts = 'Verkaufsbezirke Bez.' textl = 'Verkaufsbezirke Bez.'          emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUART'     techl = 'VERKAUFSBELEGART'               texts = 'Verkaufsbelegart'    textl = 'Auftragsart'                    emphs = 'C500' shide = ' ' spgrp = 1 isgrp = '09' grpx1 = 'AUART_X' ) TO gt_fieldlist.
@@ -7841,7 +7846,7 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'ERDAT'     techl = 'AUFTRAGSDATUM'                  texts = 'Aufttragsdatum'      textl = 'Auftragerstellungsdatum'        emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '16' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ERZET'     techl = 'AUFTRAGSZEITPUNKT'              texts = 'Aufttragszeitpkt.'   textl = 'Auftragerstellungszeitpunkt'    emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ERNAM'     techl = 'AUFTRAGSERSTELLER'              texts = 'Auftragsersteller'   textl = 'Auftragsersteller'              emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '17' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'SHKZG'     techl = 'RÜCKGABE'                       texts = 'Rückgabe'            textl = 'Rückgabe'                       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'SHKZG'     techl = 'RUCKGABE'                       texts = 'Rückgabe'            textl = 'Rückgabe'                       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'POSEX'     techl = 'VORHERIGEPOSITION'              texts = 'Vorherige Pos.'      textl = 'Vorherige Position'             emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VGBEL'     techl = 'VORLAGEBELEG'                   texts = 'Vorlagebeleg-Dok.'   textl = 'Vorlagebeleg'                   emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VGPOS'     techl = 'VORLAGEBELEGPOSITION'           texts = 'Vorlagebeleg-Pos.'   textl = 'Vorlagebelegposition'           emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
@@ -7852,8 +7857,8 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'LFPER'     techl = 'LIEFERPERIODE'                  texts = 'Lieferperiode'       textl = 'Lieferperiode'                  emphs = 'C700' shide = 'X' spgrp = 2 isgrp = '19' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WBSTA'     techl = 'WARENVERSANDSTATUS'             texts = 'Warenversandstatus'  textl = 'Warenversandstatus'             emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BWART'     techl = 'BEWEGUNGSART'                   texts = 'Bewegungsart'        textl = 'Bewegungsart'                   emphs = 'C700' shide = 'X' spgrp = 2 isgrp = '20' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'MBLNR'     techl = 'MATERIALDOKUMENT'               texts = 'Mater.-Dok.'         textl = 'Materialdokument'               emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'BLDAT'     techl = 'MATERIALAUSGABEDATUM'           texts = 'Mater.-Ausg-Datum'   textl = 'Materialausgabedatum'           emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'MBLNR'     techl = 'WARENAUSGANGSDOKUMENT'          texts = 'Warenaus.-Dok.'      textl = 'Warenausgangsdokument'          emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'BLDAT'     techl = 'WARENAUSGANGSDATUM'             texts = 'Warenaus.-Datum'     textl = 'Warenausgangsdatum'             emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FKBEL'     techl = 'RECHNUNGSDOKUMENT'              texts = 'Rechn.-Dok.'         textl = 'Rechnungsdokument'              emphs = 'C300' shide = ' ' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FKPOS'     techl = 'RECHNUNGSPOSITION'              texts = 'Rechn.-Pos.'         textl = 'Rechnungsposition'              emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'PRSDT'     techl = 'PREISDATUM'                     texts = 'Preis Datum'         textl = 'Preis Datum'                    emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
@@ -7878,22 +7883,22 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'KDGRP_X'   techl = 'KUNDENGRUPPEBEZEICHNUNG'        texts = 'Kundengruppe Bez.'   textl = 'Kundengruppe Bez.'              emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KUNNR'     techl = 'BESTELLER'                      texts = 'Besteller'           textl = 'Besteller'                      emphs = 'C200' shide = ' ' spgrp = 5 isgrp = '33' grpx1 = 'KUNNR_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KUNNR_X'   techl = 'NAMEDESBESTELLERS'              texts = 'Besteller-Name'      textl = 'Name des Bestellers'            emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'KUNRE'     techl = 'RECHNUNGSEMPFÄNGER'             texts = 'Rechnungsempf.'      textl = 'Rechnungsempfänger'             emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '34' grpx1 = 'KUNRE_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'KUNRE_X'   techl = 'NAMEDESRECHNUNGSEMPFÄNGERS'     texts = 'Rechnungsempf.-Name' textl = 'Name des Rechnungsempfängers'   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'KUNRE'     techl = 'RECHNUNGSEMPFANGER'             texts = 'Rechnungsempf.'      textl = 'Rechnungsempfänger'             emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '34' grpx1 = 'KUNRE_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'KUNRE_X'   techl = 'NAMEDESRECHNUNGSEMPFANGERS'     texts = 'Rechnungsempf.-Name' textl = 'Name des Rechnungsempfängers'   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KUNRG'     techl = 'ZAHLER'                         texts = 'Zahler'              textl = 'Zahler'                         emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '35' grpx1 = 'KUNRG_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KUNRG_X'   techl = 'NAMEDESZAHLERS'                 texts = 'Name des Zahlers'    textl = 'Name des Zahlers'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'KUNWE'     techl = 'WARENEMPFÄNGER'                 texts = 'Warenempf.'          textl = 'Warenempfänger'                 emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '36' grpx1 = 'KUNWE_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'KUNWE_X'   techl = 'NAMEDESWARENEMPFÄNGERS'         texts = 'Warenempf.-Name'     textl = 'Name des Warenempfängers'       emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'PARVW'     techl = 'MUHATAPROL'                     texts = 'Role'                textl = 'Role'                           emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '37' grpx1 = 'PARVW_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'PARVW_X'   techl = 'MUHATAPROLADI'                  texts = 'Role Name'           textl = 'Role Name'                      emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'PARTN'     techl = 'ROLMUHATABI'                    texts = 'Role Partner'        textl = 'Role Partner'                   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '38' grpx1 = 'PARTN_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'PARTN_X'   techl = 'ROLMUHATABIADI'                 texts = 'Role Partner Name'   textl = 'Role Partner Name'              emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'KUNWE'     techl = 'WARENEMPFANGER'                 texts = 'Warenempf.'          textl = 'Warenempfänger'                 emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '36' grpx1 = 'KUNWE_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'KUNWE_X'   techl = 'NAMEDESWARENEMPFANGERS'         texts = 'Warenempf.-Name'     textl = 'Name des Warenempfängers'       emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'PARVW'     techl = 'ROLE'                           texts = 'Role'                textl = 'Role'                           emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '37' grpx1 = 'PARVW_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'PARVW_X'   techl = 'ROLEBEZEICHNUNG'                texts = 'Role Bez.'           textl = 'Role Bezeichnung'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'PARTN'     techl = 'ROLEPARTNER'                    texts = 'Role Partner'        textl = 'Role Partner'                   emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '38' grpx1 = 'PARTN_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'PARTN_X'   techl = 'ROLEPARTNERNAME'                texts = 'Role Partner Name'   textl = 'Role Partner Name'              emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KTOKD'     techl = 'KUNDENKONTENGRUPPE'             texts = 'Kund.Kontengr.'      textl = 'Kundenkontengruppe'             emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '39' grpx1 = 'KTOKD_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KTOKD_X'   techl = 'KUNDENKONTENGRUPPENBEZEICHNUNG' texts = 'Kund.Kontengr.Bez.'  textl = 'Kundenkontengruppen Bez.'       emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KONDA'     techl = 'KUNDENPREISGRUPPE'              texts = 'Kund.Preisgr.'       textl = 'Kundenpreisgruppe'              emphs = 'C200' shide = 'X' spgrp = 5 isgrp = '40' grpx1 = 'KONDA_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'KONDA_X'   techl = 'KUNDENPREISGRUPPENBEZEICHNUNG'  texts = 'Kund.Preisgr.Bez.'   textl = 'Kundenpreisgruppen Bez.'        emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BPVIP'     techl = 'VIPKUNDE'                       texts = 'VIP-Kunde'           textl = 'VIP-Kunde'                      emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'BPUNW'     techl = 'UNERWÜNSCHTERKUNDE'             texts = 'Unerw. Kunde'        textl = 'Unerwünschter Kunde'            emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'BPUNW'     techl = 'UNERWUNSCHTERKUNDE'             texts = 'Unerw. Kunde'        textl = 'Unerwünschter Kunde'            emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BPBLK'     techl = 'GESPERRTERKUNDE'                texts = 'Gesp. Kunde'         textl = 'Gesperrter Kunde'               emphs = 'C200' shide = 'X' spgrp = 5 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'MATNR'     techl = 'MATERIAL'                       texts = 'Material'            textl = 'Material'                       emphs = 'C200' shide = ' ' spgrp = 4 isgrp = '41' grpx1 = 'MAKTX'   ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'MAKTX'     techl = 'MATERIALNAME'                   texts = 'Materialname'        textl = 'Materialname'                   emphs = 'C200' shide = 'X' spgrp = 4 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
@@ -7923,12 +7928,12 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'LGORT_X'   techl = 'VERSANDLAGERORTBEZEICHNUNG'     texts = 'Lagerort Bez.'       textl = 'Versandlagerort Bezeichnung'    emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'INCO1'     techl = 'INCOTERMS'                      texts = 'Incoterms'           textl = 'Incoterms'                      emphs = 'C200' shide = 'X' spgrp = 1 isgrp = '55' grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'INCO2'     techl = 'INCOTERMSORT'                   texts = 'Incoterms-Ort'       textl = 'Incoterms-Ort'                  emphs = 'C200' shide = 'X' spgrp = 1 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WE_CITY'   techl = 'EMPFÄNGERSSTADT'                texts = 'Empf.Stadt'          textl = 'Empfängersstadt'                emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WE_PSTC'   techl = 'EMPFÄNGERSPOSTLEITZAHL'         texts = 'Empf.PLZ'            textl = 'Empfängerspostleitzahl'         emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WE_REGI'   techl = 'EMPFÄNGERSREGION'               texts = 'Empf.Region'         textl = 'Empfängersregion'               emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '56' grpx1 = 'WE_REGN' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WE_REGN'   techl = 'EMPFÄNGERSREGIONNAME'           texts = 'Empf.Regionname'     textl = 'Empfängersregionname'           emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WE_CNTY'   techl = 'EMPFÄNGERSLAND'                 texts = 'Empf.Land'           textl = 'Empfängersland'                 emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '57' grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WE_ADRS'   techl = 'EMPFÄNGERSADRESSE'              texts = 'Empf.Adresse'        textl = 'Empfängersadresse'              emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WE_CITY'   techl = 'EMPFANGERSSTADT'                texts = 'Empf.Stadt'          textl = 'Empfängersstadt'                emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WE_PSTC'   techl = 'EMPFANGERSPOSTLEITZAHL'         texts = 'Empf.PLZ'            textl = 'Empfängerspostleitzahl'         emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WE_REGI'   techl = 'EMPFANGERSREGION'               texts = 'Empf.Region'         textl = 'Empfängersregion'               emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '56' grpx1 = 'WE_REGN' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WE_REGN'   techl = 'EMPFANGERSREGIONNAME'           texts = 'Empf.Regionname'     textl = 'Empfängersregionname'           emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WE_CNTY'   techl = 'EMPFANGERSLAND'                 texts = 'Empf.Land'           textl = 'Empfängersland'                 emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '57' grpx1 = ' '       ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WE_ADRS'   techl = 'EMPFANGERSADRESSE'              texts = 'Empf.Adresse'        textl = 'Empfängersadresse'              emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'TM_QUAN'   techl = 'TERMINMENGE'                    texts = 'Terminmenge'         textl = 'Terminmenge'                    emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'Q' slynr = '01' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_QUAN'   techl = 'LIEFERMENGE'                    texts = 'Liefermenge'         textl = 'Liefermenge'                    emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'Q' slynr = '02' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BQUA'   techl = 'NICHTGELIEFERTEMENGE'           texts = 'Nicht gel.Menge '    textl = 'Nicht gelieferte Menge'         emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'Q' slynr = '03' ) TO gt_fieldlist.
@@ -7951,23 +7956,23 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'FK_TOTL'   techl = 'STEUERINKLINRECHNUNGBETRAG'     texts = 'IR-Betrag in.MwSt.'  textl = 'Steuerinkl. in Rechnung Betrag' emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'C' slynr = '17' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AG_BAMN'   techl = 'OFFENERBETRAG'                  texts = 'Offener Betrag'      textl = 'Offener Betrag'                 emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'C' slynr = '18' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AG_AMNT'   techl = 'BEZAHLTERBETRAG'                texts = 'Bezahlter Betrag'    textl = 'Bezahlter Betrag'               emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'C' slynr = '19' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WAERK'     techl = 'BERICHTSSWÄHRUNG'               texts = 'B-Währung'           textl = 'Berichtsswährung'               emphs = 'C300' shide = 'X' spgrp = 1 isgrp = '60' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'CWAER'     techl = 'AUFTRAGSWÄHRUNG'                texts = 'A-Währung'           textl = 'Auftragswährung'                emphs = 'C300' shide = ' ' spgrp = 1 isgrp = '61' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WAERK'     techl = 'BERICHTSSWAHRUNG'               texts = 'B-Währung'           textl = 'Berichtsswährung'               emphs = 'C300' shide = 'X' spgrp = 1 isgrp = '60' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'CWAER'     techl = 'AUFTRAGSWAHRUNG'                texts = 'A-Währung'           textl = 'Auftragswährung'                emphs = 'C300' shide = ' ' spgrp = 1 isgrp = '61' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_PRIC_2' techl = 'VERKAUFSPREIS'                  texts = 'Verkaufspreis'       textl = 'Verkaufspreis'                  emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'A'  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_TXPR_2' techl = 'STEUERINKLVERKAUFSPREIS'        texts = 'VP inkl.MwSt'        textl = 'Steuerinklusiver Verkaufspreis' emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'A'  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_AMNT_2' techl = 'INRECHNUNGBETRAG'               texts = 'IR-Betrag'           textl = 'In Rechnung Betrag'             emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'C'  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_TOTL_2' techl = 'STEUERINKLINRECHNUNGBETRAG'     texts = 'IR-Betrag in.MwSt.'  textl = 'Steuerinkl. in Rechnung Betrag' emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'C'  ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'WAERK_2'   techl = 'BERICHTSWÄHRUNG2'               texts = 'B-Währung (2)'       textl = 'Berichtswährung (2)'            emphs = 'C300' shide = 'X' spgrp = 1 ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'WAERK_2'   techl = 'BERICHTSWAHRUNG2'               texts = 'B-Währung (2)'       textl = 'Berichtswährung (2)'            emphs = 'C300' shide = 'X' spgrp = 1 ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'EC_AMNT'   techl = 'WECHSELKURSDIFFERENZ'           texts = 'WexK Diff.'          textl = 'Wechselkursdifferenz'           emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'C' slynr = '20' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'EC_TAMN'   techl = 'STEUERINKLWECHSELKURSDIFF.'     texts = 'WexK Diff. in.MwSt.' textl = 'Steuerinkl. Wechselkursdiff.'   emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'C' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VP_QUAN'   techl = 'AUFTRAGSPOSITIONSMENGE'         texts = 'Auftragspos.menge '  textl = 'Auftragspositionsmenge'         emphs = 'C700' shide = 'X' spgrp = 6 cumty = ' ' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ZTAGE'     techl = 'ZAHLUNGSKONDITIONENTAGANZAHL'   texts = 'ZK-Tage'             textl = 'Zahlungskonditionen Taganzahl'  emphs = 'C100' shide = 'X' spgrp = 1 cumty = 'O' slynr = '21' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA'     techl = 'GESAMTSTATUS'                   texts = 'Gesamtstatus'        textl = 'Gesamtstatus'                   emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '62' grpx1 = 'GBSTA_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'GBSTA_D'   techl = 'GESAMTSTATUSBEZEICHNUNG'        texts = 'Gesamtstatus Bez.'   textl = 'Gesamtstatus Bezeichnung'       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '63' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AUGRU'     techl = 'AUFTRAGSGRUND'                  texts = 'Auftragsgrund'       textl = 'Auftragsgrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'GBSTA_D'   techl = 'GESAMTSTATUSBEZEICHNUNG'        texts = 'Gesamtstatus Bez.'   textl = 'Gesamtstatus Bezeichnung'       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' ' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AUGRU'     techl = 'AUFTRAGSGRUND'                  texts = 'Auftragsgrund'       textl = 'Auftragsgrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '63' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUGRU_X'   techl = 'AUFTRAGSGRUNDBEZEICHNUNG'       texts = 'Auftragsgrund Bez.'  textl = 'Auftragsgrund Bezeichnung'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'ABGRU'     techl = 'RÜCKGABEGRUND'                  texts = 'Rückgabegrund'       textl = 'Rückgabegrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RÜCKGABEGRUNDBEZEICHNUNG'       texts = 'Rückgabegrund Bez.'  textl = 'Rückgabegrund Bezeichnung'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'ABGRU'     techl = 'RUCKGABEGRUND'                  texts = 'Rückgabegrund'       textl = 'Rückgabegrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RUCKGABEGRUNDBEZEICHNUNG'       texts = 'Rückgabegrund Bez.'  textl = 'Rückgabegrund Bezeichnung'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'COUNT'     techl = 'DATENSATZANZAHL'                texts = '#'                   textl = 'Datensatzanzahl'                emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = 'T' slynr = '22' ) TO gt_fieldlist.
 
 ENDFORM.
@@ -8143,6 +8148,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'TXS' text = 'Toplam' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXT' text = 'Genel Toplam' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXU' text = 'Kullanıcılar' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXZ' text = 'Metin Fonksiyonları' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ0' text = 'SATIS' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ1' text = 'ORTALAMA' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ2' text = 'GENELORTALAMA' ) TO gt_textlist.
@@ -8443,6 +8449,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TXS' text = 'Total' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXT' text = 'Grand Total' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXU' text = 'Users' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXZ' text = 'Text Functions' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ0' text = 'SALES' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ1' text = 'AVERAGE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ2' text = 'OVERALLAVERAGE' ) TO gt_textlist.
@@ -8744,6 +8751,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TXS' text = 'Gesamt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXT' text = 'Gesamttotal' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXU' text = 'Benutzer' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXZ' text = 'Text Funktionen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ0' text = 'VERKAUFE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ1' text = 'DURCHSCHNITT' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ2' text = 'GESAMTDURCHSCHNITT' ) TO gt_textlist.
