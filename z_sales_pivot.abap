@@ -236,6 +236,8 @@ TYPES: BEGIN OF ty_fields_agr,
          cper TYPE c LENGTH 4,
          cavg TYPE c LENGTH 4,
          cwga TYPE c LENGTH 4,
+         cmax TYPE c LENGTH 4,
+         cmin TYPE c LENGTH 4,
        END OF ty_fields_agr.
 
 TYPES: BEGIN OF ty_fields_param,
@@ -902,7 +904,6 @@ INITIALIZATION.
   gv_clgui_enabled = abap_true.  " before setting true activate screens, status and title by double-clicking numbers
 
   but02 = icon_next_page.
-  but02 = icon_next_page.
   but04 = icon_information.
   but05 = icon_value_help.
   but06 = icon_value_help.
@@ -1174,7 +1175,9 @@ CLASS lcl_main IMPLEMENTATION.
         ELSE.
           rd_result = go_main->convert_to_group( ).
         ENDIF.
-        ASSIGN <gs_group_data> TO <gs_itab>.
+        IF rd_result EQ abap_true.
+          ASSIGN <gs_group_data> TO <gs_itab>.
+        ENDIF.
       ELSE.
         rd_result = abap_true.
         ASSIGN gt_main_data TO <gs_itab>.
@@ -1209,7 +1212,7 @@ CLASS lcl_main IMPLEMENTATION.
       IF p_disp EQ '0' AND p_expo NE 'X' .
         CALL SCREEN 0100.  "< == Just double click and activate the screen.
       ELSE.
-        IF p_disp EQ '3' AND gv_detail_view = abap_false.
+        IF p_disp EQ '3' AND p_expo IS INITIAL AND gv_detail_view = abap_false.
           create_salv_tree( ).
           go_tree->display( ).
         ELSE.
@@ -1768,7 +1771,7 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD initialization.
 
-    IF p_lang NE gv_lang OR p_loca NE gv_loca OR gt_fieldlist[] IS INITIAL.
+    IF p_lang NE gv_lang OR p_loca NE gv_loca OR gt_fieldlist[] IS INITIAL OR gv_variant_changed = abap_true.
 
       ret_function_values( ).
 
@@ -1801,7 +1804,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       set_text_variables( ).
       fill_aggrs( ).
-      fill_choices( EXPORTING pv_only_fill = abap_true ) ." USING abap_true.
+      fill_choices( EXPORTING pv_only_fill = abap_true ) .
 
       functxt-icon_id = icon_reject.
       functxt-quickinfo = VALUE #( gt_textlist[ sym = 'B01' ]-text OPTIONAL ).
@@ -1908,10 +1911,10 @@ CLASS lcl_main IMPLEMENTATION.
         CREATE OBJECT lo_aggr_setup.
         fill_aggrs( ).
         lcl_popup_aggr_setup=>display_popup( EXPORTING start_line   = 1
-                                                       end_line     = 21
-                                                       start_column = 90
-                                                       end_column   = 150
-                                                       pop_header   = VALUE char100( gt_textlist[ sym = 'TXZ' ]-text OPTIONAL )
+                                                       end_line     = 26
+                                                       start_column = 40
+                                                       end_column   = 130
+                                                       pop_header   = VALUE char100( gt_textlist[ sym = 'TXY' ]-text OPTIONAL )
                                                        t_table = gt_aggregation_fields  ).
 
         gt_fcat = go_main->set_fieldcatalog( ).
@@ -2110,9 +2113,8 @@ CLASS lcl_main IMPLEMENTATION.
                 OTHERS               = 3.
 
             p_vari = gv_variant.
-            gv_variant_changed = abap_false.
-
             go_main->initialization( ).
+            gv_variant_changed = abap_false.
 
           ENDIF.
         WHEN 'P_GRP1' OR 'P_GRP2' OR 'P_GRP3' OR 'P_GRP4' OR 'P_GRP5' OR 'P_GRP6'.
@@ -3607,12 +3609,14 @@ CLASS lcl_main IMPLEMENTATION.
 
         IF lv_aggrtype EQ 'W'.
           lv_list = |{ lv_list }| & |, ROUND( SUM( | & |{ <fs_fieldlist>-fname }| && | * TM_QUAN ), 6 ) AS | && |{ <fs_fieldlist>-fname }|.
-        ELSE.
-          IF lv_aggrtype EQ 'A'.
+        ELSEIF lv_aggrtype EQ 'A'.
             lv_list = |{ lv_list }| & |, AVG( | & |{ <fs_fieldlist>-fname }| && | ) AS | && |{ <fs_fieldlist>-fname }|.
-          ELSE.
+        ELSEIF lv_aggrtype EQ 'M'.
+            lv_list = |{ lv_list }| & |, MAX( | & |{ <fs_fieldlist>-fname }| && | ) AS | && |{ <fs_fieldlist>-fname }|.
+        ELSEIF lv_aggrtype EQ 'L'.
+            lv_list = |{ lv_list }| & |, MIN( | & |{ <fs_fieldlist>-fname }| && | ) AS | && |{ <fs_fieldlist>-fname }|.
+        ELSE.
             lv_list = |{ lv_list }| & |, SUM( | & |{ <fs_fieldlist>-fname }| && | ) AS | && |{ <fs_fieldlist>-fname }|.
-          ENDIF.
         ENDIF.
       ENDLOOP.
 
@@ -3737,7 +3741,7 @@ CLASS lcl_main IMPLEMENTATION.
    ENDDO.
 
    SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
-                     ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+                           ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
 
 
    IF p_wrks EQ 'X'.
@@ -3933,21 +3937,24 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
 
         IF lv_col_suffix EQ ( 100 + col_count + 1 ).
-          IF lv_aggrtype EQ 'A'  .
+          IF lv_aggrtype EQ 'W'  .
             lv_list = |{ lv_list }| && |, ROUND( SUM( | && |{ lv_colfield }| &&  | * TM_QUAN ), 6 ) AS | && | MENGE| && lv_col_suffix.
+          ELSEIF lv_aggrtype EQ 'M'.
+            lv_list = |{ lv_list }| && |, MAX( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
+          ELSEIF lv_aggrtype EQ 'L'.
+            lv_list = |{ lv_list }| && |, MIN( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
           ELSE.
             lv_list = |{ lv_list }| && |, SUM( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
           ENDIF.
-          IF lv_aggrtype EQ 'A' .
+
+          IF lv_aggrtype EQ 'W' .
             lv_list = |{ lv_list }| && |, SUM( TM_QUAN ) AS | && | WADIV| && lv_col_suffix.
-          ELSE.
-            IF lv_aggrtype EQ 'O' .
+          ELSEIF lv_aggrtype EQ 'A' .
               lv_list = |{ lv_list }| && |, COUNT( TM_QUAN ) AS | && | WADIV| && lv_col_suffix.
-            ENDIF.
           ENDIF.
 
         ELSE.
-          IF lv_aggrtype EQ 'A'  .
+          IF lv_aggrtype EQ 'W'  .
             lv_list = |{ lv_list }| && |, ROUND( SUM( CASE | && gv_pivot_fieldname .
             IF <fs_group_data_columns>-text = '-' .
               lv_list = |{ lv_list }| && | WHEN @space|.
@@ -3955,6 +3962,22 @@ CLASS lcl_main IMPLEMENTATION.
               lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
             ENDIF.
             lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | * TM_QUAN END ), 6 ) AS | && | MENGE| && lv_col_suffix.
+          ELSEIF lv_aggrtype EQ 'M'.
+            lv_list = |{ lv_list }| && |, MAX( CASE | && gv_pivot_fieldname .
+            IF <fs_group_data_columns>-text = '-' .
+              lv_list = |{ lv_list }| && | WHEN @space|.
+            ELSE.
+              lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
+            ENDIF.
+            lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
+          ELSEIF lv_aggrtype EQ 'L'.
+            lv_list = |{ lv_list }| && |, MIN( CASE | && gv_pivot_fieldname .
+            IF <fs_group_data_columns>-text = '-' .
+              lv_list = |{ lv_list }| && | WHEN @space|.
+            ELSE.
+              lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
+            ENDIF.
+            lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
           ELSE.
             lv_list = |{ lv_list }| && |, SUM( CASE | && gv_pivot_fieldname .
             IF <fs_group_data_columns>-text = '-' .
@@ -3964,7 +3987,8 @@ CLASS lcl_main IMPLEMENTATION.
             ENDIF.
             lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
           ENDIF.
-          IF lv_aggrtype EQ 'A' .
+
+          IF lv_aggrtype EQ 'W' .
             lv_list = |{ lv_list }| && |, SUM( CASE | && gv_pivot_fieldname .
             IF <fs_group_data_columns>-text = '-' .
               lv_list = |{ lv_list }| && | WHEN @space|.
@@ -3972,8 +3996,7 @@ CLASS lcl_main IMPLEMENTATION.
               lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
             ENDIF.
             lv_list = |{ lv_list }| && | THEN TM_QUAN END ) AS | && | WADIV| && lv_col_suffix.
-          ELSE.
-            IF lv_aggrtype EQ 'O' .
+          ELSEIF lv_aggrtype EQ 'A' .
               lv_list = |{ lv_list }| && |, COUNT( CASE | && gv_pivot_fieldname .
               IF <fs_group_data_columns>-text = '-' .
                 lv_list = |{ lv_list }| && | WHEN @space|.
@@ -3981,7 +4004,6 @@ CLASS lcl_main IMPLEMENTATION.
                 lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
               ENDIF.
               lv_list = |{ lv_list }| && | THEN TM_QUAN END ) AS | && | WADIV| && lv_col_suffix.
-            ENDIF.
           ENDIF.
 
         ENDIF.
@@ -4023,14 +4045,14 @@ CLASS lcl_main IMPLEMENTATION.
 
        fnum = 100.
 
-       DO gv_max_ycolumns TIMES.
+       DO ( col_count + 1 ) TIMES.
          fnum = fnum + 1.
          m_name = 'MENGE' && fnum.
          a_name = 'WADIV' && fnum.
          ASSIGN COMPONENT m_name OF STRUCTURE <fs_g_data> TO FIELD-SYMBOL(<mc_value>).
          ASSIGN COMPONENT a_name OF STRUCTURE <fs_g_data> TO FIELD-SYMBOL(<ac_value>).
 
-         IF lv_aggrtype EQ 'W'.
+         IF lv_aggrtype EQ 'A' OR lv_aggrtype EQ 'W'.
            IF <mc_value> IS NOT INITIAL AND <ac_value> IS NOT INITIAL.
              <mc_value> = <mc_value> / <ac_value> .
            ENDIF.
@@ -4209,8 +4231,12 @@ CLASS lcl_main IMPLEMENTATION.
       <fs_fcat>-lowercase = ' '.
       <fs_fcat>-no_sign = ' '.
       <fs_fcat>-no_out = ' '.
-      <fs_fcat>-no_zero = p_zero.
       <fs_fcat>-no_merging = p_ocds.
+      IF not <fs_fcat>-inttype EQ 'P'.
+        <fs_fcat>-no_zero = 'X'.
+      ELSE.
+        <fs_fcat>-no_zero = p_zero.
+      ENDIF.
 
       CLEAR lv_dtext.
       CLEAR lv_dtexs.
@@ -4242,18 +4268,28 @@ CLASS lcl_main IMPLEMENTATION.
           ELSE.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TZ1' ]-text OPTIONAL ) && lv_dtext.
           ENDIF.
-        ENDIF.
-
-        IF lv_aggrtype EQ 'W'.
+        ELSEIF lv_aggrtype EQ 'W'.
           IF p_tech IS INITIAL.
             lv_dtexs = VALUE #( gt_textlist[ sym = 'TW4' ]-text OPTIONAL ) && lv_dtexs.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TW5' ]-text OPTIONAL ) && | | && lv_dtext.
           ELSE.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TZ3' ]-text OPTIONAL ) && lv_dtext.
           ENDIF.
-        ENDIF.
-
-        IF lv_aggrtype EQ 'P'.
+        ELSEIF lv_aggrtype EQ 'M'.
+          IF p_tech IS INITIAL.
+            lv_dtexs = VALUE #( gt_textlist[ sym = 'TW8' ]-text OPTIONAL ) && lv_dtexs.
+            lv_dtext = VALUE #( gt_textlist[ sym = 'TW6' ]-text OPTIONAL ) && | | && lv_dtext.
+          ELSE.
+            lv_dtext = VALUE #( gt_textlist[ sym = 'TZM' ]-text OPTIONAL ) && lv_dtext.
+          ENDIF.
+        ELSEIF lv_aggrtype EQ 'L'.
+          IF p_tech IS INITIAL.
+            lv_dtexs = VALUE #( gt_textlist[ sym = 'TW9' ]-text OPTIONAL ) && lv_dtexs.
+            lv_dtext = VALUE #( gt_textlist[ sym = 'TW7' ]-text OPTIONAL ) && | | && lv_dtext.
+          ELSE.
+            lv_dtext = VALUE #( gt_textlist[ sym = 'TZL' ]-text OPTIONAL ) && lv_dtext.
+          ENDIF.
+        ELSEIF lv_aggrtype EQ 'P'.
           IF p_tech IS INITIAL.
             lv_dtexs = |% | && lv_dtexs.
             lv_dtext = |% | && lv_dtext.
@@ -4292,83 +4328,80 @@ CLASS lcl_main IMPLEMENTATION.
       DATA(offset) = strlen( <fs_fcat>-fieldname ) - 2.
 
       IF s_fnams[] IS INITIAL.
-        " Her zaman ondalık yok (Gün  sayıları)
-        IF lv_aggrtype = 'O' AND ( p_cdec IS INITIAL OR s_fnams[] IS INITIAL ).
-          <fs_fcat>-decimals_o = '0'.
-        ENDIF.
+        IF <fs_fcat>-inttype EQ 'P'.
+          " Miktar
+          IF p_cdec = 'X'.
+            <fs_fcat>-qfieldname = 'DUMBE'.
+            <fs_fcat>-decimals_o = '3'.
+          ELSEIF p_twoc EQ 'X' AND p_mein IS NOT INITIAL .
+            <fs_fcat>-qfieldname = 'VRKME'.
+          ELSE.
+            <fs_fcat>-qfieldname = 'VRKME_BLG'.
+          ENDIF.
 
-        " Sayı
-        IF <fs_fcat>-fieldname EQ 'COUNT'.
-          <fs_fcat>-qfieldname = ' '.
-          <fs_fcat>-decimals_o = '0'.
-        ENDIF.
+          " Tutar
+           IF p_twoc EQ 'X' AND p_wahr IS NOT INITIAL.
+             <fs_fcat>-cfieldname = 'WAERK'.
+           ELSE.
+             <fs_fcat>-cfieldname = 'WAERK_BLG'.
+           ENDIF.
 
-        " Miktar
-        IF p_cdec = 'X'.
-          <fs_fcat>-qfieldname = 'DUMBE'.
-          <fs_fcat>-decimals_o = '3'.
-        ELSEIF p_twoc EQ 'X' AND p_mein IS NOT INITIAL .
-          <fs_fcat>-qfieldname = 'VRKME'.
-        ELSE.
-          <fs_fcat>-qfieldname = 'CVRKM'.
-        ENDIF.
-
-        " Tutar
-         IF p_twoc EQ 'X' AND p_wahr IS NOT INITIAL.
-           <fs_fcat>-cfieldname = 'WAERK'.
-         ELSE.
-           <fs_fcat>-cfieldname = 'CWAER'.
-         ENDIF.
-
-         IF <fs_fcat>-fieldname+offset(2) EQ '_2'.
-           IF p_wah2 IS NOT INITIAL.
-             IF p_twoc EQ 'X' .
-               <fs_fcat>-cfieldname = 'WAERK_2'.
-             ELSE.
-               <fs_fcat>-cfieldname = 'CWAER'.
+           IF <fs_fcat>-fieldname+offset(2) EQ '_2'.
+             IF p_wah2 IS NOT INITIAL.
+               IF p_twoc EQ 'X' .
+                 <fs_fcat>-cfieldname = 'WAERK_2'.
+               ELSE.
+                 <fs_fcat>-cfieldname = 'WAERK_BLG'.
+               ENDIF.
              ENDIF.
            ENDIF.
-         ENDIF.
+        ENDIF.
+      ENDIF.
+
+      " Sayı
+      IF <fs_fcat>-fieldname EQ 'COUNT'.
+        <fs_fcat>-qfieldname = ' '.
+        <fs_fcat>-cfieldname = ' '.
+        <fs_fcat>-decimals_o = '0'.
       ENDIF.
 
       " Tutar kur bilgisi kolon başlığına ekle
-      IF p_wahr IS NOT INITIAL.
-        IF p_tech IS INITIAL.
-          <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wahr .
-          <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wahr .
-
-          IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' .
-            <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' ¤' && VALUE #( gt_textlist[ sym = 'TT6' ]-text OPTIONAL ) && ')'.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' ¤' && VALUE #( gt_textlist[ sym = 'TT6' ]-text OPTIONAL ) && ')'.
-          ELSE.
-            IF <fs_fcat>-fieldname EQ 'EC_AMNT' OR <fs_fcat>-fieldname EQ 'EC_TAMN' .
-              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ')'.
-              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ')'.
-            ELSE.
-              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' ¤' && p_cur1 && ')'.
-              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' ¤' && p_cur1 && ')'.
-            ENDIF.
-          ENDIF.
-        ELSE.
-          IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' OR <fs_fcat>-fieldname EQ 'TM_BTUTAR'.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && VALUE #( gt_textlist[ sym = 'TZC' ]-text OPTIONAL ).
-          ELSE.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && p_cur1.
-          ENDIF.
-        ENDIF.
-      ENDIF.
-
       IF <fs_fcat>-fieldname+offset(2) EQ '_2'.
-        IF p_wah2 IS NOT INITIAL.
+        IF p_wah2 IS NOT INITIAL AND <fs_fcat>-datatype EQ 'CURR'.
+          DATA(curdat_sym) = 'M' && p_cur2.
+          DATA(curdat_txt) = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
+
           IF p_tech IS INITIAL.
-            <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wah2 && ' ¤' && p_cur2 && ')'.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wah2 && ' ¤' && p_cur2 && ')'.
+            <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
+            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
           ELSE.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && p_wah2 && p_cur2 .
+            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && p_wah2 && to_upper( curdat_txt ).
           ENDIF.
         ELSE.
           <fs_fcat>-tech = 'X'.
         ENDIF.
+      ELSE.
+
+        IF p_wahr IS NOT INITIAL AND <fs_fcat>-datatype EQ 'CURR'.
+          curdat_sym = 'M' && p_cur1.
+          IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' .
+            curdat_txt = VALUE #( gt_textlist[ sym = 'M06' ]-text OPTIONAL ).
+          ELSE.
+            curdat_txt = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
+          ENDIF.
+
+          IF p_tech IS INITIAL.
+            IF <fs_fcat>-fieldname EQ 'EC_AMNT' OR <fs_fcat>-fieldname EQ 'EC_TAMN' .
+              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s  && ' (' && p_wahr && ')'.
+              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && ' (' && p_wahr && ')'.
+            ELSE.
+              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
+            ENDIF.
+          ELSE.
+            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && curdat_txt.
+          ENDIF.
+        ENDIF.
+
       ENDIF.
 
       IF p_wah2 IS INITIAL OR p_cur1 EQ p_cur2.
@@ -4544,12 +4577,18 @@ CLASS lcl_main IMPLEMENTATION.
             CASE lv_aggrtype .
               WHEN 'W'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZ4' ]-text OPTIONAL ).
               WHEN 'A'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZ2' ]-text OPTIONAL ).
+              WHEN 'P'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZP' ]-text OPTIONAL ).
+              WHEN 'M'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZM' ]-text OPTIONAL ).
+              WHEN 'L'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZL' ]-text OPTIONAL ).
               WHEN OTHERS. lv_coltext = VALUE #( gt_textlist[ sym = 'TZT' ]-text OPTIONAL ).
             ENDCASE.
           ELSE.
             CASE lv_aggrtype .
-              WHEN 'W'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TW5' ]-text OPTIONAL ).
+              WHEN 'W'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TWT' ]-text OPTIONAL ).
               WHEN 'A'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TW3' ]-text OPTIONAL ).
+              WHEN 'P'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TW0' ]-text OPTIONAL ).
+              WHEN 'M'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TW6' ]-text OPTIONAL ).
+              WHEN 'L'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TW7' ]-text OPTIONAL ).
               WHEN OTHERS. lv_coltext = VALUE #( gt_textlist[ sym = 'TXT' ]-text OPTIONAL ).
             ENDCASE.
           ENDIF.
@@ -4692,7 +4731,7 @@ CLASS lcl_main IMPLEMENTATION.
       CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
         EXPORTING
           retfield        = 'SMTP_ADDR'
-          window_title    = CONV string( VALUE #( gt_textlist[ sym = 'TXM' ]-text OPTIONAL ) )
+          window_title    = CONV char30( VALUE #( gt_textlist[ sym = 'TXM' ]-text OPTIONAL ) )
           value_org       = 'S'
           dynpprog        = sy-repid
           dynpnr          = sy-dynnr
@@ -4731,7 +4770,7 @@ CLASS lcl_main IMPLEMENTATION.
           lv_dynfield TYPE help_info-dynprofld.
 
     SELECT DISTINCT vb~ernam,
-                    ad~name_text
+                    CASE WHEN ad~name_text IS NULL THEN vb~ernam ELSE ad~name_text END AS name_text
                FROM vbap AS vb
           LEFT JOIN user_addrs AS ad
                  ON ad~bname EQ vb~ernam
@@ -4747,7 +4786,7 @@ CLASS lcl_main IMPLEMENTATION.
       CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
         EXPORTING
           retfield        = 'ERNAM'
-          window_title    = CONV string( VALUE #( gt_textlist[ sym = 'TXU' ]-text OPTIONAL ) )
+          window_title    = CONV char30( VALUE #( gt_textlist[ sym = 'TXU' ]-text OPTIONAL ) )
           value_org       = 'S'
           dynpprog        = sy-repid
           dynpnr          = sy-dynnr
@@ -4882,6 +4921,10 @@ CLASS lcl_main IMPLEMENTATION.
           aggr_title = VALUE #( gt_textlist[ sym = 'TW1' ]-text OPTIONAL ).
         WHEN 'W'.
           aggr_title = VALUE #( gt_textlist[ sym = 'TW4' ]-text OPTIONAL ).
+        WHEN 'M'.
+          aggr_title = VALUE #( gt_textlist[ sym = 'TW6' ]-text OPTIONAL ).
+        WHEN 'L'.
+          aggr_title = VALUE #( gt_textlist[ sym = 'TW7' ]-text OPTIONAL ).
       ENDCASE.
 
       colgroup_title = aggr_title && | | && VALUE #( gt_fieldlist[ slynr = p_yval ]-textl OPTIONAL ) .
@@ -6624,8 +6667,11 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD fill_aggrs.
 
+    REFRESH: gt_aggregation_fields.
+
     " Toplama alanları listesi
     IF s_aggrs[] IS INITIAL.
+
       LOOP AT gt_fieldlist ASSIGNING FIELD-SYMBOL(<ls_fieldlist>).
         IF <ls_fieldlist>-cumty IS NOT INITIAL.
           APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING FIELD-SYMBOL(<ls_aggregation_fields>).
@@ -6642,21 +6688,22 @@ CLASS lcl_main IMPLEMENTATION.
           <ls_aggregation_fields>-cper = ICON_WD_RADIO_BUTTON_EMPTY.
           <ls_aggregation_fields>-cavg = ICON_WD_RADIO_BUTTON_EMPTY.
           <ls_aggregation_fields>-cwga = ICON_WD_RADIO_BUTTON_EMPTY.
+          <ls_aggregation_fields>-cmax = ICON_WD_RADIO_BUTTON_EMPTY.
+          <ls_aggregation_fields>-cmin = ICON_WD_RADIO_BUTTON_EMPTY.
           CASE <ls_fieldlist>-cumty.
-            WHEN 'T'. <ls_aggregation_fields>-ctot = ICON_RADIOBUTTON. "'X'.
-            WHEN 'P'. <ls_aggregation_fields>-cper = ICON_RADIOBUTTON. "'X'.
-            WHEN 'A'. <ls_aggregation_fields>-cavg = ICON_RADIOBUTTON. "'X'.
-            WHEN 'W'. <ls_aggregation_fields>-cwga = ICON_RADIOBUTTON. "'X'.
+            WHEN 'T'. <ls_aggregation_fields>-ctot = ICON_RADIOBUTTON.
+            WHEN 'P'. <ls_aggregation_fields>-cper = ICON_RADIOBUTTON.
+            WHEN 'A'. <ls_aggregation_fields>-cavg = ICON_RADIOBUTTON.
+            WHEN 'W'. <ls_aggregation_fields>-cwga = ICON_RADIOBUTTON.
+            WHEN 'M'. <ls_aggregation_fields>-cmax = ICON_RADIOBUTTON.
+            WHEN 'L'. <ls_aggregation_fields>-cmin = ICON_RADIOBUTTON.
           ENDCASE.
-
         ENDIF.
       ENDLOOP.
 
       set_aggrs( ).
 
     ELSE.
-
-      REFRESH: gt_aggregation_fields.
 
       LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
         APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING <ls_aggregation_fields>.
@@ -6675,11 +6722,15 @@ CLASS lcl_main IMPLEMENTATION.
         <ls_aggregation_fields>-cper = ICON_WD_RADIO_BUTTON_EMPTY.
         <ls_aggregation_fields>-cavg = ICON_WD_RADIO_BUTTON_EMPTY.
         <ls_aggregation_fields>-cwga = ICON_WD_RADIO_BUTTON_EMPTY.
+        <ls_aggregation_fields>-cmax = ICON_WD_RADIO_BUTTON_EMPTY.
+        <ls_aggregation_fields>-cmin = ICON_WD_RADIO_BUTTON_EMPTY.
         CASE <ls_aggregation_fields>-type.
           WHEN 'T'. <ls_aggregation_fields>-ctot = ICON_RADIOBUTTON.
           WHEN 'P'. <ls_aggregation_fields>-cper = ICON_RADIOBUTTON.
           WHEN 'A'. <ls_aggregation_fields>-cavg = ICON_RADIOBUTTON.
           WHEN 'W'. <ls_aggregation_fields>-cwga = ICON_RADIOBUTTON.
+          WHEN 'M'. <ls_aggregation_fields>-cmax = ICON_RADIOBUTTON.
+          WHEN 'L'. <ls_aggregation_fields>-cmin = ICON_RADIOBUTTON.
         ENDCASE.
       ENDLOOP.
 
@@ -6883,6 +6934,8 @@ CLASS lcl_main IMPLEMENTATION.
       CASE lv_aggrtype.
         WHEN 'A'. text_val = VALUE #( gt_textlist[ sym = 'TW1' ]-text OPTIONAL ) && | | && <fs_fieldlist>-textl.
         WHEN 'W'. text_val = VALUE #( gt_textlist[ sym = 'TW4' ]-text OPTIONAL ) && | | && <fs_fieldlist>-textl.
+        WHEN 'M'. text_val = VALUE #( gt_textlist[ sym = 'TW8' ]-text OPTIONAL ) && | | && <fs_fieldlist>-textl.
+        WHEN 'L'. text_val = VALUE #( gt_textlist[ sym = 'TW9' ]-text OPTIONAL ) && | | && <fs_fieldlist>-textl.
         WHEN 'P'. text_val = |%| && | | && <fs_fieldlist>-textl.
       "  WHEN 'T'. text_val = VALUE #( gt_textlist[ sym = 'TXS' ]-text OPTIONAL ) && | | && <fs_fieldlist>-textl.
       ENDCASE.
@@ -7321,6 +7374,8 @@ CLASS lcl_main IMPLEMENTATION.
         DATA(h_num) = 0.
         DATA(l_num) = 0.
 
+        DATA: lv_aggrtype TYPE string.
+
         IF gv_detail_view = abap_false.
 
           ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO <f_field>.
@@ -7334,22 +7389,16 @@ CLASS lcl_main IMPLEMENTATION.
           IF VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
 
             LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
-              IF fes_row_id-rowtype(1) NE 'T'.
-                IF <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
-                  l_num += 1.
-                  IF ( p_addp IS INITIAL AND p_disp NE '3' ) OR h_str IS INITIAL OR ( h_num NE 0 AND l_num LE h_num ).
-
-                    ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
-
-                    CONDENSE <fs_group_key_columns>-fnam NO-GAPS .
-                    p_id = <fs_group_key_columns>-fnam.
-                    CONDENSE p_id NO-GAPS.
-                    IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-                    IF <comp> IS INITIAL.
-                      gv_filter_where = gv_filter_where && p_id && | IS INITIAL|.
-                    ELSE.
-                      gv_filter_where = gv_filter_where && p_id && | EQ '| && <comp> && |'|.
-                    ENDIF.
+              IF fes_row_id-rowtype(1) NE 'T' AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
+                l_num += 1.
+                IF ( p_addp IS INITIAL AND p_disp NE '3' ) OR h_str IS INITIAL OR ( h_num NE 0 AND l_num LE h_num ).
+                  ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
+                  CONDENSE <fs_group_key_columns>-fnam NO-GAPS .
+                  IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+                  IF <comp> IS INITIAL.
+                    gv_filter_where = gv_filter_where && <fs_group_key_columns>-fnam && | IS INITIAL|.
+                  ELSE.
+                    gv_filter_where = gv_filter_where && <fs_group_key_columns>-fnam && | EQ '| && <comp> && |'|.
                   ENDIF.
                 ENDIF.
               ENDIF.
@@ -7359,28 +7408,48 @@ CLASS lcl_main IMPLEMENTATION.
 
               gt_fcat = go_main->set_fieldcatalog( ).
 
-              name = VALUE #( gt_fcat[ fieldname = iv_column ]-reptext OPTIONAL ) .
-              IF name NE VALUE #( gt_textlist[ sym = 'TXT' ]-text OPTIONAL ).
+              " Son kolon is y field where koşulunda yok
+              DATA(lv_col_suffix) = 100.
+              LOOP AT gt_group_data_columns ASSIGNING FIELD-SYMBOL(<fs_group_data_columns>).
+                ADD 1 TO lv_col_suffix.
+                DATA(last_field_name) = 'MENGE' && lv_col_suffix.
+              ENDLOOP.
+
+              " Diğer kolonlarda MENGE101, MENGE102 vs. reptext deki değeri oku
+              IF iv_column NE last_field_name.
+                name = VALUE #( gt_fcat[ fieldname = iv_column ]-reptext OPTIONAL ) .
                 ASSIGN name TO <comp>.
-                CONDENSE gv_pivot_fieldname NO-GAPS .
-                p_id = gv_pivot_fieldname.
-                CONDENSE p_id NO-GAPS.
                 IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
                 IF name EQ '-'.
-                  gv_filter_where = gv_filter_where && p_id && | IS INITIAL|.
+                  gv_filter_where = gv_filter_where && gv_pivot_fieldname && | IS INITIAL|.
                 ELSE.
-                  gv_filter_where = gv_filter_where && p_id && | EQ '| && <comp> && |'|.
+                  gv_filter_where = gv_filter_where && gv_pivot_fieldname && | EQ '| && <comp> && |'|.
                 ENDIF.
               ENDIF.
+
+              " Hücre alanı: y alanı
               k_field = VALUE #( gt_fieldlist[ slynr = p_yval ]-fname OPTIONAL ) .
-              IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-              gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
+
             ELSE.
-              name = iv_column .
-              ASSIGN name TO <comp>.
-              IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-              gv_filter_where = gv_filter_where && <comp> && | IS NOT INITIAL| .
+
+              " Hücre alanı: Kolonun kendisi
+              k_field = iv_column.
+
             ENDIF.
+
+
+            IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+              lv_aggrtype = VALUE #( gt_aggregation_fields[ fnam = k_field ]-type OPTIONAL ).
+              " Toplam ve yüzdede sıfırdan farklılar, max min için =hücre değeri
+              IF lv_aggrtype EQ 'M' OR lv_aggrtype EQ 'L'.
+                ASSIGN COMPONENT iv_column OF STRUCTURE <f_line> TO <f_field>.
+                DATA(cell_value) = CONV string( <f_field> ) .
+                CONDENSE cell_value NO-GAPS.
+                gv_filter_where = gv_filter_where && k_field && | EQ '| && cell_value && |'|.
+              ELSE.
+                gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
+            ENDIF.
+
 
             gv_detail_view = abap_true.
             go_main->fill_data( ).
@@ -7453,25 +7522,37 @@ CLASS lcl_popup_aggr_setup IMPLEMENTATION .
         lo_column->set_cell_type( if_salv_c_cell_type=>hotspot ).
         lo_column->set_icon( if_salv_c_bool_sap=>true ).
         lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TXS' ]-text OPTIONAL ) ).
-        lo_column->set_output_length( 12 ).
+        lo_column->set_output_length( 10 ).
 
         lo_column ?= lo_cols->get_column( 'CPER' ).
         lo_column->set_cell_type( if_salv_c_cell_type=>hotspot ).
         lo_column->set_icon( if_salv_c_bool_sap=>true ).
         lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TW0' ]-text OPTIONAL ) ).
-        lo_column->set_output_length( 12 ).
+        lo_column->set_output_length( 10 ).
 
         lo_column ?= lo_cols->get_column( 'CAVG' ).
         lo_column->set_cell_type( if_salv_c_cell_type=>hotspot ).
         lo_column->set_icon( if_salv_c_bool_sap=>true ).
         lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TW2' ]-text OPTIONAL ) ).
-        lo_column->set_output_length( 12 ).
+        lo_column->set_output_length( 10 ).
 
         lo_column ?= lo_cols->get_column( 'CWGA' ).
         lo_column->set_cell_type( if_salv_c_cell_type=>hotspot ).
         lo_column->set_icon( if_salv_c_bool_sap=>true ).
         lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TW5' ]-text OPTIONAL ) ).
-        lo_column->set_output_length( 12 ).
+        lo_column->set_output_length( 10 ).
+
+        lo_column ?= lo_cols->get_column( 'CMAX' ).
+        lo_column->set_cell_type( if_salv_c_cell_type=>hotspot ).
+        lo_column->set_icon( if_salv_c_bool_sap=>true ).
+        lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TW6' ]-text OPTIONAL ) ).
+        lo_column->set_output_length( 10 ).
+
+        lo_column ?= lo_cols->get_column( 'CMIN' ).
+        lo_column->set_cell_type( if_salv_c_cell_type=>hotspot ).
+        lo_column->set_icon( if_salv_c_bool_sap=>true ).
+        lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TW7' ]-text OPTIONAL ) ).
+        lo_column->set_output_length( 10 ).
       CATCH cx_salv_not_found.
     ENDTRY.
 
@@ -7496,13 +7577,14 @@ CLASS lcl_popup_aggr_setup IMPLEMENTATION .
                                       report   = 'SAPLKKBL' ).
 
     ob_salv_table->set_screen_popup(
-      start_column = 90
-      end_column   = 170
-      start_line   = 1
-      end_line     = 27 ).
+      start_column = start_column
+      end_column   = end_column
+      start_line   = start_line
+      end_line     = end_line ).
 
-*   Displaying the ALV
-*   Here we will call the DISPLAY method to get the output on the screen
+    DATA(ob_salv_settings) = ob_salv_table->get_display_settings( ).
+    ob_salv_settings->set_list_header( CONV #( pop_header )  ).
+
     ob_salv_table->display( ).
 
   ENDMETHOD.
@@ -7513,24 +7595,32 @@ CLASS lcl_popup_aggr_setup IMPLEMENTATION .
     READ TABLE t_aggregation_fields ASSIGNING FIELD-SYMBOL(<lfa_data>) INDEX row.
     CHECK sy-subrc IS INITIAL.
 
-    <lfa_data>-ctot = ICON_WD_RADIO_BUTTON_EMPTY. "' '.
-    <lfa_data>-cper = ICON_WD_RADIO_BUTTON_EMPTY. "' '.
-    <lfa_data>-cavg = ICON_WD_RADIO_BUTTON_EMPTY. "' '.
-    <lfa_data>-cwga = ICON_WD_RADIO_BUTTON_EMPTY. "' '.
+    <lfa_data>-ctot = ICON_WD_RADIO_BUTTON_EMPTY.
+    <lfa_data>-cper = ICON_WD_RADIO_BUTTON_EMPTY.
+    <lfa_data>-cavg = ICON_WD_RADIO_BUTTON_EMPTY.
+    <lfa_data>-cwga = ICON_WD_RADIO_BUTTON_EMPTY.
+    <lfa_data>-cmax = ICON_WD_RADIO_BUTTON_EMPTY.
+    <lfa_data>-cmin = ICON_WD_RADIO_BUTTON_EMPTY.
 
     CASE column.
       WHEN 'CTOT'.
        <lfa_data>-type = 'T'.
-       <lfa_data>-ctot = ICON_RADIOBUTTON. "'X'.
+       <lfa_data>-ctot = ICON_RADIOBUTTON.
       WHEN 'CPER'.
        <lfa_data>-type = 'P'.
-       <lfa_data>-cper = ICON_RADIOBUTTON. "'X'.
+       <lfa_data>-cper = ICON_RADIOBUTTON.
       WHEN 'CAVG'.
        <lfa_data>-type = 'A'.
-       <lfa_data>-cavg = ICON_RADIOBUTTON. "'X'.
+       <lfa_data>-cavg = ICON_RADIOBUTTON.
       WHEN 'CWGA'.
        <lfa_data>-type = 'W'.
-       <lfa_data>-cwga = ICON_RADIOBUTTON. "'X'.
+       <lfa_data>-cwga = ICON_RADIOBUTTON.
+      WHEN 'CMAX'.
+       <lfa_data>-type = 'M'.
+       <lfa_data>-cmax = ICON_RADIOBUTTON.
+      WHEN 'CMIN'.
+       <lfa_data>-type = 'L'.
+       <lfa_data>-cmin = ICON_RADIOBUTTON.
     ENDCASE.
 
     ob_salv_table->refresh( ).
@@ -8385,6 +8475,12 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'L33' text = 'Muhatap' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L34' text = 'Lokasyon' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L41' text = 'Malzeme' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M01' text = 'SipT' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M02' text = 'TslT' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M03' text = 'FatT' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M04' text = 'FytT' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M05' text = 'DnkT' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M06' text = 'GunT' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L42' text = 'Malzeme Grubu' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCD' text = 'Yaratma tarihi' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCR' text = 'Yaratan' ) TO gt_textlist.
@@ -8504,7 +8600,12 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'TW3' text = 'Genel Ortalama' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TW4' text = 'Ağ.Ort.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TW5' text = 'Ağ.Ortalama' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TW6' text = 'Genel Ağ. Ortalama' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW6' text = 'Maksimum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW7' text = 'Minimum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW8' text = 'Max.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW9' text = 'Min.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TWS' text = 'Genel Ağ. Ort.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TWT' text = 'Genel Ağ. Ortalama' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXA' text = 'Seçilebilecek alanlar' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXB' text = 'Seçilen alanlar' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXC' text = 'Alan adı' ) TO gt_textlist.
@@ -8515,13 +8616,16 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'TXS' text = 'Toplam' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXT' text = 'Genel Toplam' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXU' text = 'Kullanıcılar' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TXZ' text = 'Metin Fonksiyonları' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXY' text = 'Küme seçenekleri' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXZ' text = 'Metin fonksiyonları' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ0' text = 'SATIS' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ1' text = 'ORTALAMA' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ2' text = 'GENELORTALAMA' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ3' text = 'AGORTALAMA' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ4' text = 'GENELAGIRLIKLIORTALAMA' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZC' text = 'GUNKUR' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TZM' text = 'MAX' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TZL' text = 'MIN' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZP' text = 'YUZDE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZS' text = 'TOPLAM' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZT' text = 'GENELTOPLAM' ) TO gt_textlist.
@@ -8696,6 +8800,12 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'L34' text = 'Location' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L41' text = 'Material' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L42' text = 'Material Group' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M01' text = 'OrdD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M02' text = 'DlvD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M03' text = 'BilD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M04' text = 'PrcD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M05' text = 'ClrD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M06' text = 'CurD' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCD' text = 'Creation Date' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCR' text = 'Created By' ) TO gt_textlist.
   APPEND VALUE #( sym = 'P01' text = '01-JANUARY' ) TO gt_textlist.
@@ -8814,7 +8924,12 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TW3' text = 'Overall average' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TW4' text = 'Wgt.Avg.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TW5' text = 'Wgt.Average' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TW6' text = 'Overall Wgt. Average' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW6' text = 'Maximum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW7' text = 'Minimum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW8' text = 'Max.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW9' text = 'Min.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TWS' text = 'Overall Wgt. Avg.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TWT' text = 'Overall Wgt. Average' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXA' text = 'Field List' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXB' text = 'Selected Fields' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXC' text = 'Field Name' ) TO gt_textlist.
@@ -8825,6 +8940,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TXS' text = 'Total' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXT' text = 'Grand Total' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXU' text = 'Users' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXY' text = 'Aggregation Settings' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXZ' text = 'Text Functions' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ0' text = 'SALES' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ1' text = 'AVERAGE' ) TO gt_textlist.
@@ -8832,6 +8948,8 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TZ3' text = 'WEIGHTEDAVERAGE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ4' text = 'OVERALLWEIGHTEDAVERAGE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZC' text = 'CURRATE' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TZM' text = 'MAX' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TZL' text = 'MIN' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZP' text = 'PERCENTAGE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZS' text = 'TOTAL' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZT' text = 'GRANDTOTAL' ) TO gt_textlist.
@@ -9006,6 +9124,12 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'L34' text = 'Standort' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L41' text = 'Material' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L42' text = 'Materialgruppe' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M01' text = 'OrdD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M02' text = 'LfrD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M03' text = 'FktD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M04' text = 'PrsD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M05' text = 'AglD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M06' text = 'AktD' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCD' text = 'Erstellungdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCR' text = 'Ersteller' ) TO gt_textlist.
   APPEND VALUE #( sym = 'P01' text = '01-JANUAR' ) TO gt_textlist.
@@ -9124,7 +9248,12 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TW3' text = 'Gesamtdurchschnitt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TW4' text = 'Gew.Durchschn.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TW5' text = 'Gew.Durchschnitt' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TW6' text = 'Gesamtewichtetedurchschnitt' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW6' text = 'Maximum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW7' text = 'Minimum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW8' text = 'Max.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TW9' text = 'Min.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TWS' text = 'Ges.Gew.Durchschn.' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TWT' text = 'Gesamtewichtetedurchschnitt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXA' text = 'Auswählbare Felder' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXB' text = 'Ausgewählte Felder' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXC' text = 'Feldname' ) TO gt_textlist.
@@ -9135,6 +9264,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TXS' text = 'Gesamt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXT' text = 'Gesamttotal' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXU' text = 'Benutzer' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXY' text = 'Aggregationseinstellungen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXZ' text = 'Text Funktionen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ0' text = 'VERKAUFE' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ1' text = 'DURCHSCHNITT' ) TO gt_textlist.
@@ -9142,6 +9272,8 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TZ3' text = 'GEWDURCHSCHNITT' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZ4' text = 'GESAMTGEWICHTETEDURCHSCHNITT' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZC' text = 'TAGESKURS' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TZM' text = 'MAX' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TZL' text = 'MIN' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZP' text = 'PROZENTSATZ' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZS' text = 'GESAMT' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TZT' text = 'GESAMTSUMME' ) TO gt_textlist.
