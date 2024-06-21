@@ -901,7 +901,7 @@ INITIALIZATION.
   gv_max_filesize = 20971520. " 20 MB
   gv_iso_week = abap_false.
   gv_change_locale = abap_true.
-  gv_clgui_enabled = abap_true.  " before setting true activate screens, status and title by double-clicking numbers
+  gv_clgui_enabled = abap_false.  " before setting true activate screens, status and title by double-clicking numbers
 
   but02 = icon_next_page.
   but04 = icon_information.
