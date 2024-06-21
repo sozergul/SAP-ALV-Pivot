@@ -2119,6 +2119,14 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
         WHEN 'P_GRP1' OR 'P_GRP2' OR 'P_GRP3' OR 'P_GRP4' OR 'P_GRP5' OR 'P_GRP6'.
           screen-input = 0.
+        WHEN 'P_WAHR'.
+          IF p_wahr IS NOT INITIAL AND p_cur1 EQ space.
+            p_cur1 = '01'.
+          ENDIF.
+        WHEN 'P_WAH2'.
+          IF p_wah2 IS NOT INITIAL AND p_cur2 EQ space.
+            p_cur2 = '03'.
+          ENDIF.
         WHEN 'P_CUR1'.
           IF p_wahr EQ space.
             p_cur1 = ' '.
@@ -2131,6 +2139,7 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
         WHEN 'P_YVAL'.
           IF gv_group_count < 2.
+            p_yval = ' '.
             screen-input = 0.
           ENDIF.
         WHEN 'P_ADDP'.
@@ -3756,7 +3765,6 @@ CLASS lcl_main IMPLEMENTATION.
     LOOP AT <gs_group_data> ASSIGNING <fs_g_data>.
 
       ASSIGN COMPONENT 'HIERA' OF STRUCTURE <fs_g_data> TO <x_value>.
-      <x_value> = 1.
 
       IF <x_value> EQ 0.
         sheet_max = 0.
@@ -4142,7 +4150,6 @@ CLASS lcl_main IMPLEMENTATION.
     LOOP AT <gs_group_data> ASSIGNING <fs_g_data>.
 
       ASSIGN COMPONENT 'HIERA' OF STRUCTURE <fs_g_data> TO <x_value>.
-      <x_value> = 1.
 
       IF <x_value> EQ 0.
         sheet_max = 0.
@@ -4396,9 +4403,10 @@ CLASS lcl_main IMPLEMENTATION.
               <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && ' (' && p_wahr && ')'.
             ELSE.
               <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
+              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
             ENDIF.
           ELSE.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && curdat_txt.
+            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && to_upper( curdat_txt ).
           ENDIF.
         ENDIF.
 
@@ -6705,18 +6713,45 @@ CLASS lcl_main IMPLEMENTATION.
 
     ELSE.
 
+   "  LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
+   "    APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING <ls_aggregation_fields>.
+   "    <ls_aggregation_fields>-fnam = <f_aggrs>-low.
+   "
+   "      offset = strlen( <f_aggrs>-low ) - 2.
+   "      IF <f_aggrs>-low+offset(2) EQ '_2'.
+   "        <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ) && ' (2)'.
+   "      ELSE.
+   "        <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ).
+   "      ENDIF.
+
+
       LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
         APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING <ls_aggregation_fields>.
         <ls_aggregation_fields>-fnam = <f_aggrs>-low.
+        <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ).
+        offset = strlen( <f_aggrs>-low ) - 2.
+        DATA(spgrp) = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-spgrp OPTIONAL ).
 
-          offset = strlen( <f_aggrs>-low ) - 2.
-          IF <f_aggrs>-low+offset(2) EQ '_2'.
-            <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ) && ' (2)'.
+        IF <f_aggrs>-low+offset(2) EQ '_2'.
+          IF p_wah2 IS NOT INITIAL AND ( spgrp EQ '7' OR spgrp EQ '8' ).
+            DATA(curdat_sym) = 'M' && p_cur2.
+            DATA(curdat_txt) = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
+            <ls_aggregation_fields>-text = <ls_aggregation_fields>-text && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
           ELSE.
-            <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ).
+            <ls_aggregation_fields>-text = <ls_aggregation_fields>-text && ' (2)'.
           ENDIF.
+        ELSE.
+          IF p_wahr IS NOT INITIAL AND ( spgrp EQ '7' OR spgrp EQ '8' ).
+            curdat_sym = 'M' && p_cur1.
+            curdat_txt = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
+            IF p_wahr EQ p_wah2 AND ( <ls_aggregation_fields>-fnam EQ 'EC_AMNT' OR <ls_aggregation_fields>-fnam EQ 'EC_TAMN' ).
+              <ls_aggregation_fields>-text = <ls_aggregation_fields>-text && ' (' && p_wahr && ')'.
+            ELSE.
+              <ls_aggregation_fields>-text = <ls_aggregation_fields>-text && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
+            ENDIF.
+          ENDIF.
+        ENDIF.
 
-      "  <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <ls_aggregation_fields>-fnam ]-textl OPTIONAL ).
         <ls_aggregation_fields>-type = <f_aggrs>-high.
         <ls_aggregation_fields>-ctot = ICON_WD_RADIO_BUTTON_EMPTY.
         <ls_aggregation_fields>-cper = ICON_WD_RADIO_BUTTON_EMPTY.
@@ -6791,42 +6826,46 @@ CLASS lcl_main IMPLEMENTATION.
     LOOP AT s_fnams ASSIGNING FIELD-SYMBOL(<f_fnams>).
 
       READ TABLE gt_groupable_fields ASSIGNING <ls_groupable_fields> WITH KEY fnam = <f_fnams>-low.
-      CHECK sy-subrc EQ 0.
-      APPEND <ls_groupable_fields> TO gt_selected_group_fields.
 
-      nr_pos = nr_pos + 1.
-
-      IF nr_pos < nr_count OR nr_count EQ 1 OR p_yval IS INITIAL.
-
-        APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
-        <ls_group_key_columns>-fnam = <f_fnams>-low.
-        <ls_group_key_columns>-grup = nr_pos.
-        <ls_group_key_columns>-ikey = 'X'.
-
-        grpx1 = VALUE #( gt_fieldlist[ fname = <ls_groupable_fields>-fnam ]-grpx1 OPTIONAL ).
-        IF grpx1 IS NOT INITIAL.
-          APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
-          <ls_group_key_columns>-fnam = grpx1.
-          <ls_group_key_columns>-grup = nr_pos.
-        ENDIF.
-
-        grpx2 = VALUE #( gt_fieldlist[ fname = <ls_groupable_fields>-fnam ]-grpx2 OPTIONAL ).
-        IF grpx2 IS NOT INITIAL.
-          APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
-          <ls_group_key_columns>-fnam = grpx2.
-          <ls_group_key_columns>-grup = nr_pos.
-        ENDIF.
-
-        grpx3 = VALUE #( gt_fieldlist[ fname = <ls_groupable_fields>-fnam ]-grpx3 OPTIONAL ).
-        IF grpx3 IS NOT INITIAL.
-          APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
-          <ls_group_key_columns>-fnam = grpx3.
-          <ls_group_key_columns>-grup = nr_pos.
-        ENDIF.
-
+      IF sy-subrc NE 0.
+        DELETE s_fnams.
       ELSE.
+        APPEND <ls_groupable_fields> TO gt_selected_group_fields.
+        nr_pos = nr_pos + 1.
 
-        gv_pivot_fieldname =  <f_fnams>-low.
+        IF nr_pos < nr_count OR nr_count EQ 1 OR p_yval IS INITIAL.
+
+          APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
+          <ls_group_key_columns>-fnam = <f_fnams>-low.
+          <ls_group_key_columns>-grup = nr_pos.
+          <ls_group_key_columns>-ikey = 'X'.
+
+          grpx1 = VALUE #( gt_fieldlist[ fname = <ls_groupable_fields>-fnam ]-grpx1 OPTIONAL ).
+          IF grpx1 IS NOT INITIAL.
+            APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
+            <ls_group_key_columns>-fnam = grpx1.
+            <ls_group_key_columns>-grup = nr_pos.
+          ENDIF.
+
+          grpx2 = VALUE #( gt_fieldlist[ fname = <ls_groupable_fields>-fnam ]-grpx2 OPTIONAL ).
+          IF grpx2 IS NOT INITIAL.
+            APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
+            <ls_group_key_columns>-fnam = grpx2.
+            <ls_group_key_columns>-grup = nr_pos.
+          ENDIF.
+
+          grpx3 = VALUE #( gt_fieldlist[ fname = <ls_groupable_fields>-fnam ]-grpx3 OPTIONAL ).
+          IF grpx3 IS NOT INITIAL.
+            APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
+            <ls_group_key_columns>-fnam = grpx3.
+            <ls_group_key_columns>-grup = nr_pos.
+          ENDIF.
+
+        ELSE.
+
+          gv_pivot_fieldname =  <f_fnams>-low.
+
+        ENDIF.
 
       ENDIF.
 
@@ -7128,15 +7167,22 @@ CLASS lcl_main IMPLEMENTATION.
 
     IF gv_detail_view = abap_false.
       IF s_fnams[] IS INITIAL.
+        CHECK gt_main_data IS NOT INITIAL.
         CREATE DATA new_line LIKE LINE OF gt_main_data.
         ASSIGN new_line->* TO <f_line>.
         READ TABLE gt_main_data INDEX iv_row INTO <f_line>.
       ELSE.
-       CREATE DATA new_line LIKE LINE OF <gs_group_data>.
-       ASSIGN new_line->* TO <f_line>.
-       READ TABLE <gs_group_data> INDEX iv_row INTO <f_line>.
+        IF <gs_group_data> IS ASSIGNED.
+          CHECK <gs_group_data> IS NOT INITIAL.
+          CREATE DATA new_line LIKE LINE OF <gs_group_data>.
+          ASSIGN new_line->* TO <f_line>.
+          READ TABLE <gs_group_data> INDEX iv_row INTO <f_line>.
+        ELSE.
+          RETURN.
+        ENDIF.
       ENDIF.
     ELSE.
+      CHECK gt_detail_data IS NOT INITIAL.
       CREATE DATA new_line LIKE LINE OF gt_detail_data.
       ASSIGN new_line->* TO <f_line>.
       READ TABLE gt_detail_data INDEX iv_row INTO <f_line>.
@@ -8475,12 +8521,12 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'L33' text = 'Muhatap' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L34' text = 'Lokasyon' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L41' text = 'Malzeme' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M01' text = 'SipT' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M02' text = 'TslT' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M03' text = 'FatT' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M04' text = 'FytT' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M05' text = 'DnkT' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M06' text = 'GunT' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M01' text = 'Sip' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M02' text = 'Tsl' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M03' text = 'Fat' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M04' text = 'Fyt' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M05' text = 'Dnk' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M06' text = 'Gun' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L42' text = 'Malzeme Grubu' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCD' text = 'Yaratma tarihi' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCR' text = 'Yaratan' ) TO gt_textlist.
@@ -8652,7 +8698,7 @@ FORM set_screen_tr.
   %_s_bldat_%_app_%-text = 'Mal çıkış tarihi'.
   %_s_bwtar_%_app_%-text = 'Değerleme türü'.
   %_s_charg_%_app_%-text = 'Parti'.
-  %_s_cntry_%_app_%-text = 'Gideceği ülke'.
+  %_s_cntry_%_app_%-text = 'Varış ülkesi'.
   %_s_edatu_%_app_%-text = 'Teslimat tarihi'.
   %_s_erdat_%_app_%-text = 'Yaratma tarihi'.
   %_s_ernam_%_app_%-text = 'Yaratan'.
@@ -8679,7 +8725,7 @@ FORM set_screen_tr.
   %_s_mvgr4_%_app_%-text = 'Malzeme grubu 4'.
   %_s_mvgr5_%_app_%-text = 'Malzeme grubu 5'.
   %_s_posnr_%_app_%-text = 'Kalem'.
-  %_s_regio_%_app_%-text = 'İl'.
+  %_s_regio_%_app_%-text = 'Varış ili'.
   %_s_spart_%_app_%-text = 'Bölüm'.
   %_s_vbeln_%_app_%-text = 'Satış belgesi'.
   %_s_vgtyp_%_app_%-text = 'Önceki belge tipi'.
@@ -8800,12 +8846,12 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'L34' text = 'Location' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L41' text = 'Material' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L42' text = 'Material Group' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M01' text = 'OrdD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M02' text = 'DlvD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M03' text = 'BilD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M04' text = 'PrcD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M05' text = 'ClrD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M06' text = 'CurD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M01' text = 'Ord' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M02' text = 'Dlv' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M03' text = 'Bil' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M04' text = 'Prc' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M05' text = 'Clr' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M06' text = 'Cur' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCD' text = 'Creation Date' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCR' text = 'Created By' ) TO gt_textlist.
   APPEND VALUE #( sym = 'P01' text = '01-JANUARY' ) TO gt_textlist.
@@ -9124,12 +9170,12 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'L34' text = 'Standort' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L41' text = 'Material' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L42' text = 'Materialgruppe' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M01' text = 'OrdD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M02' text = 'LfrD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M03' text = 'FktD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M04' text = 'PrsD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M05' text = 'AglD' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'M06' text = 'AktD' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M01' text = 'Ord' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M02' text = 'Lfr' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M03' text = 'Fkt' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M04' text = 'Prs' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M05' text = 'Aus' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'M06' text = 'Akt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCD' text = 'Erstellungdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'OCR' text = 'Ersteller' ) TO gt_textlist.
   APPEND VALUE #( sym = 'P01' text = '01-JANUAR' ) TO gt_textlist.
