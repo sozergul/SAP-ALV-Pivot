@@ -4239,9 +4239,10 @@ CLASS lcl_main IMPLEMENTATION.
       <fs_fcat>-no_sign = ' '.
       <fs_fcat>-no_out = ' '.
       <fs_fcat>-no_merging = p_ocds.
-      IF not <fs_fcat>-inttype EQ 'P'.
+      <fs_fcat>-no_zero = ' '.
+      IF <fs_fcat>-inttype EQ 'N' OR <fs_fcat>-inttype EQ 'D' OR <fs_fcat>-inttype EQ 'T' .
         <fs_fcat>-no_zero = 'X'.
-      ELSE.
+      ELSEIF <fs_fcat>-inttype EQ 'P'.
         <fs_fcat>-no_zero = p_zero.
       ENDIF.
 
@@ -5751,13 +5752,6 @@ CLASS lcl_main IMPLEMENTATION.
             DATA(inttype)  = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-inttype  OPTIONAL ).
             DATA(decimals) = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-decimals OPTIONAL ).
 
-         "  IF p_yval IS INITIAL.
-         "    DATA(aggrtype) = VALUE #( s_aggrs[ low = <ls_col>-columnname ]-high OPTIONAL ).
-         "  ELSE.
-         "    DATA(colname) = VALUE #( gt_fieldlist[ slynr = p_yval ]-fname OPTIONAL ).
-         "    aggrtype = VALUE #( s_aggrs[ low = colname ]-high OPTIONAL ).
-         "  ENDIF.
-
             lo_column->set_short_text( ' ' ).
             lo_column->set_medium_text( ' ' ).
             lo_column->set_long_text( VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-scrtext_l OPTIONAL ) ).
@@ -6121,7 +6115,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       IF p_cdec IS INITIAL.
-        REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.##0"| .
+        REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.###"| .
         " Tutarları da değişken ondalık istersen aşağıdaki satırı aç
         " REPLACE ALL OCCURRENCES OF |numFmtId="4"| IN lv_xml WITH |numFmtId="0"| .
       ENDIF.
@@ -6713,18 +6707,6 @@ CLASS lcl_main IMPLEMENTATION.
 
     ELSE.
 
-   "  LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
-   "    APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING <ls_aggregation_fields>.
-   "    <ls_aggregation_fields>-fnam = <f_aggrs>-low.
-   "
-   "      offset = strlen( <f_aggrs>-low ) - 2.
-   "      IF <f_aggrs>-low+offset(2) EQ '_2'.
-   "        <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ) && ' (2)'.
-   "      ELSE.
-   "        <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ).
-   "      ENDIF.
-
-
       LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
         APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING <ls_aggregation_fields>.
         <ls_aggregation_fields>-fnam = <f_aggrs>-low.
@@ -6752,7 +6734,11 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
         ENDIF.
 
-        <ls_aggregation_fields>-type = <f_aggrs>-high.
+        IF <f_aggrs>-high IS INITIAL.
+          <ls_aggregation_fields>-type = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-cumty OPTIONAL ).
+        ELSE.
+          <ls_aggregation_fields>-type = <f_aggrs>-high.
+        ENDIF.
         <ls_aggregation_fields>-ctot = ICON_WD_RADIO_BUTTON_EMPTY.
         <ls_aggregation_fields>-cper = ICON_WD_RADIO_BUTTON_EMPTY.
         <ls_aggregation_fields>-cavg = ICON_WD_RADIO_BUTTON_EMPTY.
@@ -7482,7 +7468,6 @@ CLASS lcl_main IMPLEMENTATION.
               k_field = iv_column.
 
             ENDIF.
-
 
             IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
               lv_aggrtype = VALUE #( gt_aggregation_fields[ fnam = k_field ]-type OPTIONAL ).
