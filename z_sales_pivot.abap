@@ -325,7 +325,7 @@ DATA: desktop_path   TYPE string,
       display_name   TYPE string,
       preyear        TYPE string,
       preperiod      TYPE string,
-      yesterday      TYPE string.
+      yesterday      TYPE sy-datum.
 
 
 " Double click cell
@@ -895,9 +895,9 @@ INITIALIZATION.
 
   gv_initial_dir = 'Desktop'.
   gv_from_address = 'sapmail@company.com'.
-  gv_max_ycolumns = 53.
+  gv_max_ycolumns = 99.
   gv_max_ordernum = 500000.
-  gv_max_xlsheets = 92.
+  gv_max_xlsheets = 53.
   gv_max_filesize = 20971520. " 20 MB
   gv_iso_week = abap_false.
   gv_change_locale = abap_true.
@@ -4234,6 +4234,8 @@ CLASS lcl_main IMPLEMENTATION.
 
     LOOP AT rt_fcat ASSIGNING FIELD-SYMBOL(<fs_fcat>).
 
+      <fs_fcat>-qfieldname = ' '.
+      <fs_fcat>-cfieldname = ' '.
       <fs_fcat>-ref_field = ' '.
       <fs_fcat>-lowercase = ' '.
       <fs_fcat>-no_sign = ' '.
@@ -4336,7 +4338,8 @@ CLASS lcl_main IMPLEMENTATION.
       DATA(offset) = strlen( <fs_fcat>-fieldname ) - 2.
 
       IF s_fnams[] IS INITIAL.
-        IF <fs_fcat>-inttype EQ 'P'.
+
+        IF <fs_fcat>-datatype EQ 'QUAN' .
           " Miktar
           IF p_cdec = 'X'.
             <fs_fcat>-qfieldname = 'DUMBE'.
@@ -4344,14 +4347,16 @@ CLASS lcl_main IMPLEMENTATION.
           ELSEIF p_twoc EQ 'X' AND p_mein IS NOT INITIAL .
             <fs_fcat>-qfieldname = 'VRKME'.
           ELSE.
-            <fs_fcat>-qfieldname = 'VRKME_BLG'.
+            <fs_fcat>-qfieldname = 'CVRKM'.
           ENDIF.
+        ENDIF.
 
-          " Tutar
+        IF <fs_fcat>-datatype EQ 'CURR' .
+           " Tutar
            IF p_twoc EQ 'X' AND p_wahr IS NOT INITIAL.
              <fs_fcat>-cfieldname = 'WAERK'.
            ELSE.
-             <fs_fcat>-cfieldname = 'WAERK_BLG'.
+             <fs_fcat>-cfieldname = 'CWAER'.
            ENDIF.
 
            IF <fs_fcat>-fieldname+offset(2) EQ '_2'.
@@ -4359,56 +4364,61 @@ CLASS lcl_main IMPLEMENTATION.
                IF p_twoc EQ 'X' .
                  <fs_fcat>-cfieldname = 'WAERK_2'.
                ELSE.
-                 <fs_fcat>-cfieldname = 'WAERK_BLG'.
+                 <fs_fcat>-cfieldname = 'CWAERK'.
                ENDIF.
              ENDIF.
            ENDIF.
         ENDIF.
+
       ENDIF.
 
       " Sayı
-      IF <fs_fcat>-fieldname EQ 'COUNT'.
-        <fs_fcat>-qfieldname = ' '.
-        <fs_fcat>-cfieldname = ' '.
+      IF <fs_fcat>-datatype EQ 'DEC' OR <fs_fcat>-fieldname EQ 'COUNT'.
         <fs_fcat>-decimals_o = '0'.
       ENDIF.
 
       " Tutar kur bilgisi kolon başlığına ekle
-      IF <fs_fcat>-fieldname+offset(2) EQ '_2'.
-        IF p_wah2 IS NOT INITIAL AND <fs_fcat>-datatype EQ 'CURR'.
-          DATA(curdat_sym) = 'M' && p_cur2.
-          DATA(curdat_txt) = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
+      IF <fs_fcat>-datatype EQ 'CURR'.
 
-          IF p_tech IS INITIAL.
-            <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
-          ELSE.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && p_wah2 && to_upper( curdat_txt ).
-          ENDIF.
-        ELSE.
-          <fs_fcat>-tech = 'X'.
-        ENDIF.
-      ELSE.
+        IF <fs_fcat>-fieldname+offset(2) EQ '_2'.
 
-        IF p_wahr IS NOT INITIAL AND <fs_fcat>-datatype EQ 'CURR'.
-          curdat_sym = 'M' && p_cur1.
-          IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' .
-            curdat_txt = VALUE #( gt_textlist[ sym = 'M06' ]-text OPTIONAL ).
-          ELSE.
-            curdat_txt = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
-          ENDIF.
+          IF p_wah2 IS NOT INITIAL.
+            DATA(curdat_sym) = 'M' && p_cur2.
+            DATA(curdat_txt) = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
 
-          IF p_tech IS INITIAL.
-            IF <fs_fcat>-fieldname EQ 'EC_AMNT' OR <fs_fcat>-fieldname EQ 'EC_TAMN' .
-              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s  && ' (' && p_wahr && ')'.
-              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && ' (' && p_wahr && ')'.
+            IF p_tech IS INITIAL.
+              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
+              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wah2 && ' ¤' && curdat_txt && ')'.
             ELSE.
-              <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
-              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
+              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && p_wah2 && to_upper( curdat_txt ).
             ENDIF.
           ELSE.
-            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && to_upper( curdat_txt ).
+            <fs_fcat>-tech = 'X'.
           ENDIF.
+
+        ELSE.
+
+          IF p_wahr IS NOT INITIAL.
+            curdat_sym = 'M' && p_cur1.
+            IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' .
+              curdat_txt = VALUE #( gt_textlist[ sym = 'M06' ]-text OPTIONAL ).
+            ELSE.
+              curdat_txt = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
+            ENDIF.
+
+            IF p_tech IS INITIAL.
+              IF <fs_fcat>-fieldname EQ 'EC_AMNT' OR <fs_fcat>-fieldname EQ 'EC_TAMN' .
+                <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s  && ' (' && p_wahr && ')'.
+                <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && ' (' && p_wahr && ')'.
+              ELSE.
+                <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
+                <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (' && p_wahr && ' ¤' && curdat_txt && ')'.
+              ENDIF.
+            ELSE.
+              <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && p_wahr && to_upper( curdat_txt ).
+            ENDIF.
+          ENDIF.
+
         ENDIF.
 
       ENDIF.
@@ -4531,6 +4541,10 @@ CLASS lcl_main IMPLEMENTATION.
 
         IF <fs_fcat>-datatype EQ 'CURR' .
           <fs_fcat>-cfieldname = ' '.
+        ENDIF.
+
+        IF <fs_fcat>-datatype EQ 'DEC' AND ( lv_aggrtype EQ 'P' OR lv_aggrtype EQ 'A' OR lv_aggrtype EQ 'W' ) .
+          <fs_fcat>-decimals_o = '2'.
         ENDIF.
 
       ENDLOOP.
@@ -4998,7 +5012,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
     ENDIF.
 
-    yesterday =  sy-datum - 1.
+    yesterday = sy-datum - 1 .
 
     " mail ve excel hesaplanan değerler için kullanıcı bilgisi
     SELECT name_text, smtp_addr
@@ -6369,6 +6383,7 @@ CLASS lcl_main IMPLEMENTATION.
               "Send Email
               DATA(lv_sent_to_all) = lo_send_request->send( ).
               COMMIT WORK.
+              MESSAGE VALUE #( gt_textlist[ sym = 'A08' ]-text OPTIONAL ) TYPE 'S'.
             ENDIF.
 
           CATCH cx_send_req_bcs INTO DATA(lx_req_bsc).
@@ -7175,6 +7190,39 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
 
+    ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vkorg>).
+    ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vtweg>).
+    ASSIGN COMPONENT 'SPART' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<spart>).
+    ASSIGN COMPONENT 'VBELK' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vbelk>).
+    ASSIGN COMPONENT 'VBELN' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vbeln>).
+    ASSIGN COMPONENT 'POSNR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<posnr>).
+    ASSIGN COMPONENT 'VGTYP' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vgtyp>).
+    ASSIGN COMPONENT 'VGBEL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vgbel>).
+    ASSIGN COMPONENT 'VGPOS' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vgpos>).
+    ASSIGN COMPONENT 'EBELN' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<ebeln>).
+    ASSIGN COMPONENT 'MBLNR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<mblnr>).
+    ASSIGN COMPONENT 'BELNR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<belnr>).
+    ASSIGN COMPONENT 'BUKRS' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<bukrs>).
+    ASSIGN COMPONENT 'GJAHR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<gjahr>).
+    ASSIGN COMPONENT 'AUGBL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<augbl>).
+    ASSIGN COMPONENT 'MATNR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<matnr>).
+    ASSIGN COMPONENT 'LFBEL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<lfbel>).
+    ASSIGN COMPONENT 'FKBEL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<fkbel>).
+
+
+    CASE iv_column.
+      WHEN 'KUNFT' OR 'KUNFT_X'.
+        ASSIGN COMPONENT 'KUNFT' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<kunnr>).
+      WHEN 'KUNMT' OR 'KUNMT_X'.
+        ASSIGN COMPONENT 'KUNMT' OF STRUCTURE <f_line> TO <kunnr>.
+      WHEN 'KUNFS' OR 'KUNFS_X'.
+        ASSIGN COMPONENT 'KUNFS' OF STRUCTURE <f_line> TO <kunnr>.
+      WHEN OTHERS.
+        ASSIGN COMPONENT 'KUNNR' OF STRUCTURE <f_line> TO <kunnr>.
+    ENDCASE.
+
+
+
     " ***********************************
     " SALV Popup Select
     TYPES: BEGIN OF cs_data,
@@ -7187,8 +7235,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       WHEN 'VBELN'.
 
-        ASSIGN COMPONENT 'VBELN' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <vbeln> IS NOT INITIAL.
 
         DATA: lo_popup  TYPE REF TO cl_salv_table,
               lo_events TYPE REF TO cl_salv_events_table.
@@ -7204,109 +7251,55 @@ CLASS lcl_main IMPLEMENTATION.
 
         CASE gv_clicked_row.
           WHEN 1.
-            SET PARAMETER ID 'AUN' FIELD <f_field>.
+            SET PARAMETER ID 'AUN' FIELD <vbeln>.
             CALL TRANSACTION 'VA03' WITH AUTHORITY-CHECK AND
                                     SKIP FIRST SCREEN.
           WHEN 2.
-            k_field = <f_field>.
-            SET PARAMETER ID 'VBELN' FIELD k_field.
+            SET PARAMETER ID 'VBELN' FIELD <vbeln>.
             SUBMIT (sy-repid) AND RETURN.
           WHEN 3.
-            k_field = <f_field>.
-            r_field = 'T'.
-            SET PARAMETER ID 'VBELN' FIELD k_field.
-            SET PARAMETER ID 'TTYPE' FIELD r_field.
+            SET PARAMETER ID 'VBELN' FIELD <vbeln>.
+            SET PARAMETER ID 'TTYPE' FIELD 'T'.
             SUBMIT (sy-repid) AND RETURN.
         ENDCASE.
 
       WHEN 'MATNR' OR 'MAKTX'.
 
-        ASSIGN COMPONENT 'MATNR' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <matnr> IS NOT INITIAL.
 
-        SET PARAMETER ID 'MAT' FIELD <f_field>.
-        ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VKO' FIELD <f_field>.
-        ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VTW' FIELD <f_field>.
+        SET PARAMETER ID 'MAT' FIELD <matnr>.
+        IF <vkorg> IS ASSIGNED AND <vtweg> IS ASSIGNED.
+          SET PARAMETER ID 'VKO' FIELD <vkorg>.
+          SET PARAMETER ID 'VTW' FIELD <vtweg>.
+        ENDIF.
         SET PARAMETER ID 'MXX' FIELD 'V' .
         CALL TRANSACTION 'MM03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN .
 
-      WHEN 'KUNNR' OR 'KUNNR_X'.
+      WHEN 'KUNNR' OR 'KUNNR_X' OR 'KUNRE' OR 'KUNRE_X' OR 'KUNRG' OR 'KUNRG_X' OR 'KUNWE'  OR 'KUNWE_X'.
 
-        ASSIGN COMPONENT 'KUNNR' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <kunnr> IS NOT INITIAL.
 
-        SET PARAMETER ID 'KUN' FIELD <f_field>.
-        ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VKO' FIELD <f_field>.
-        ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VTW' FIELD <f_field>.
-        ASSIGN COMPONENT 'SPART' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'SPA' FIELD <f_field>.
-        CALL TRANSACTION 'XD03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN .
-
-      WHEN 'KUNRE' OR 'KUNRE_X'.
-
-        ASSIGN COMPONENT 'KUNRE' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
-
-        SET PARAMETER ID 'KUN' FIELD <f_field>.
-        ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VKO' FIELD <f_field>.
-        ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VTW' FIELD <f_field>.
-        ASSIGN COMPONENT 'SPART' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'SPA' FIELD <f_field>.
-        CALL TRANSACTION 'XD03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN .
-
-      WHEN 'KUNRG' OR 'KUNRG_X'.
-
-        ASSIGN COMPONENT 'KUNRG' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
-
-        SET PARAMETER ID 'KUN' FIELD <f_field>.
-        ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VKO' FIELD <f_field>.
-        ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VTW' FIELD <f_field>.
-        ASSIGN COMPONENT 'SPART' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'SPA' FIELD <f_field>.
-        CALL TRANSACTION 'XD03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN .
-
-      WHEN 'KUNWE'  OR 'KUNWE_X'.
-
-        ASSIGN COMPONENT 'KUNWE' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
-
-        SET PARAMETER ID 'KUN' FIELD <f_field>.
-        ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VKO' FIELD <f_field>.
-        ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'VTW' FIELD <f_field>.
-        ASSIGN COMPONENT 'SPART' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'SPA' FIELD <f_field>.
+        SET PARAMETER ID 'KUN' FIELD <kunnr>.
+        IF <vkorg> IS ASSIGNED AND <vtweg> IS ASSIGNED AND <spart> IS ASSIGNED.
+          SET PARAMETER ID 'VKO' FIELD <vkorg>.
+          SET PARAMETER ID 'VTW' FIELD <vtweg>.
+          SET PARAMETER ID 'SPA' FIELD <spart>.
+        ENDIF.
         CALL TRANSACTION 'XD03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN .
 
       WHEN 'POSNR'.
 
-        ASSIGN COMPONENT 'POSNR' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
-        r_field = <f_field>.
-        ASSIGN COMPONENT 'VBELN' OF STRUCTURE <f_line> TO <f_field>.
-        k_field = <f_field>.
+        CHECK <posnr> IS NOT INITIAL.
 
-        SET PARAMETER ID 'VBELN' FIELD k_field.
-        SET PARAMETER ID 'POSNR' FIELD r_field.
+        SET PARAMETER ID 'VBELN' FIELD <vbeln>.
+        SET PARAMETER ID 'POSNR' FIELD <posnr>.
         SUBMIT (sy-repid) AND RETURN.
 
       WHEN 'VBELK'.
 
-        ASSIGN COMPONENT 'VBELK' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <vbelk> IS NOT INITIAL.
 
-        k_field = <f_field>.
-        SET PARAMETER ID 'VBELK' FIELD k_field.
+        SET PARAMETER ID 'VBELK' FIELD <vbelk>.
         IF gv_detail_view EQ abap_true.
           SET PARAMETER ID 'KEEP_DETAIL' FIELD gv_detail_view.
           SET PARAMETER ID 'C_LAYD' FIELD p_layd.
@@ -7321,81 +7314,69 @@ CLASS lcl_main IMPLEMENTATION.
 
       WHEN 'VGBEL'.
 
-        ASSIGN COMPONENT 'VGBEL' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
-        ASSIGN COMPONENT 'VGPOS' OF STRUCTURE <f_line> TO <f_field2>.
-        ASSIGN COMPONENT 'VGTYP' OF STRUCTURE <f_line> TO <f_field3>.
+        CHECK <vgtyp> IS NOT INITIAL.
 
-        IF <f_field3> EQ 'M'.
+        IF <vgtyp> EQ 'M'.
           SELECT SINGLE *
              INTO @DATA(ls_aubel)
              FROM vbrp
-            WHERE vbeln EQ @<f_field>
-              AND posnr EQ @<f_field2>.
+            WHERE vbeln EQ @<vgbel>
+              AND posnr EQ @<vgpos>.
 
-          ASSIGN COMPONENT 'AUBEL' OF STRUCTURE <f_line> TO <f_field2>.
-          k_field = <f_field2>.
+          r_field = ls_aubel-aubel.
         ELSE.
-          ASSIGN COMPONENT 'VGBEL' OF STRUCTURE <f_line> TO <f_field>.
-          k_field = <f_field>.
+          r_field = <vgbel> .
         ENDIF.
-        SET PARAMETER ID 'AUN' FIELD k_field .
+
+        SET PARAMETER ID 'AUN' FIELD r_field .
         CALL TRANSACTION 'VA03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN.
 
       WHEN 'VGPOS'.
 
-        ASSIGN COMPONENT 'VGBEL' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
-        ASSIGN COMPONENT 'VGPOS' OF STRUCTURE <f_line> TO <f_field2>.
-        ASSIGN COMPONENT 'VGTYP' OF STRUCTURE <f_line> TO <f_field3>.
+        CHECK <vgtyp> IS NOT INITIAL.
 
-        IF <f_field3> EQ 'M'.
+        IF <vgtyp> EQ 'M'.
           SELECT SINGLE *
              INTO @DATA(ls_aubelp)
              FROM vbrp
-            WHERE vbeln EQ @<f_field>
-              AND posnr EQ @<f_field2>.
+            WHERE vbeln EQ @<vgbel>
+              AND posnr EQ @<vgpos>.
           r_field = ls_aubelp-aubel && '-' && ls_aubelp-aupos.
         ELSE.
-          r_field = <f_field> && '-' && <f_field2> .
+          r_field = <vgbel> && '-' && <vgpos> .
         ENDIF.
+
         SET PARAMETER ID 'VBELK' FIELD r_field.
         SUBMIT (sy-repid) AND RETURN.
 
       WHEN 'LFBEL'.
 
-        ASSIGN COMPONENT 'LFBEL' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <lfbel> IS NOT INITIAL.
 
-        SET PARAMETER ID 'VL' FIELD <f_field>.
+        SET PARAMETER ID 'VL' FIELD <lfbel>.
         CALL TRANSACTION 'VL03N' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN.
 
       WHEN 'FKBEL'.
 
-        ASSIGN COMPONENT 'FKBEL' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <fkbel> IS NOT INITIAL.
 
-        SET PARAMETER ID 'VF'  FIELD <f_field>.
+        SET PARAMETER ID 'VF'  FIELD <fkbel>.
         CALL TRANSACTION 'VF03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN.
 
       WHEN 'MBLNR'.
 
-        ASSIGN COMPONENT 'MBLNR' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <mblnr> IS NOT INITIAL.
 
-        SET PARAMETER ID 'MBN' FIELD <f_field>.
+        SET PARAMETER ID 'MBN' FIELD <mblnr>.
         CALL TRANSACTION 'MB51' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN.
 
       WHEN 'BELNR'.
 
-        ASSIGN COMPONENT 'BELNR' OF STRUCTURE <f_line> TO <f_field>.
-        CHECK <f_field> IS NOT INITIAL.
+        CHECK <belnr> IS NOT INITIAL.
 
-        SET PARAMETER ID 'BLN' FIELD <f_field>.
-        ASSIGN COMPONENT 'BUKRS' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'BUK' FIELD <f_field>.
-        ASSIGN COMPONENT 'GJAHR' OF STRUCTURE <f_line> TO <f_field>.
-        SET PARAMETER ID 'GJR' FIELD <f_field>.
+        SET PARAMETER ID 'BLN' FIELD <belnr>.
+        SET PARAMETER ID 'BUK' FIELD <bukrs>.
+        SET PARAMETER ID 'GJR' FIELD <gjahr>.
         CALL TRANSACTION 'FB03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN.
 
 
@@ -8110,7 +8091,7 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'ZTAGE'     techl = 'VADEGUNSAYISI'                texts = 'Vade Gün'             textl = 'Vade Gün Sayısı'               emphs = 'C100' shide = 'X' spgrp = 1 cumty = 'A' slynr = '21' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA'     techl = 'DURUMU'                       texts = 'Sipariş Drm.'         textl = 'Sipariş Durumu'                emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '63' grpx1 = 'GBSTA_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA_D'   techl = 'DURUMTANIMI'                  texts = 'Sipariş Drm. Tnm.'    textl = 'Sipariş Durumu Tanımı'         emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' ' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AUGRU'     techl = 'SIPARISNEDENI'                texts = 'Sipariş Nd.'          textl = 'Sipariş Nedeni'                emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AUGRU'     techl = 'SIPARISNEDENI'                texts = 'Sipariş Nd.'          textl = 'Sipariş Nedeni'                emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'AUGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUGRU_X'   techl = 'SIPARISNEDENITANIMI'          texts = 'Sipariş Nedeni Tnm.'  textl = 'Sipariş Nedeni Tanımı'         emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU'     techl = 'RETNEDENI'                    texts = 'Ret Nd.'              textl = 'Ret Nedeni'                    emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '65' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RETNEDENITANIMI'              texts = 'Ret Nedeni Tnm.'      textl = 'Ret Nedeni Tanımı'             emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
@@ -8280,7 +8261,7 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'ZTAGE'     techl = 'PAYMENTTERMSDAYCOUNT'           texts = 'Pay. Terms Day Cnt.'  textl = 'Payment Terms Day Count'       emphs = 'C100' shide = 'X' spgrp = 1 cumty = 'A' slynr = '21' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA'     techl = 'ORDERSTATUS'                    texts = 'Ord. Status'          textl = 'Order Status'                  emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '63' grpx1 = 'GBSTA_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA_D'   techl = 'ORDERSTATUSDEFINITION'          texts = 'Ord. Status Def.'     textl = 'Order Status Definition'       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' ' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AUGRU'     techl = 'ORDERREASON'                    texts = 'Order Reason'         textl = 'Order Reason'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AUGRU'     techl = 'ORDERREASON'                    texts = 'Order Reason'         textl = 'Order Reason'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'AUGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUGRU_X'   techl = 'ORDERREASONDEFINITION'          texts = 'Order Reason Def.'    textl = 'Order Reason Definition'       emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU'     techl = 'RETURNREASON'                   texts = 'Return Reason'        textl = 'Return Reason'                 emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '65' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RETURNREASONDEFINITION'         texts = 'Return Reason Def.'   textl = 'Return Reason Definition'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
@@ -8449,7 +8430,7 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'ZTAGE'     techl = 'ZAHLUNGSKONDITIONENTAGANZAHL'   texts = 'ZK-Tage'             textl = 'Zahlungskonditionen Taganzahl'  emphs = 'C100' shide = 'X' spgrp = 1 cumty = 'A' slynr = '21' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA'     techl = 'GESAMTSTATUS'                   texts = 'Gesamtstatus'        textl = 'Gesamtstatus'                   emphs = 'C500' shide = 'X' spgrp = 1 isgrp = '63' grpx1 = 'GBSTA_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'GBSTA_D'   techl = 'GESAMTSTATUSBEZEICHNUNG'        texts = 'Gesamtstatus Bez.'   textl = 'Gesamtstatus Bezeichnung'       emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' ' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AUGRU'     techl = 'AUFTRAGSGRUND'                  texts = 'Auftragsgrund'       textl = 'Auftragsgrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AUGRU'     techl = 'AUFTRAGSGRUND'                  texts = 'Auftragsgrund'       textl = 'Auftragsgrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '64' cumty = ' ' grpx1 = 'AUGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'AUGRU_X'   techl = 'AUFTRAGSGRUNDBEZEICHNUNG'       texts = 'Auftragsgrund Bez.'  textl = 'Auftragsgrund Bezeichnung'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU'     techl = 'RUCKGABEGRUND'                  texts = 'Rückgabegrund'       textl = 'Rückgabegrund'                  emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '65' cumty = ' ' grpx1 = 'ABGRU_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ABGRU_X'   techl = 'RUCKGABEGRUNDBEZEICHNUNG'       texts = 'Rückgabegrund Bez.'  textl = 'Rückgabegrund Bezeichnung'      emphs = 'C700' shide = 'X' spgrp = 1 isgrp = ' '  cumty = ' ' grpx1 = ' '  ) TO gt_fieldlist.
@@ -8470,6 +8451,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'A05' text = 'E-Posta adresi hatalı :' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A06' text = 'Lütfen ekli dosyayı inceleyiniz.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A07' text = 'Sistem dilini değiştirmek istiyor musunuz ?' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A08' text = 'E-posta gönderildi.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B01' text = 'Seçimleri sıfırla' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Dili Değiştir' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B03' text = 'Alan Seçimi' ) TO gt_textlist.
@@ -8794,6 +8776,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'A05' text = 'E-mail address is incorrect :' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A06' text = 'Please see attached file.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A07' text = 'Also change system locale language ?' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A08' text = 'E-mail has been sent.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B01' text = 'Clear Selection' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Change Language' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B03' text = 'Field Selection' ) TO gt_textlist.
@@ -9118,6 +9101,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'A05' text = 'Die E-Mail-Adresse ist falsch :' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A06' text = 'Anbei finden Sie die Datei zur E-Mail.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A07' text = 'Ändern Sie auch das lokal Sprache des Systems ? ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A08' text = 'Die Email wurde verschickt.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B01' text = 'Auswahl löschen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Sprache ändern' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B03' text = 'Feldselektion' ) TO gt_textlist.
