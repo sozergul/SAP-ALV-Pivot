@@ -287,6 +287,7 @@ DATA: gt_sheets      TYPE TABLE OF ty_sheets WITH EMPTY KEY.
 DATA(gv_detail_view) = abap_false.
 DATA(gv_mng_cnv_all) = abap_false.
 DATA(gv_amt_cnv_all) = abap_false.
+DATA gv_disable_bytrm TYPE bool.
 DATA gv_change_locale TYPE bool.
 DATA gv_clgui_enabled TYPE bool.
 DATA gv_iso_week      TYPE bool.
@@ -509,19 +510,19 @@ SELECTION-SCREEN BEGIN OF SCREEN 1500 AS SUBSCREEN.
   SELECTION-SCREEN BEGIN OF LINE.
     SELECTION-SCREEN COMMENT 1(33) pdd FOR FIELD p_layd.
     PARAMETERS: p_layd TYPE disvariant-variant  MODIF ID d1.
-    " SELECTION-SCREEN COMMENT 53(1) l_spx2 .
-    " PARAMETERS: p_tech AS CHECKBOX DEFAULT ' '  MODIF ID d1 .
-    " SELECTION-SCREEN COMMENT 74(32) ptc FOR FIELD p_tech.
-    PARAMETERS    : p_tech DEFAULT ' ' NO-DISPLAY.
+    SELECTION-SCREEN COMMENT 53(1) l_spx2 .
+    PARAMETERS: p_tech AS CHECKBOX DEFAULT ' '  MODIF ID d1 .
+    SELECTION-SCREEN COMMENT 74(32) ptc FOR FIELD p_tech.
+    "PARAMETERS    : p_tech DEFAULT ' ' NO-DISPLAY.
   SELECTION-SCREEN END OF LINE.
 
   SELECTION-SCREEN BEGIN OF LINE.
     SELECTION-SCREEN COMMENT 1(33) ptr FOR FIELD p_disp.
     PARAMETERS: p_disp AS LISTBOX VISIBLE LENGTH 12 DEFAULT '1' USER-COMMAND srt MODIF ID d1.
-    " SELECTION-SCREEN COMMENT 53(1) l_spx4 .
-    " PARAMETERS: p_cdlb AS CHECKBOX DEFAULT ' ' MODIF ID d1 .
-    " SELECTION-SCREEN COMMENT 74(30) pcl FOR FIELD p_cdlb.
-    PARAMETERS    : p_cdlb DEFAULT ' ' NO-DISPLAY.
+    SELECTION-SCREEN COMMENT 53(1) l_spx4 .
+    PARAMETERS: p_cdlb AS CHECKBOX DEFAULT ' ' MODIF ID d1 .
+    SELECTION-SCREEN COMMENT 74(30) pcl FOR FIELD p_cdlb.
+    "PARAMETERS    : p_cdlb DEFAULT ' ' NO-DISPLAY.
   SELECTION-SCREEN END   OF LINE .
 
 SELECTION-SCREEN END   OF SCREEN 1500.
@@ -750,58 +751,13 @@ DATA: d_per   TYPE string,
       v_posnr TYPE posnr.
 
 
-DATA : c_field TYPE tvakt-bezei.
-p_id = 'FLD_NAME'.
-GET PARAMETER ID p_id FIELD c_field.
-
 p_id = 'KEEP_DETAIL'.
 CLEAR v_param.
 GET PARAMETER ID p_id FIELD v_param.
 IF v_param IS NOT INITIAL.
   gv_detail_view = v_param    .
   SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_LAYD'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_layd = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_SORT'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_sort = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_ASDE'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_asde = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_COLR'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_colr = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_ZERO'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_zero = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_TWOC'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_twoc = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_OCDS'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_ocds = v_param.
-  SET PARAMETER ID p_id FIELD space.
-
-  p_id = 'C_CDEC'.
-  GET PARAMETER ID p_id FIELD v_param.
-  p_cdec = v_param.
-  SET PARAMETER ID p_id FIELD space.
 ENDIF.
-
 
 
 LOOP AT gt_fieldlist ASSIGNING FIELD-SYMBOL(<gs_fieldlist>).
@@ -880,6 +836,7 @@ LOOP AT gt_fieldlist ASSIGNING FIELD-SYMBOL(<gs_fieldlist>).
       WHEN 'VBELN' . APPEND VALUE #( sign = 'I' option = 'EQ' low = v_param ) TO s_vbeln        .
       WHEN 'POSNR' . APPEND VALUE #( sign = 'I' option = 'EQ' low = v_param ) TO s_posnr        .
       WHEN 'VGBEL' . APPEND VALUE #( sign = 'I' option = 'EQ' low = v_param ) TO s_vbeln        .
+      WHEN 'TTYPE' . p_term = v_param     .
       " ...
 
     ENDCASE.
@@ -902,6 +859,8 @@ INITIALIZATION.
   gv_iso_week = abap_false.
   gv_change_locale = abap_true.
   gv_clgui_enabled = abap_false.  " before setting true activate screens, status and title by double-clicking numbers
+
+  gv_disable_bytrm = abap_false.
 
   but02 = icon_next_page.
   but04 = icon_information.
@@ -1037,7 +996,10 @@ CLASS lcl_main DEFINITION.
       go_tree TYPE REF TO cl_salv_tree,
 
       go_grid TYPE REF TO cl_gui_alv_grid,
-      go_dock TYPE REF TO cl_gui_docking_container.
+      go_dock TYPE REF TO cl_gui_docking_container,
+
+      go_grid2 TYPE REF TO cl_gui_alv_grid,
+      go_dock2 TYPE REF TO cl_gui_docking_container.
 
     CLASS-METHODS :
       initialization,
@@ -1068,20 +1030,20 @@ CLASS lcl_main DEFINITION.
       create_salv_table,
       create_salv_tree,
       show_alv,
+      show_alv_detail,
       get_source_data,
       get_result_data,
       get_formatted_data RETURNING VALUE(rd_result) TYPE abap_bool,
       fill_data RETURNING VALUE(rd_result) TYPE abap_bool,
       convert_to_group RETURNING VALUE(rd_result) TYPE abap_bool,
       convert_to_pivot RETURNING VALUE(rd_result) TYPE abap_bool,
-
+      set_aggrs,
       fill_aggrs,
       fill_choices IMPORTING pv_only_fill TYPE abap_bool,
       fill_groups,
       get_variant_slc,
       get_variant_dsp IMPORTING pv_islem TYPE string
-                      CHANGING  pv_duzen TYPE any,
-      set_aggrs.
+                      CHANGING  pv_duzen TYPE any.
 
 ENDCLASS.
 
@@ -1210,7 +1172,11 @@ CLASS lcl_main IMPLEMENTATION.
       set_title( ).
 
       IF p_disp EQ '0' AND p_expo NE 'X' .
-        CALL SCREEN 0100.  "< == Just double click and activate the screen.
+        IF gv_detail_view = abap_false.
+          CALL SCREEN 0100.  "< == Just double click and activate the screen.
+        ELSE.
+          CALL SCREEN 0200.  "< == Just double click and activate the screen.
+        ENDIF.
       ELSE.
         IF p_disp EQ '3' AND p_expo IS INITIAL AND gv_detail_view = abap_false.
           create_salv_tree( ).
@@ -1399,7 +1365,6 @@ CLASS lcl_main IMPLEMENTATION.
 
       ENDIF.
 
-
     ENDLOOP.
 
   ENDMETHOD.
@@ -1443,7 +1408,6 @@ CLASS lcl_main IMPLEMENTATION.
     FIELD-SYMBOLS <node_curr> TYPE any.
     FIELD-SYMBOLS <node_next> TYPE any.
 
-
     LOOP AT gt_fcat ASSIGNING FIELD-SYMBOL(<fs_fcat>).
       IF   <fs_fcat>-fieldname EQ 'SCOL_TAB'
         OR <fs_fcat>-fieldname EQ 'COLOR'
@@ -1456,7 +1420,6 @@ CLASS lcl_main IMPLEMENTATION.
           DELETE gt_fcat WHERE fieldname EQ <fs_fcat>-fieldname.
       ENDIF.
     ENDLOOP.
-
 
     " ALV TREE için boş tablo
     DATA : gt_empty  TYPE REF TO data.
@@ -1761,6 +1724,90 @@ CLASS lcl_main IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD show_alv_detail.
+    DATA : ls_variant    TYPE disvariant,
+           lt_toolbar_ex TYPE ui_functions,
+           go_event      TYPE REF TO lcl_clgui_handler.
+
+    ls_variant-report = sy-repid.
+    ls_variant-variant = p_layd.
+
+    IF go_grid2 IS NOT BOUND.
+
+      IF go_dock2 IS NOT BOUND.
+
+        CREATE OBJECT go_dock2
+          EXPORTING
+            repid                       = sy-repid
+            dynnr                       = sy-dynnr
+            extension                   = 500
+            side                        = cl_gui_docking_container=>dock_at_top
+            parent                      = cl_gui_container=>default_screen
+          EXCEPTIONS
+            cntl_error                  = 1
+            cntl_system_error           = 2
+            create_error                = 3
+            lifetime_error              = 4
+            lifetime_dynpro_dynpro_link = 5
+            OTHERS                      = 6.
+      ENDIF.
+
+      CREATE OBJECT go_grid2
+        EXPORTING
+          i_parent = go_dock2.
+
+      CREATE OBJECT go_event .
+      SET HANDLER go_event->handle_toolbar FOR go_grid2.
+      SET HANDLER go_event->handle_user_command FOR go_grid2.
+      SET HANDLER go_event->on_double_click FOR go_grid2.
+
+      CALL METHOD go_grid2->set_table_for_first_display
+        EXPORTING
+          is_layout                     = VALUE #( zebra = 'X' sel_mode = 'A' info_fname = 'COLOR' ctab_fname = 'SCOL_TAB' )
+          it_special_groups             = VALUE #( ( sp_group = 10 text = VALUE #( gt_textlist[ sym = 'Y10' ]-text OPTIONAL ) )
+                                                   ( sp_group = 20 text = VALUE #( gt_textlist[ sym = 'Y20' ]-text OPTIONAL ) )
+                                                   ( sp_group = 30 text = VALUE #( gt_textlist[ sym = 'Y30' ]-text OPTIONAL ) )
+                                                   ( sp_group = 40 text = VALUE #( gt_textlist[ sym = 'Y40' ]-text OPTIONAL ) )
+                                                   ( sp_group = 50 text = VALUE #( gt_textlist[ sym = 'Y50' ]-text OPTIONAL ) )
+                                                   ( sp_group = 60 text = VALUE #( gt_textlist[ sym = 'Y60' ]-text OPTIONAL ) )
+                                                   ( sp_group = 70 text = VALUE #( gt_textlist[ sym = 'Y70' ]-text OPTIONAL ) )
+                                                   ( sp_group = 80 text = VALUE #( gt_textlist[ sym = 'Y80' ]-text OPTIONAL ) )
+                                                   ( sp_group = 90 text = VALUE #( gt_textlist[ sym = 'Y90' ]-text OPTIONAL ) )
+                                                   ( sp_group = 95 text = VALUE #( gt_textlist[ sym = 'Y95' ]-text OPTIONAL ) )
+                                                   ( sp_group = 97 text = VALUE #( gt_textlist[ sym = 'Y97' ]-text OPTIONAL ) )
+                                                 )
+          is_variant                    = ls_variant
+          i_save                        = 'A'
+          i_default                     = 'X'
+        CHANGING
+          it_fieldcatalog               = gt_fcat
+          it_outtab                     = <gs_itab>
+        EXCEPTIONS
+          invalid_parameter_combination = 1
+          program_error                 = 2
+          too_many_lines                = 3
+          OTHERS                        = 4.
+
+      go_grid2->register_edit_event( cl_gui_alv_grid=>mc_evt_modified ).
+      go_grid2->register_edit_event( cl_gui_alv_grid=>mc_evt_enter ).
+
+    ELSE.
+
+      CALL METHOD go_grid2->set_frontend_layout
+        EXPORTING
+          is_layout = VALUE #( zebra = 'X' sel_mode = 'A' info_fname = 'COLOR' ctab_fname = 'SCOL_TAB' ).
+
+      CALL METHOD go_grid2->refresh_table_display(
+          is_stable      = VALUE lvc_s_stbl( col = 'X' row = 'X' )
+          i_soft_refresh = 'X' ).
+
+    ENDIF.
+
+    CALL METHOD go_grid2->set_toolbar_interactive.
+
+  ENDMETHOD.
+
+
   METHOD ret_group_level.
     IF iv_level IS NOT INITIAL.
       ASSIGN COMPONENT iv_level OF STRUCTURE i_ls_value TO FIELD-SYMBOL(<part>).
@@ -1901,7 +1948,6 @@ CLASS lcl_main IMPLEMENTATION.
         fill_groups( ).
 
         MODIFY SCREEN.
-
 
       WHEN 'UC03'.
         CHECK sy-dynnr = 1000.
@@ -2158,7 +2204,7 @@ CLASS lcl_main IMPLEMENTATION.
             screen-input = 0.
           ENDIF.
         WHEN 'P_TWOC'.
-          IF p_mein IS INITIAL OR p_wahr IS INITIAL.
+          IF p_mein IS INITIAL AND p_wahr IS INITIAL.
             p_twoc = ' '.
             screen-input = 0.
           ENDIF.
@@ -2231,7 +2277,7 @@ CLASS lcl_main IMPLEMENTATION.
                        OR 'S_FSTAT-LOW' OR 'S_FSTAT-HIGH'
                        OR 'S_BWTAR-LOW' OR 'S_BWTAR-HIGH'
                        OR 'S_CHARG-LOW' OR 'S_CHARG-HIGH'.
-          IF p_term EQ 'S'.
+          IF p_term EQ 'S' AND gv_disable_bytrm EQ abap_true.
             CLEAR:   s_edatu, s_bldat, s_fkdat, s_wbsta, s_fstat, s_lfbel, s_fkbel, s_mblnr, s_belnr, s_augbl, s_bwtar, s_charg.
             REFRESH: s_edatu, s_bldat, s_fkdat, s_wbsta, s_fstat, s_lfbel, s_fkbel, s_mblnr, s_belnr, s_augbl, s_bwtar, s_charg.
             p_blin = ' '.
@@ -2282,21 +2328,20 @@ CLASS lcl_main IMPLEMENTATION.
       inv_selected = abap_true.
     ENDIF.
 
+    IF ( dlv_selected = abap_true OR inv_selected = abap_true ) ."AND
 
-    IF ( dlv_selected = abap_true OR inv_selected = abap_true ) AND
+     "  s_wbsta-high IS INITIAL AND
+     "  s_edatu-high IS INITIAL AND
+     "  s_bldat-high IS INITIAL AND
+     "  s_lfbel-high IS INITIAL AND
+     "  s_mblnr-high IS INITIAL AND
+     "  s_fkdat-high IS INITIAL AND
+     "  s_fstat-high IS INITIAL AND
+     "  s_fkbel-high IS INITIAL AND
+     "  s_belnr-high IS INITIAL AND
+     "  s_augbl-high IS INITIAL .
 
-        s_wbsta-high IS INITIAL AND
-        s_edatu-high IS INITIAL AND
-        s_bldat-high IS INITIAL AND
-        s_lfbel-high IS INITIAL AND
-        s_mblnr-high IS INITIAL AND
-        s_fkdat-high IS INITIAL AND
-        s_fstat-high IS INITIAL AND
-        s_fkbel-high IS INITIAL AND
-        s_belnr-high IS INITIAL AND
-        s_augbl-high IS INITIAL .
-
-      lv_t_filter = | sk~vbeln IN ( SELECT DISTINCT sk~vbeln|.
+      lv_t_filter = | concat( sk~vbeln, sk~posnr ) IN ( SELECT DISTINCT concat( sk~vbeln, sk~posnr )|.
       lv_t_filter = lv_t_filter && | FROM vbap as sk|.
       lv_t_filter = lv_t_filter && | INNER JOIN vbak  AS sb|.
       lv_t_filter = lv_t_filter && | ON sb~vbeln  EQ sk~vbeln|.
@@ -2716,7 +2761,7 @@ CLASS lcl_main IMPLEMENTATION.
       FROM @lb_data AS sk
 
       WHERE ( ( sk~lf_quan LT sk~vp_quan AND sk~fkarv IS NOT INITIAL AND @dlv_selected EQ @abap_false AND @inv_selected EQ @abap_false )   " Teslimat ilişkili
-           OR ( sk~fk_quan LT sk~vp_quan AND sk~fkarv IS INITIAL AND @inv_selected EQ @abap_false ) )                                       " Fatura ilişkili
+           OR ( sk~fk_quan LT sk~vp_quan AND sk~fkarv IS INITIAL AND @inv_selected EQ @abap_false ) )                                      " Fatura ilişkili
 
           APPENDING CORRESPONDING FIELDS OF TABLE @gt_base_data.
 
@@ -2747,13 +2792,13 @@ CLASS lcl_main IMPLEMENTATION.
              CASE WHEN fk_quan GT vp_quan THEN fk_quan ELSE vp_quan END - fk_quan AS fk_bqua,
              CASE WHEN sk~fkarv IS INITIAL THEN ( CASE WHEN fk_quan GT vp_quan THEN fk_quan ELSE vp_quan END ) - fk_quan ELSE lf_quan - fk_quan END AS fk_wqua,
 
-             sk~vp_quan,                                                " Sipariş Miktarı
-             sk~nt_pric,                                                " Satış Fiyatı
-             sk~vp_amnt,                                                " Sipariş Tutarı
-             sk~tx_amnt,                                                " Vergi Tutarı
+             sk~vp_quan,                                    " Sipariş Miktarı
+             sk~nt_pric,                                    " Satış Fiyatı
+             sk~vp_amnt,                                    " Sipariş Tutarı
+             sk~tx_amnt,                                    " Vergi Tutarı
 
-             SUM( coalesce( fk~fkimg, 0 ) ) AS kd_quan,                 " Koşul Miktarı
-             SUM( coalesce( fk~netwr, 0 ) ) AS fk_amnt                  " Fatura Tutarı
+             SUM( coalesce( fk~fkimg, 0 ) ) AS kd_quan,     " Koşul Miktarı
+             SUM( coalesce( fk~netwr, 0 ) ) AS fk_amnt      " Fatura Tutarı
 
       FROM @lb_data AS sk
       " Teslimat
@@ -3082,22 +3127,6 @@ CLASS lcl_main IMPLEMENTATION.
 
     rd_result = abap_true.
 
-    " Parametre filtrele
-    IF c_field IS NOT INITIAL.
-      FIELD-SYMBOLS: <l_field> TYPE any.
-      FIELD-SYMBOLS: <ls_data>  LIKE LINE OF gt_main_data.
-
-      LOOP AT gt_main_data ASSIGNING <ls_data>.
-        ASSIGN COMPONENT c_field OF STRUCTURE <ls_data> TO <l_field>.
-        IF ( <l_field> IS ASSIGNED ).
-          IF <l_field> EQ 0.
-            DELETE gt_main_data.
-          ENDIF.
-        ENDIF.
-        UNASSIGN <l_field>.
-      ENDLOOP.
-    ENDIF.
-
     " Sorts
     IF p_xval IS NOT INITIAL.
 
@@ -3118,6 +3147,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDLOOP.
 
       IF p_asde IS INITIAL .
+
         CASE p_sort.
           WHEN '1'. SORT gt_main_data BY sheet vbeln posnr ttype lfbel lfpos fkbel fkpos.   " Sipariş Numarası
           WHEN '2'. SORT gt_main_data BY sheet erdat erzet .                                " Yaratma Tarihi
@@ -3140,11 +3170,11 @@ CLASS lcl_main IMPLEMENTATION.
 
       IF p_asde IS INITIAL .
         CASE p_sort.
-          WHEN '1'. SORT gt_main_data BY vbeln posnr ttype lfbel lfpos fkbel fkpos.   " Sipariş Numarası
-          WHEN '2'. SORT gt_main_data BY erdat erzet .                                " Yaratma Tarihi
-          WHEN '3'. SORT gt_main_data BY audat ttype lfbel lfpos fkbel fkpos.         " Sipariş Tarihi
-          WHEN '4'. SORT gt_main_data BY lfdat lfbel lfpos .                          " Teslim Tarihi
-          WHEN '5'. SORT gt_main_data BY fkdat fkbel fkpos.                           " Fatura Tarihi
+          WHEN '1'. SORT gt_main_data BY vbeln posnr ttype lfbel lfpos fkbel fkpos.         " Sipariş Numarası
+          WHEN '2'. SORT gt_main_data BY erdat erzet .                                      " Yaratma Tarihi
+          WHEN '3'. SORT gt_main_data BY audat ttype lfbel lfpos fkbel fkpos.               " Sipariş Tarihi
+          WHEN '4'. SORT gt_main_data BY lfdat lfbel lfpos .                                " Teslim Tarihi
+          WHEN '5'. SORT gt_main_data BY fkdat fkbel fkpos.                                 " Fatura Tarihi
         ENDCASE.
       ELSE.
         CASE p_sort.
@@ -3933,7 +3963,10 @@ CLASS lcl_main IMPLEMENTATION.
         sort_loop = cur_grup .
         DO ( max_grup - cur_grup ) TIMES.
           sort_loop = sort_loop + 1.
-          lv_list = |{ lv_list }| & |, | & |'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ' AS sort000| & |{ sort_loop }|.
+          IF lv_list IS NOT INITIAL.
+            lv_list = |{ lv_list }| & |, |.
+          ENDIF.
+          lv_list = |{ lv_list }| & |'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ' AS sort000| & |{ sort_loop }|.
         ENDDO.
       ENDIF.
 
@@ -3964,54 +3997,34 @@ CLASS lcl_main IMPLEMENTATION.
         ELSE.
           IF lv_aggrtype EQ 'W'  .
             lv_list = |{ lv_list }| && |, ROUND( SUM( CASE | && gv_pivot_fieldname .
-            IF <fs_group_data_columns>-text = '-' .
-              lv_list = |{ lv_list }| && | WHEN @space|.
-            ELSE.
-              lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
-            ENDIF.
-            lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | * TM_QUAN END ), 6 ) AS | && | MENGE| && lv_col_suffix.
           ELSEIF lv_aggrtype EQ 'M'.
             lv_list = |{ lv_list }| && |, MAX( CASE | && gv_pivot_fieldname .
-            IF <fs_group_data_columns>-text = '-' .
-              lv_list = |{ lv_list }| && | WHEN @space|.
-            ELSE.
-              lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
-            ENDIF.
-            lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
           ELSEIF lv_aggrtype EQ 'L'.
             lv_list = |{ lv_list }| && |, MIN( CASE | && gv_pivot_fieldname .
-            IF <fs_group_data_columns>-text = '-' .
-              lv_list = |{ lv_list }| && | WHEN @space|.
-            ELSE.
-              lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
-            ENDIF.
-            lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
           ELSE.
             lv_list = |{ lv_list }| && |, SUM( CASE | && gv_pivot_fieldname .
-            IF <fs_group_data_columns>-text = '-' .
-              lv_list = |{ lv_list }| && | WHEN @space|.
-            ELSE.
-              lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
-            ENDIF.
-            lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
           ENDIF.
+
+          IF <fs_group_data_columns>-text = '-' .
+            lv_list = |{ lv_list }| && | WHEN @space|.
+          ELSE.
+            lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
+          ENDIF.
+          lv_list = |{ lv_list }| && | THEN | && |{ lv_colfield }| &&  | END ) AS | && | MENGE| && lv_col_suffix.
 
           IF lv_aggrtype EQ 'W' .
             lv_list = |{ lv_list }| && |, SUM( CASE | && gv_pivot_fieldname .
+          ELSEIF lv_aggrtype EQ 'A' .
+            lv_list = |{ lv_list }| && |, COUNT( CASE | && gv_pivot_fieldname .
+          ENDIF.
+
+          IF lv_aggrtype EQ 'W' OR lv_aggrtype EQ 'A' .
             IF <fs_group_data_columns>-text = '-' .
               lv_list = |{ lv_list }| && | WHEN @space|.
             ELSE.
               lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
             ENDIF.
             lv_list = |{ lv_list }| && | THEN TM_QUAN END ) AS | && | WADIV| && lv_col_suffix.
-          ELSEIF lv_aggrtype EQ 'A' .
-              lv_list = |{ lv_list }| && |, COUNT( CASE | && gv_pivot_fieldname .
-              IF <fs_group_data_columns>-text = '-' .
-                lv_list = |{ lv_list }| && | WHEN @space|.
-              ELSE.
-                lv_list = |{ lv_list }| && | WHEN '| &&  <fs_group_data_columns>-text && |'|.
-              ENDIF.
-              lv_list = |{ lv_list }| && | THEN TM_QUAN END ) AS | && | WADIV| && lv_col_suffix.
           ENDIF.
 
         ENDIF.
@@ -4135,7 +4148,7 @@ CLASS lcl_main IMPLEMENTATION.
    ENDDO.
 
    SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
-                     ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+                           ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
 
    IF p_wrks EQ 'X'.
 
@@ -4423,19 +4436,19 @@ CLASS lcl_main IMPLEMENTATION.
 
       ENDIF.
 
-      IF p_wah2 IS INITIAL OR p_cur1 EQ p_cur2.
+      " Termin tipi satış ise alanları gizle
+      IF p_term EQ 'S'.
         CASE <fs_fcat>-fieldname.
-          WHEN 'EC_AMNT' OR 'EC_TAMN'.
+          WHEN 'LFBEL' OR 'LFPOS' OR 'LFDAT' OR 'LFPER' OR 'WBSTA' OR 'BWART' OR 'MBLNR' OR 'BLDAT' OR 'FKBEL' OR 'FKPOS' OR 'PRSDT' OR 'FKDAT' OR
+               'FKPER' OR 'FKWEK' OR 'FSTAT' OR 'BELNR' OR 'AUGBL' OR 'AUGDT' OR 'GJAHR' OR 'GMONT' OR 'GQUAR' OR 'GHALF' OR 'HKONT' OR 'PRCTR'.
             <fs_fcat>-tech = 'X' .
         ENDCASE.
       ENDIF.
 
-      " Termin tipi satış ise alanları gizle
-      IF p_term EQ 'S'.
+      " Kur farkı alanını gizle
+      IF p_wah2 IS INITIAL OR p_cur1 EQ p_cur2.
         CASE <fs_fcat>-fieldname.
-          WHEN 'LFPER'   OR 'LFBEL'   OR 'LFPOS' OR 'LFDAT' OR 'INVID' OR 'WBSTA' OR 'BWART' OR 'BLDAT' OR 'MBLNR' OR
-               'FKPER'   OR 'FKBEL'   OR 'FKPOS' OR 'FCDAT' OR 'FKDAT' OR 'FSTAT' OR 'XBLNR' OR 'BELNR' OR 'AUGBL' OR 'AUGDT' OR
-               'AG_AMNT' OR 'AG_BAMN' OR 'BWTAR' OR 'CHARG' .
+          WHEN 'EC_AMNT' OR 'EC_TAMN'.
             <fs_fcat>-tech = 'X' .
         ENDCASE.
       ENDIF.
@@ -5162,6 +5175,8 @@ CLASS lcl_main IMPLEMENTATION.
     pad = VALUE #( gt_textlist[ sym = 'PAD' ]-text OPTIONAL ).
     pdm = VALUE #( gt_textlist[ sym = 'PDM' ]-text OPTIONAL ).
     pco = VALUE #( gt_textlist[ sym = 'PCO' ]-text OPTIONAL ).
+    pcl = VALUE #( gt_textlist[ sym = 'PCL' ]-text OPTIONAL ).
+    ptc = VALUE #( gt_textlist[ sym = 'PTC' ]-text OPTIONAL ).
     pdd = VALUE #( gt_textlist[ sym = 'PDD' ]-text OPTIONAL ).
     ptr = VALUE #( gt_textlist[ sym = 'PTR' ]-text OPTIONAL ).
     pml = VALUE #( gt_textlist[ sym = 'PML' ]-text OPTIONAL ).
@@ -5291,7 +5306,6 @@ CLASS lcl_main IMPLEMENTATION.
     CREATE OBJECT lr_xlfile.
     CREATE OBJECT lr_xlshstrfile.
 
-
     " FILE NAME
     IF p_excl EQ 'X' OR p_mail EQ 'X'.
       IF p_path IS INITIAL.
@@ -5368,6 +5382,7 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
 
       ENDIF.
+
     ENDIF.
 
     "****************************************************************
@@ -6834,7 +6849,7 @@ CLASS lcl_main IMPLEMENTATION.
         APPEND <ls_groupable_fields> TO gt_selected_group_fields.
         nr_pos = nr_pos + 1.
 
-        IF nr_pos < nr_count OR nr_count EQ 1 OR p_yval IS INITIAL.
+        IF p_yval IS INITIAL OR nr_pos < nr_count OR nr_count EQ 1.
 
           APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
           <ls_group_key_columns>-fnam = <f_fnams>-low.
@@ -6862,11 +6877,9 @@ CLASS lcl_main IMPLEMENTATION.
             <ls_group_key_columns>-grup = nr_pos.
           ENDIF.
 
-        ELSE.
-
-          gv_pivot_fieldname =  <f_fnams>-low.
-
         ENDIF.
+
+        gv_pivot_fieldname =  <f_fnams>-low.
 
       ENDIF.
 
@@ -6907,15 +6920,12 @@ CLASS lcl_main IMPLEMENTATION.
 
       DESCRIBE TABLE gt_selected_group_fields LINES nr_count.
 
-      IF nr_count LT 2 .
-        p_yval = ' '.
-      ENDIF.
 
       LOOP AT gt_selected_group_fields ASSIGNING <ls_selected_group_fields>.
 
         nr_pos = nr_pos + 1.
 
-        IF nr_pos < nr_count OR nr_count EQ 1 OR p_yval IS INITIAL.
+        IF p_yval IS INITIAL OR nr_pos < nr_count OR nr_count EQ 1.
 
           APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
           <ls_group_key_columns>-fnam = <ls_selected_group_fields>-fnam.
@@ -6943,11 +6953,9 @@ CLASS lcl_main IMPLEMENTATION.
             <ls_group_key_columns>-grup = nr_pos.
           ENDIF.
 
-        ELSE.
-
-          gv_pivot_fieldname = <ls_selected_group_fields>-fnam.
-
         ENDIF.
+
+        gv_pivot_fieldname = <ls_selected_group_fields>-fnam.
 
       ENDLOOP.
     ENDIF.
@@ -7027,10 +7035,10 @@ CLASS lcl_main IMPLEMENTATION.
 
     " Termin Type
     xvrm_val_t-key = 'S'.
-    xvrm_val_t-text = VALUE #( gt_textlist[ sym = 'DT1' ]-text OPTIONAL ). "TEXT-dt1.
+    xvrm_val_t-text = VALUE #( gt_textlist[ sym = 'DT1' ]-text OPTIONAL ).
     APPEND xvrm_val_t TO ivrm_val_t.
     xvrm_val_t-key = 'T'.
-    xvrm_val_t-text = VALUE #( gt_textlist[ sym = 'DT2' ]-text OPTIONAL ). "TEXT-dt2.
+    xvrm_val_t-text = VALUE #( gt_textlist[ sym = 'DT2' ]-text OPTIONAL ).
     APPEND xvrm_val_t TO ivrm_val_t.
 
     vrm_name_t = 'p_term'.
@@ -7041,19 +7049,19 @@ CLASS lcl_main IMPLEMENTATION.
 
     " Ordering
     xvrm_val_s-key = '1'.
-    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO1' ]-text OPTIONAL ). "TEXT-do1.
+    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO1' ]-text OPTIONAL ).
     APPEND xvrm_val_s TO ivrm_val_s.
     xvrm_val_s-key = '2'.
-    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO2' ]-text OPTIONAL ). "TEXT-do2.
+    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO2' ]-text OPTIONAL ).
     APPEND xvrm_val_s TO ivrm_val_s.
     xvrm_val_s-key = '3'.
-    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO3' ]-text OPTIONAL ). "TEXT-do3.
+    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO3' ]-text OPTIONAL ).
     APPEND xvrm_val_s TO ivrm_val_s.
     xvrm_val_s-key = '4'.
-    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO4' ]-text OPTIONAL ). "TEXT-do4.
+    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO4' ]-text OPTIONAL ).
     APPEND xvrm_val_s TO ivrm_val_s.
     xvrm_val_s-key = '5'.
-    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO5' ]-text OPTIONAL ). "TEXT-do5.
+    xvrm_val_s-text = VALUE #( gt_textlist[ sym = 'DO5' ]-text OPTIONAL ).
     APPEND xvrm_val_s TO ivrm_val_s.
 
     vrm_name_s = 'p_sort'.
@@ -7102,7 +7110,7 @@ CLASS lcl_main IMPLEMENTATION.
       APPEND xvrm_val_x TO ivrm_val_x.
     ELSE.
       LOOP AT gt_fieldlist ASSIGNING <ls_fieldlist>.
-        IF <ls_fieldlist>-isgrp IS NOT INITIAL .  "AND strlen( <fs_fieldlist>-isgrp ) GE 3.
+        IF <ls_fieldlist>-isgrp IS NOT INITIAL .
           xvrm_val_x-key  = <ls_fieldlist>-isgrp.
           xvrm_val_x-text = <ls_fieldlist>-textl.
           APPEND xvrm_val_x TO ivrm_val_x.
@@ -7126,6 +7134,7 @@ CLASS lcl_main IMPLEMENTATION.
     CLEAR: p_grp1,p_grp2,p_grp3,p_grp4,p_grp5,p_grp6.
 
     LOOP AT gt_selected_group_fields ASSIGNING FIELD-SYMBOL(<ls_selected_group_fields>).
+
       DATA(lv_tabix) = sy-tabix.
       IF but02 EQ icon_previous_page.
         lv_tabix = lv_tabix - 6.
@@ -7165,7 +7174,6 @@ CLASS lcl_main IMPLEMENTATION.
     FIELD-SYMBOLS: <f_field2>  TYPE any.
     FIELD-SYMBOLS: <f_field3>  TYPE any.
 
-
     IF gv_detail_view = abap_false.
       IF s_fnams[] IS INITIAL.
         CHECK gt_main_data IS NOT INITIAL.
@@ -7189,7 +7197,6 @@ CLASS lcl_main IMPLEMENTATION.
       READ TABLE gt_detail_data INDEX iv_row INTO <f_line>.
     ENDIF.
 
-
     ASSIGN COMPONENT 'VKORG' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vkorg>).
     ASSIGN COMPONENT 'VTWEG' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<vtweg>).
     ASSIGN COMPONENT 'SPART' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<spart>).
@@ -7205,10 +7212,9 @@ CLASS lcl_main IMPLEMENTATION.
     ASSIGN COMPONENT 'BUKRS' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<bukrs>).
     ASSIGN COMPONENT 'GJAHR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<gjahr>).
     ASSIGN COMPONENT 'AUGBL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<augbl>).
-    ASSIGN COMPONENT 'MATNR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<matnr>).
     ASSIGN COMPONENT 'LFBEL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<lfbel>).
     ASSIGN COMPONENT 'FKBEL' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<fkbel>).
-
+    ASSIGN COMPONENT 'MATNR' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<matnr>).
 
     CASE iv_column.
       WHEN 'KUNFT' OR 'KUNFT_X'.
@@ -7220,7 +7226,6 @@ CLASS lcl_main IMPLEMENTATION.
       WHEN OTHERS.
         ASSIGN COMPONENT 'KUNNR' OF STRUCTURE <f_line> TO <kunnr>.
     ENDCASE.
-
 
 
     " ***********************************
@@ -7287,14 +7292,6 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
         CALL TRANSACTION 'XD03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN .
 
-      WHEN 'POSNR'.
-
-        CHECK <posnr> IS NOT INITIAL.
-
-        SET PARAMETER ID 'VBELN' FIELD <vbeln>.
-        SET PARAMETER ID 'POSNR' FIELD <posnr>.
-        SUBMIT (sy-repid) AND RETURN.
-
       WHEN 'VBELK'.
 
         CHECK <vbelk> IS NOT INITIAL.
@@ -7302,15 +7299,17 @@ CLASS lcl_main IMPLEMENTATION.
         SET PARAMETER ID 'VBELK' FIELD <vbelk>.
         IF gv_detail_view EQ abap_true.
           SET PARAMETER ID 'KEEP_DETAIL' FIELD gv_detail_view.
-          SET PARAMETER ID 'C_LAYD' FIELD p_layd.
-          SET PARAMETER ID 'C_SORT' FIELD p_sort.
-          SET PARAMETER ID 'C_ASDE' FIELD p_asde.
-          SET PARAMETER ID 'C_COLR' FIELD p_colr.
-          SET PARAMETER ID 'C_ZERO' FIELD p_zero.
-          SET PARAMETER ID 'C_TWOC' FIELD p_twoc.
-          SET PARAMETER ID 'C_CDEC' FIELD p_cdec.
         ENDIF.
-        SUBMIT (sy-repid) AND RETURN.
+
+        SUBMIT (sy-repid) WITH s_vbeln EQ <vbeln>
+                          WITH p_layd  EQ p_layd
+                          WITH p_sort  EQ p_sort
+                          WITH p_asde  EQ p_asde
+                          WITH p_colr  EQ p_colr
+                          WITH p_zero  EQ p_zero
+                          WITH p_twoc  EQ p_twoc
+                          WITH p_cdec  EQ p_cdec
+        AND RETURN.
 
       WHEN 'VGBEL'.
 
@@ -7383,7 +7382,7 @@ CLASS lcl_main IMPLEMENTATION.
       WHEN OTHERS.
 
         CHECK s_fnams[] IS NOT INITIAL.
-        DATA h_str TYPE c LENGTH 20.
+        DATA hiera TYPE c LENGTH 20.
         DATA(h_num) = 0.
         DATA(l_num) = 0.
 
@@ -7392,9 +7391,9 @@ CLASS lcl_main IMPLEMENTATION.
         IF gv_detail_view = abap_false.
 
           ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO <f_field>.
-          h_str = <f_field>.
-          IF h_str IS NOT INITIAL.
-            h_num = h_str.
+          hiera = <f_field>.
+          IF hiera IS NOT INITIAL.
+            h_num = hiera.
           ENDIF.
 
           gv_filter_where = ' '.
@@ -7402,9 +7401,9 @@ CLASS lcl_main IMPLEMENTATION.
           IF VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
 
             LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
-              IF fes_row_id-rowtype(1) NE 'T' AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
+              IF hiera IS NOT INITIAL AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
                 l_num += 1.
-                IF ( p_addp IS INITIAL AND p_disp NE '3' ) OR h_str IS INITIAL OR ( h_num NE 0 AND l_num LE h_num ).
+                IF ( p_addp IS INITIAL AND p_disp NE '3' ) OR ( h_num NE 0 AND l_num LE h_num ).
                   ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
                   CONDENSE <fs_group_key_columns>-fnam NO-GAPS .
                   IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
@@ -7462,7 +7461,6 @@ CLASS lcl_main IMPLEMENTATION.
                 gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
             ENDIF.
 
-
             gv_detail_view = abap_true.
             go_main->fill_data( ).
 
@@ -7484,9 +7482,7 @@ CLASS lcl_main IMPLEMENTATION.
   ENDMETHOD.
 
 
-
 ENDCLASS.
-
 
 
 CLASS lcl_popup_aggr_setup IMPLEMENTATION .
@@ -7658,7 +7654,6 @@ CLASS lcl_popup_aggr_setup IMPLEMENTATION .
 ENDCLASS.
 
 
-
 CLASS lcl_salv_pop_up IMPLEMENTATION .
 
   METHOD popup .
@@ -7736,7 +7731,6 @@ CLASS lcl_salv_pop_up IMPLEMENTATION .
 ENDCLASS.
 
 
-
 CLASS lcl_salv_handler IMPLEMENTATION.
 
   METHOD: handle_click .
@@ -7752,7 +7746,6 @@ CLASS lcl_salv_handler IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
-
 
 
 CLASS lcl_tree_handler IMPLEMENTATION.
@@ -7772,7 +7765,6 @@ CLASS lcl_tree_handler IMPLEMENTATION.
 ENDCLASS.
 
 
-
 CLASS lcl_clgui_handler IMPLEMENTATION .
 
   METHOD on_double_click.
@@ -7780,19 +7772,15 @@ CLASS lcl_clgui_handler IMPLEMENTATION .
     DATA: t_row    TYPE int8,
           t_column TYPE string.
 
-    IF s_fnams[] IS INITIAL.
-      go_main->go_grid->get_current_cell(
-         IMPORTING
-           es_row_id = fes_row_id
-           es_col_id = fes_col_id
-           es_row_no = fes_row_no
-           e_value = fes_value ).
+    go_main->go_grid->get_current_cell(
+       IMPORTING
+         es_row_id = fes_row_id
+         es_col_id = fes_col_id
+         es_row_no = fes_row_no
+         e_value = fes_value ).
 
-      t_row = fes_row_id .
-      t_column = fes_col_id .
-    ELSE.
-      t_row = e_row-index.
-    ENDIF.
+    t_row = fes_row_id .
+    t_column = fes_col_id .
 
     go_main->go_when_clicked( iv_row = t_row iv_column = t_column ).
 
@@ -7820,15 +7808,16 @@ CLASS lcl_clgui_handler IMPLEMENTATION .
 ENDCLASS.
 
 
-
 MODULE status_0100 OUTPUT.
 
   SET PF-STATUS '0100'.                         " Double click '0100' to activate. Add values '&F03' OR '&F12' OR '&F15'. Uncomment script.
   SET TITLEBAR 'TITLE_0100' WITH gv_alv_title.  " Double click 'TITLE_0100' to activate. Set value to &1
 
-  FREE go_main->go_grid.
-  FREE go_main->go_dock.
-  CALL METHOD go_main->show_alv.
+  IF gv_detail_view = abap_false.
+    CALL METHOD go_main->show_alv.
+  ELSE.
+    CALL METHOD go_main->show_alv_detail.
+  ENDIF.
 
 ENDMODULE.
 
@@ -7971,6 +7960,7 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'VGPOS'     techl = 'SIPARISREFKALEM'              texts = 'Sip.Ref.Klm.'         textl = 'Sipariş Ref. Kalem'            emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VGTYP'     techl = 'SIPARISREFTIP'                texts = 'Sip.Ref.Tip'          textl = 'Sipariş Ref. Tip'              emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BSTKD'     techl = 'MUSTERIREFERANSI'             texts = 'Müş.Ref.'             textl = 'Müşteri Referansı'             emphs = 'C500' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
+IF p_term EQ 'T'.
   APPEND VALUE #( fname = 'LFBEL'     techl = 'TESLIMATBELGESI'              texts = 'Tsl.Blg.'             textl = 'Teslimat Belgesi'              emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFPOS'     techl = 'TESLIMATKALEMI'               texts = 'Tsl.Klm.'             textl = 'Teslimat Kalemi'               emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFDAT'     techl = 'TESLIMATTARIHI'               texts = 'Tsl.Tar.'             textl = 'Teslimat Tarihi'               emphs = 'C700' shide = ' ' spgrp = 2 isgrp = '18' ) TO gt_fieldlist.
@@ -7995,6 +7985,7 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'GHALF'     techl = 'FATURAYARIDONEMI'             texts = 'Fatura Yarı Dn.'      textl = 'Fatura Yarı Dn.'               emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '27' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'HKONT'     techl = 'KEBIRHESABI'                  texts = 'Kebir Hesabı'         textl = 'Kebir Hesabı'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '28' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'PRCTR'     techl = 'KARMERKEZI'                   texts = 'Kar Merkezi'          textl = 'Kar Merkezi'                   emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '29' ) TO gt_fieldlist.
+ENDIF.
   APPEND VALUE #( fname = 'ZTERM'     techl = 'ODEMEKOSULU'                  texts = 'Ödeme Koş.'           textl = 'Ödeme Koşulu'                  emphs = 'C100' shide = ' ' spgrp = 1 isgrp = '30' grpx1 = 'ZTERM_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ZTERM_X'   techl = 'ODEMEKOSULUTANIMI'            texts = 'Ödeme Koşulu Tnm.'    textl = 'Ödeme Koşulu Tanımı'           emphs = 'C100' shide = 'X' spgrp = 1 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VKAUS'     techl = 'KULLANIMSURESI'               texts = 'Kullanım Süresi'      textl = 'Kullanım Süresi'               emphs = 'C400' shide = 'X' spgrp = 1 isgrp = '31' grpx1 = 'VKAUS_X' ) TO gt_fieldlist.
@@ -8141,6 +8132,7 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'VGPOS'     techl = 'ORDERREFITEM'                   texts = 'Ref.Item'             textl = 'Order Ref. Item'               emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VGTYP'     techl = 'ORDERREFTYPE'                   texts = 'Ref.Type'             textl = 'Order Ref. Type'               emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BSTKD'     techl = 'CUSTOMERREFERENCE'              texts = 'Cus.Ref.'             textl = 'Customer Reference'            emphs = 'C500' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
+IF p_term EQ 'T'.
   APPEND VALUE #( fname = 'LFBEL'     techl = 'DELIVERYDOCUMENT'               texts = 'Dlv.Doc.'             textl = 'Delivery Document'             emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFPOS'     techl = 'DELIVERYITEM'                   texts = 'Dlv.Doc.Item.'        textl = 'Delivery Item'                 emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFDAT'     techl = 'DELIVERYDATE'                   texts = 'Dlv.Date'             textl = 'Delivery Date'                 emphs = 'C700' shide = ' ' spgrp = 2 isgrp = '18' ) TO gt_fieldlist.
@@ -8165,6 +8157,7 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'GHALF'     techl = 'INVOICEHALFYEAR'                texts = 'Fatura Yarı Dn.'      textl = 'Invoice Half Year'             emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '27' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'HKONT'     techl = 'GENERALLEDGERACCOUNT'           texts = 'Gen.Ledger Acc.'      textl = 'General Ledger Account'        emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '28' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'PRCTR'     techl = 'PROFITCENTER'                   texts = 'Profit Center'        textl = 'Profit Center'                 emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '29' ) TO gt_fieldlist.
+ENDIF.
   APPEND VALUE #( fname = 'ZTERM'     techl = 'CONDITIONTYPE'                  texts = 'Cond.Type'            textl = 'Condition Type'                emphs = 'C100' shide = ' ' spgrp = 1 isgrp = '30' grpx1 = 'ZTERM_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ZTERM_X'   techl = 'CONDITIONTYPEDEFINITION'        texts = 'Cond.Type Def.'       textl = 'Condition Type Definition'     emphs = 'C100' shide = 'X' spgrp = 1 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VKAUS'     techl = 'USAGE'                          texts = 'Usage'                textl = 'Usage'                         emphs = 'C400' shide = 'X' spgrp = 1 isgrp = '31' grpx1 = 'VKAUS_X' ) TO gt_fieldlist.
@@ -8310,6 +8303,7 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'VGPOS'     techl = 'VORLAGEBELEGPOSITION'           texts = 'Vorlagebeleg-Pos.'   textl = 'Vorlagebelegposition'           emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VGTYP'     techl = 'VORLAGEBELEGART'                texts = 'Vorlagebeleg-Art'    textl = 'Vorlagebelegart'                emphs = 'C500' shide = 'X' spgrp = 1 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'BSTKD'     techl = 'KUNDENREFERENZ'                 texts = 'Kundenref.'          textl = 'Kundenreferenz'                 emphs = 'C500' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
+IF p_term EQ 'T'.
   APPEND VALUE #( fname = 'LFBEL'     techl = 'LIEFERDOKUMENT'                 texts = 'Liefer-Dok.'         textl = 'Lieferdokument'                 emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFPOS'     techl = 'LIEFERPOSITION'                 texts = 'Liefer-Pos.'         textl = 'Lieferposition'                 emphs = 'C700' shide = ' ' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LFDAT'     techl = 'LIEFERDATUM'                    texts = 'Liefer-Datum'        textl = 'Lieferdatum'                    emphs = 'C700' shide = ' ' spgrp = 2 isgrp = '18' ) TO gt_fieldlist.
@@ -8334,6 +8328,7 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'GHALF'     techl = 'RECHNUNGSHALBJAHR'              texts = 'Rechn.-Halbjahr'     textl = 'Rechnungshalbjahr'              emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '27' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'HKONT'     techl = 'HAUPTBUCHKONTO'                 texts = 'Hauptbuchkonto'      textl = 'Hauptbuchkonto'                 emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '28' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'PRCTR'     techl = 'PROFITCENTER'                   texts = 'Profit Center'       textl = 'Profit Center'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '29' ) TO gt_fieldlist.
+ENDIF.
   APPEND VALUE #( fname = 'ZTERM'     techl = 'KONDITIONSTYP'                  texts = 'Kond.-Typ'           textl = 'Konditionstyp'                  emphs = 'C100' shide = ' ' spgrp = 1 isgrp = '30' grpx1 = 'ZTERM_X' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'ZTERM_X'   techl = 'KONDITIONSTYPBEZEICHNUNG'       texts = 'Kond.-Typ Bez.'      textl = 'Konditionstyp Bezeichnung'      emphs = 'C100' shide = 'X' spgrp = 1 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VKAUS'     techl = 'NUTZUNG'                        texts = 'Nutzung'             textl = 'Nutzung'                        emphs = 'C400' shide = 'X' spgrp = 1 isgrp = '31' grpx1 = 'VKAUS_X' ) TO gt_fieldlist.
