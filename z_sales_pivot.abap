@@ -170,7 +170,7 @@ TYPES: BEGIN OF ty_struc_type,
          vp_quan   TYPE kwmeng,
          gbsta     TYPE gbsta,
          gbsta_d   TYPE bezei20,
-         augru     TYPE abgru,
+         augru     TYPE augru,
          augru_x   TYPE bezei40,
          abgru     TYPE abgru,
          abgru_x   TYPE bezei40,
@@ -290,6 +290,7 @@ DATA(gv_amt_cnv_all) = abap_false.
 DATA gv_disable_bytrm TYPE bool.
 DATA gv_change_locale TYPE bool.
 DATA gv_clgui_enabled TYPE bool.
+DATA gv_demos_enabled TYPE bool.
 DATA gv_iso_week      TYPE bool.
 DATA gv_group_count   TYPE int4.
 DATA gv_max_ycolumns  TYPE int4.
@@ -376,7 +377,7 @@ DATA: ivrm_val_d TYPE vrm_values,
 
 " Function value table
 TYPES: BEGIN OF ty_functions,
-         modtext TYPE c LENGTH 16,
+         modtext TYPE c LENGTH 18,
          modval  TYPE c LENGTH 40,
        END OF ty_functions.
 
@@ -725,6 +726,7 @@ DATA functxt TYPE smp_dyntxt.
 SELECTION-SCREEN: FUNCTION KEY 1.
 SELECTION-SCREEN: FUNCTION KEY 2.
 
+SELECTION-SCREEN: FUNCTION KEY 3. " Demo Selection
 
 PARAMETERS: p1_dynnr LIKE tabs-dynnr NO-DISPLAY,
             p1_acttb LIKE tabs-activetab NO-DISPLAY,
@@ -836,7 +838,7 @@ LOOP AT gt_fieldlist ASSIGNING FIELD-SYMBOL(<gs_fieldlist>).
       WHEN 'VBELN' . APPEND VALUE #( sign = 'I' option = 'EQ' low = v_param ) TO s_vbeln        .
       WHEN 'POSNR' . APPEND VALUE #( sign = 'I' option = 'EQ' low = v_param ) TO s_posnr        .
       WHEN 'VGBEL' . APPEND VALUE #( sign = 'I' option = 'EQ' low = v_param ) TO s_vbeln        .
-      WHEN 'TTYPE' . p_term = v_param     .
+     " WHEN 'TTYPE' . p_term = v_param     .
       " ...
 
     ENDCASE.
@@ -859,6 +861,7 @@ INITIALIZATION.
   gv_iso_week = abap_false.
   gv_change_locale = abap_true.
   gv_clgui_enabled = abap_false.  " before setting true activate screens, status and title by double-clicking numbers
+  gv_demos_enabled = abap_true.
 
   gv_disable_bytrm = abap_false.
 
@@ -1208,6 +1211,14 @@ CLASS lcl_main IMPLEMENTATION.
      CATCH cx_salv_msg.
 
     ENDTRY.
+
+   CONSTANTS: lc_pf_status TYPE sypfkey VALUE 'STANDARD_PF1'.
+
+    go_salv->set_screen_status(
+        pfstatus = 'SALV_STANDARD'
+        report   = 'SALV_DEMO_TABLE_FUNCTIONS'
+        set_functions = go_salv->c_functions_all ).
+
 
     " build_toolbar.
     DATA: lo_functions TYPE REF TO cl_salv_functions_list.
@@ -1858,10 +1869,20 @@ CLASS lcl_main IMPLEMENTATION.
       functxt-text = ''.
       sscrfields-functxt_01 = functxt.
 
-      functxt-icon_id = icon_translation_show.
-      functxt-quickinfo = VALUE #( gt_textlist[ sym = 'B02' ]-text OPTIONAL ).
+      """"""""""""""""""""""""""""""""""
+      IF gv_demos_enabled = abap_true.
+        functxt-icon_id = icon_translation_show.
+        functxt-quickinfo = VALUE #( gt_textlist[ sym = 'B02' ]-text OPTIONAL ).
+        functxt-text = ''.
+        sscrfields-functxt_02 = functxt.
+      ENDIF.
+      """"""""""""""""""""""""""""""""""
+
+      functxt-icon_id = icon_selection.
+      functxt-quickinfo = 'Demos'.
       functxt-text = ''.
-      sscrfields-functxt_02 = functxt.
+      sscrfields-functxt_03 = functxt.
+
 
       but01 = icon_sum  && VALUE #( gt_textlist[ sym = 'B03' ]-text OPTIONAL ).
       but03 = icon_oo_method  && VALUE #( gt_textlist[ sym = 'B07' ]-text OPTIONAL ).
@@ -2009,7 +2030,7 @@ CLASS lcl_main IMPLEMENTATION.
         ret_function_values( ).
 
         lcl_salv_pop_up=>popup( EXPORTING start_line   = 1
-                                          end_line     = 21
+                                          end_line     = 19
                                           start_column = 90
                                           end_column   = 150
                                           pop_header   = VALUE char100( gt_textlist[ sym = 'TXZ' ]-text OPTIONAL )
@@ -2093,6 +2114,38 @@ CLASS lcl_main IMPLEMENTATION.
 
         IF e_answer EQ '1'.
           p_loca = p_lang.
+        ENDIF.
+
+
+      WHEN 'FC03'.
+        CHECK sy-dynnr = 1000.
+
+        TYPES: BEGIN OF ds_data,
+                code TYPE c LENGTH 8,
+                text TYPE modtext_d,
+               END OF ds_data.
+
+        DATA: dt_data TYPE TABLE OF ds_data WITH EMPTY KEY.
+
+        APPEND VALUE #( code = 'DEMO-01' text = 'Demo Z1111111' ) TO dt_data.
+        APPEND VALUE #( code = 'DEMO-02' text = 'Demo Z111222342' ) TO dt_data.
+        APPEND VALUE #( code = 'DEMO-03' text = 'Demo Z11333333331' ) TO dt_data.
+
+        lcl_salv_pop_up=>popup( EXPORTING  start_line = 1
+                                           end_line   = 3
+                                           start_column = 80
+                                           end_column = 140
+                                           pop_header = 'Demo seçimi'
+                                           t_table    = dt_data  )  .
+
+        IF gv_clicked_row IS NOT INITIAL.
+
+         "IF sscrfields-ucomm EQ 'UC05'.
+         "  p_subj = p_subj && VALUE #( gt_functions[ gv_clicked_row ]-modtext OPTIONAL ).
+         "ELSE.
+         "  p_path = p_path && VALUE #( gt_functions[ gv_clicked_row ]-modtext OPTIONAL ).
+         "ENDIF.
+
         ENDIF.
 
     ENDCASE.
@@ -2263,6 +2316,11 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
           IF p_excl IS INITIAL AND p_mail IS INITIAL.
             p_oprp = 'X'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_BLIN'.
+          IF p_term EQ 'S'.
+            p_blin = ' '.
             screen-input = 0.
           ENDIF.
         WHEN  'P_BLIN' OR 'S_EDATU-LOW' OR 'S_EDATU-HIGH'
@@ -4249,7 +4307,6 @@ CLASS lcl_main IMPLEMENTATION.
 
       <fs_fcat>-qfieldname = ' '.
       <fs_fcat>-cfieldname = ' '.
-      <fs_fcat>-ref_field = ' '.
       <fs_fcat>-lowercase = ' '.
       <fs_fcat>-no_sign = ' '.
       <fs_fcat>-no_out = ' '.
@@ -4259,6 +4316,12 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_fcat>-no_zero = 'X'.
       ELSEIF <fs_fcat>-inttype EQ 'P'.
         <fs_fcat>-no_zero = p_zero.
+      ENDIF.
+
+      <fs_fcat>-ref_field = ' '.
+      IF <fs_fcat>-fieldname EQ 'VRKME' OR <fs_fcat>-fieldname EQ 'CVRKM'.
+       <fs_fcat>-ref_table = 'VBRP'.
+       <fs_fcat>-ref_field = 'VRKME'.
       ENDIF.
 
       CLEAR lv_dtext.
@@ -4437,13 +4500,13 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       " Termin tipi satış ise alanları gizle
-      IF p_term EQ 'S'.
-        CASE <fs_fcat>-fieldname.
-          WHEN 'LFBEL' OR 'LFPOS' OR 'LFDAT' OR 'LFPER' OR 'WBSTA' OR 'BWART' OR 'MBLNR' OR 'BLDAT' OR 'FKBEL' OR 'FKPOS' OR 'PRSDT' OR 'FKDAT' OR
-               'FKPER' OR 'FKWEK' OR 'FSTAT' OR 'BELNR' OR 'AUGBL' OR 'AUGDT' OR 'GJAHR' OR 'GMONT' OR 'GQUAR' OR 'GHALF' OR 'HKONT' OR 'PRCTR'.
-            <fs_fcat>-tech = 'X' .
-        ENDCASE.
-      ENDIF.
+     "IF p_term NE 'T'.
+     "  CASE <fs_fcat>-fieldname.
+     "    WHEN 'LFBEL' OR 'LFPOS' OR 'LFDAT' OR 'LFPER' OR 'WBSTA' OR 'BWART' OR 'MBLNR' OR 'BLDAT' OR 'FKBEL' OR 'FKPOS' OR 'PRSDT' OR 'FKDAT' OR
+     "         'FKPER' OR 'FKWEK' OR 'FSTAT' OR 'BELNR' OR 'AUGBL' OR 'AUGDT' OR 'GJAHR' OR 'GMONT' OR 'GQUAR' OR 'GHALF' OR 'HKONT' OR 'PRCTR'.
+     "      <fs_fcat>-tech = 'X' .
+     "  ENDCASE.
+     "ENDIF.
 
       " Kur farkı alanını gizle
       IF p_wah2 IS INITIAL OR p_cur1 EQ p_cur2.
@@ -4469,9 +4532,7 @@ CLASS lcl_main IMPLEMENTATION.
       OR <fs_fcat>-fieldname EQ 'DUMBE'
       OR <fs_fcat>-fieldname EQ 'SCOL_TAB'
       OR substring_before( val = <fs_fcat>-fieldname sub = '00' ) EQ 'SORT'
-
-      OR <fs_fcat>-fieldname EQ 'VP_AMNT'
-      OR <fs_fcat>-fieldname EQ 'KD_QUAN'  .
+      OR VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-fname OPTIONAL ) IS INITIAL.
         <fs_fcat>-tech = 'X'.
       ENDIF.
 
@@ -4940,10 +5001,6 @@ CLASS lcl_main IMPLEMENTATION.
     DATA lv_datatype TYPE string.
     DATA lv_aggrtype TYPE string.
 
-    CLEAR colgroup_title .
-    CLEAR conv_title .
-    CLEAR curr_title .
-
     IF p_yval IS NOT INITIAL AND gv_detail_view = abap_false.
 
       lv_colfield = VALUE #( gt_fieldlist[ slynr = p_yval ]-fname OPTIONAL ) .
@@ -4986,7 +5043,13 @@ CLASS lcl_main IMPLEMENTATION.
 
       IF lv_datatype EQ 'QUAN'.
         IF gv_mng_cnv_all = abap_true AND p_mein IS NOT INITIAL .
-          conv_title = | (| && p_mein && |)| .
+          CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+            EXPORTING
+             input    = p_mein
+             language = sy-langu
+           IMPORTING
+             output   = conv_title.
+          conv_title = | (| && conv_title && |)| .
         ELSE.
           conv_title = VALUE #( gt_textlist[ sym = 'TT5' ]-text OPTIONAL ).
         ENDIF.
@@ -5000,10 +5063,14 @@ CLASS lcl_main IMPLEMENTATION.
 
     ELSE.
 
-      IF variant_name IS NOT INITIAL.
-        gv_alv_title = sy-title && | - | && variant_name.
+      IF variant_name IS NOT INITIAL .
+        gv_alv_title = variant_name.
       ELSE.
         gv_alv_title = sy-title.
+      ENDIF.
+
+      IF gv_detail_view = abap_true.
+        gv_alv_title = gv_alv_title && | - | && VALUE #( gt_textlist[ sym = 'TXD' ]-text OPTIONAL ).
       ENDIF.
 
     ENDIF.
@@ -5095,27 +5162,27 @@ CLASS lcl_main IMPLEMENTATION.
 
     CLEAR gt_functions[].
 
-    APPEND VALUE #( modtext = '@DESKTOP'        modval = desktop_path    ) TO gt_functions.
-    APPEND VALUE #( modtext = '@DOCUMENTS'      modval = documents_path  ) TO gt_functions.
-    APPEND VALUE #( modtext = '@DOWNLOADS'      modval = downloads_path  ) TO gt_functions.
-    APPEND VALUE #( modtext = '@TEMP'           modval = temp_path       ) TO gt_functions.
-    APPEND VALUE #( modtext = '@USERNAME'       modval = user_name       ) TO gt_functions.
-    APPEND VALUE #( modtext = '@USERMAIL'       modval = user_mailaddr   ) TO gt_functions.
-    APPEND VALUE #( modtext = '@FULLNAME'       modval = user_fullname   ) TO gt_functions.
-    APPEND VALUE #( modtext = '@TCODE'          modval = tcode_name      ) TO gt_functions.
-    APPEND VALUE #( modtext = '@TITLE'          modval = tcode_title     ) TO gt_functions.
-    APPEND VALUE #( modtext = '@SELECTION'      modval = variant_code    ) TO gt_functions.
-    APPEND VALUE #( modtext = '@SELECTIONTITLE' modval = variant_name    ) TO gt_functions.
-    APPEND VALUE #( modtext = '@LAYOUT'         modval = display_code    ) TO gt_functions.
-    APPEND VALUE #( modtext = '@LAYOUTTITLE'    modval = display_name    ) TO gt_functions.
-    APPEND VALUE #( modtext = '@YEAR'           modval = sy-datum(4)     ) TO gt_functions.
-    APPEND VALUE #( modtext = '@MONTH'          modval = sy-datum+4(2)   ) TO gt_functions.
-    APPEND VALUE #( modtext = '@DAY'            modval = sy-datum+6(2)   ) TO gt_functions.
-    APPEND VALUE #( modtext = '@DATE'           modval = sy-datum        ) TO gt_functions.
-    APPEND VALUE #( modtext = '@TIME'           modval = sy-uzeit(4)     ) TO gt_functions.
-    APPEND VALUE #( modtext = '@PREYEAR'        modval = preyear         ) TO gt_functions.
-    APPEND VALUE #( modtext = '@PREPERIOD'      modval = preperiod       ) TO gt_functions.
-    APPEND VALUE #( modtext = '@YESTERDAY'      modval = yesterday       ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DESKTOP}'        modval = desktop_path    ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DOCUMENTS}'      modval = documents_path  ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DOWNLOADS}'      modval = downloads_path  ) TO gt_functions.
+    APPEND VALUE #( modtext = '${TEMP}'           modval = temp_path       ) TO gt_functions.
+    APPEND VALUE #( modtext = '${USERNAME}'       modval = user_name       ) TO gt_functions.
+    APPEND VALUE #( modtext = '${USERMAIL}'       modval = user_mailaddr   ) TO gt_functions.
+    APPEND VALUE #( modtext = '${FULLNAME}'       modval = user_fullname   ) TO gt_functions.
+    APPEND VALUE #( modtext = '${TCODE}'          modval = tcode_name      ) TO gt_functions.
+    APPEND VALUE #( modtext = '${TITLE}'          modval = tcode_title     ) TO gt_functions.
+    APPEND VALUE #( modtext = '${SELECTION}'      modval = variant_code    ) TO gt_functions.
+    APPEND VALUE #( modtext = '${SELECTIONTITLE}' modval = variant_name    ) TO gt_functions.
+    APPEND VALUE #( modtext = '${LAYOUT}'         modval = display_code    ) TO gt_functions.
+    APPEND VALUE #( modtext = '${LAYOUTTITLE}'    modval = display_name    ) TO gt_functions.
+    APPEND VALUE #( modtext = '${YEAR}'           modval = sy-datum(4)     ) TO gt_functions.
+    APPEND VALUE #( modtext = '${MONTH}'          modval = sy-datum+4(2)   ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DAY}'            modval = sy-datum+6(2)   ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DATE}'           modval = sy-datum        ) TO gt_functions.
+    APPEND VALUE #( modtext = '${TIME}'           modval = sy-uzeit(4)     ) TO gt_functions.
+    APPEND VALUE #( modtext = '${PREYEAR}'        modval = preyear         ) TO gt_functions.
+    APPEND VALUE #( modtext = '${PREPERIOD}'      modval = preperiod       ) TO gt_functions.
+    APPEND VALUE #( modtext = '${YESTERDAY}'      modval = yesterday       ) TO gt_functions.
 
   ENDMETHOD.
 
@@ -6378,7 +6445,7 @@ CLASS lcl_main IMPLEMENTATION.
             "Set Recipient | This method has options to set CC/BCC as well
             LOOP AT p_mlto ASSIGNING FIELD-SYMBOL(<ls_mlto>).
               lv_address = <ls_mlto>-low.
-              REPLACE ALL OCCURRENCES OF '@USERMAIL' IN lv_address WITH user_mailaddr .
+              REPLACE ALL OCCURRENCES OF '${USERMAIL}' IN lv_address WITH user_mailaddr .
 
               lo_matcher = lo_regex->create_matcher( text = lv_address ).
 
@@ -6877,9 +6944,11 @@ CLASS lcl_main IMPLEMENTATION.
             <ls_group_key_columns>-grup = nr_pos.
           ENDIF.
 
-        ENDIF.
+        ELSE.
 
-        gv_pivot_fieldname =  <f_fnams>-low.
+          gv_pivot_fieldname =  <f_fnams>-low.
+
+        ENDIF.
 
       ENDIF.
 
@@ -6953,9 +7022,11 @@ CLASS lcl_main IMPLEMENTATION.
             <ls_group_key_columns>-grup = nr_pos.
           ENDIF.
 
-        ENDIF.
+        ELSE.
 
-        gv_pivot_fieldname = <ls_selected_group_fields>-fnam.
+          gv_pivot_fieldname = <ls_selected_group_fields>-fnam.
+
+        ENDIF.
 
       ENDLOOP.
     ENDIF.
@@ -8617,6 +8688,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'TXA' text = 'Seçilebilecek alanlar' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXB' text = 'Seçilen alanlar' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXC' text = 'Alan adı' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXD' text = 'Detay' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXF' text = 'Dosya adı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXG' text = 'İlk gruplama alanı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXM' text = 'E-Posta adresleri' ) TO gt_textlist.
@@ -8837,7 +8909,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'PC1' text = 'Exchange Rate Date' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PC2' text = 'Exchange Rate Date' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PCD' text = 'Fixed decimals - no unit reference' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'PCL' text = 'Definitions with Field Code' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PCL' text = 'Definitions with field code' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PCO' text = 'Format columns' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PCP' text = 'Convert unit prices' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PDD' text = 'Detail Layout' ) TO gt_textlist.
@@ -8942,6 +9014,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TXA' text = 'Field List' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXB' text = 'Selected Fields' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXC' text = 'Field Name' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXD' text = 'Detail' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXF' text = 'File name' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXG' text = 'First grouping field' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXM' text = 'E-mail addresses' ) TO gt_textlist.
@@ -9267,6 +9340,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TXA' text = 'Auswählbare Felder' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXB' text = 'Ausgewählte Felder' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXC' text = 'Feldname' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TXD' text = 'Detail' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXF' text = 'Dateiname' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXG' text = 'Erstes Gruppierungsfeld' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TXM' text = 'E-Mail-Adressen' ) TO gt_textlist.
