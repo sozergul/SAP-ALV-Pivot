@@ -2,7 +2,7 @@ Report code is completely portable. It does not require any structure, text or s
 Using dynamic SQL strings, operations such as summing, averaging, calculating maximum or minimum values based on grouped fields can be performed, and the results are displayed in dynamically generated ALV columns.<br><br>
 Drill-down capable pivot tables can be created<br><br>
 Grid, list, and tree views can be selected<br><br>
-ALV Excel export data into Worksheets<br><br>
+Filtered view variant data can be exported to Excel, divided into separate worksheets.<br><br>
 ALV Calculate weighted average<br><br>
 SAP Sales deliveries with backorders<br><br>
 SAP Send html formatted mail<br>
