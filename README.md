@@ -5,8 +5,9 @@ ALV Calculate weighted average<br>
 SAP Sales deliveries with backorders<br>
 SAP Send html formatted mail <br>
 <br>
-![z_sales_pivot_1](https://github.com/user-attachments/assets/db8a481b-79a3-4266-8998-7d71269bbcd7)
+![z_sales_pivot_1](https://github.com/user-attachments/assets/7e66d271-ebbf-4803-94b7-8a5b7857264f)
 <br>
+![z_sales_pivot_2](https://github.com/user-attachments/assets/31b1fa15-8562-475b-a5ce-7477d6fe13c4)
 <br>
 ![image](https://github.com/sozergul/SAP-ALV-Pivot/assets/76847359/22cbeaa2-1afa-4bc0-9120-29b73446d45e)
 <br>
