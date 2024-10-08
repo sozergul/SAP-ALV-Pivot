@@ -1,4 +1,5 @@
-Report code is completely portable. It does not require any structure, text or screen elements.<br>
+<ul>
+<li>Report code is completely portable. It does not require any structure, text or screen elements.</li>
 Using dynamic SQL strings, operations such as summing, averaging, calculating maximum or minimum values based on grouped fields can be performed, and the results are displayed in dynamically generated ALV columns.<br>
 Drill-down capable pivot tables can be created<br>
 SALV Grid, List & Tree<br>
