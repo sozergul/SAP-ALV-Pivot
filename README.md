@@ -2,7 +2,8 @@ Report code is completely portable. It does not require any structure, text or s
 Using dynamic SQL strings, operations such as summing, averaging, calculating maximum or minimum values based on grouped fields can be performed, and the results are displayed in dynamically generated ALV columns.<br><br>
 Drill-down capable pivot tables can be created<br><br>
 Grid, list, and tree views can be selected<br><br>
-Filtered view variant data can be exported to Excel, divided into separate worksheets.<br><br>
+Filtered variant data can be exported to Excel<br>
+Data can be divided into separate worksheets.<br>
 Variant descriptions formatted in HTML can be stored and added in the body of the sent email.<br>
 <br>
 ![z_sales_pivot_1](https://github.com/user-attachments/assets/7e66d271-ebbf-4803-94b7-8a5b7857264f)
