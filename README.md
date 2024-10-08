@@ -3,8 +3,6 @@ Using dynamic SQL strings, operations such as summing, averaging, calculating ma
 Drill-down capable pivot tables can be created<br><br>
 Grid, list, and tree views can be selected<br><br>
 Filtered view variant data can be exported to Excel, divided into separate worksheets.<br><br>
-ALV Calculate weighted average<br><br>
-SAP Sales deliveries with backorders<br><br>
 SAP Send html formatted mail<br>
 <br>
 ![z_sales_pivot_1](https://github.com/user-attachments/assets/7e66d271-ebbf-4803-94b7-8a5b7857264f)
