@@ -4,7 +4,11 @@ ALV Excel export data into Worksheets<br>
 ALV Calculate weighted average<br>
 SAP Sales deliveries with backorders<br>
 SAP Send html formatted mail <br>
- <br>
+<br>
+![z_sales_pivot_1](https://github.com/user-attachments/assets/db8a481b-79a3-4266-8998-7d71269bbcd7)
+<br>
+
+<br>
 ![image](https://github.com/sozergul/SAP-ALV-Pivot/assets/76847359/22cbeaa2-1afa-4bc0-9120-29b73446d45e)
 <br>
 ![image](https://github.com/sozergul/SAP-ALV-Pivot/assets/76847359/f9e9e636-0ceb-4cf3-ad4d-34d819edbe76)
