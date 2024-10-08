@@ -1,12 +1,13 @@
 <ul>
 <li>Report code is completely portable. It does not require any structure, text or screen elements.</li>
-Using dynamic SQL strings, operations such as summing, averaging, calculating maximum or minimum values based on grouped fields can be performed, and the results are displayed in dynamically generated ALV columns.<br>
-Drill-down capable pivot tables can be created<br>
-SALV Grid, List & Tree<br>
-ALV Excel export data into Worksheets<br>
-ALV Calculate weighted average<br>
-SAP Sales deliveries with backorders<br>
-SAP Send html formatted mail <br>
+<li>Using dynamic SQL strings, operations such as summing, averaging, calculating maximum or minimum values based on grouped fields can be performed, and the results are displayed in dynamically generated ALV columns.</li>
+<li>Drill-down capable pivot tables can be created</li>
+<li>SALV Grid, List & Tree</li>
+<li>ALV Excel export data into Worksheets</li>
+<li>ALV Calculate weighted average</li>
+<li>SAP Sales deliveries with backorders</li>
+<li>SAP Send html formatted mail</li>
+</ul>
 <br>
 ![z_sales_pivot_1](https://github.com/user-attachments/assets/7e66d271-ebbf-4803-94b7-8a5b7857264f)
 <br>
