@@ -1,11 +1,11 @@
 *&---------------------------------------------------------------------*
 *& Report  Z_SALES_PIVOT
-*& Description : Satış Analizi Raporu
+*& Description : Sales Analysis
 *&---------------------------------------------------------------------*
 * HISTORY :                                                            *
-* AUTHOR       DATE                DESCRIPTION                         *
-* -----------  ---------- -------- ------------------------------------*
-* S.OZERGUL    10.08.2023 16:13:16 Initial version                     *
+* AUTHOR               DATE                  DESCRIPTION               *
+* ------------------   ---------- --------   --------------------------*
+* sozergul@yahoo.com   10.08.2023 16:13:16   Initial version           *
 *&---------------------------------------------------------------------*
 
 REPORT z_sales_pivot.
@@ -415,8 +415,8 @@ SELECTION-SCREEN BEGIN OF SCREEN 1100 AS SUBSCREEN.
 
   SELECTION-SCREEN BEGIN OF LINE.
     SELECTION-SCREEN COMMENT 1(33) ptp FOR FIELD p_term.
-    PARAMETERS: p_term AS LISTBOX VISIBLE LENGTH 21 USER-COMMAND UC09 DEFAULT 'S' .
-    SELECTION-SCREEN COMMENT (2) l_spb .
+    PARAMETERS: p_term AS LISTBOX VISIBLE LENGTH 22 USER-COMMAND UC09 DEFAULT 'S' .
+    SELECTION-SCREEN COMMENT (1) l_spb .
     PARAMETERS: p_blin AS CHECKBOX DEFAULT ' '.
     SELECTION-SCREEN COMMENT 70(20) pbo FOR FIELD p_blin.
   SELECTION-SCREEN END OF LINE.
@@ -2190,7 +2190,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         DATA: dt_data TYPE TABLE OF ds_data WITH EMPTY KEY.
 
-        APPEND VALUE #( code = 'DEMO-01' text = 'Invoiced Amount by Sales Area' ) TO dt_data.
+        APPEND VALUE #( code = 'DEMO-01' text = 'Billing Amount by Sales Area' ) TO dt_data.
         APPEND VALUE #( code = 'DEMO-02' text = 'a Period Report by Material Group ' ) TO dt_data.
         APPEND VALUE #( code = 'DEMO-03' text = 'Tree View of Country and Region Records' ) TO dt_data.
 
@@ -8634,8 +8634,8 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'FK_BAMN'   techl = 'FATURALANMAMISTUTAR'          texts = 'Fatura Bak. Tut.'     textl = 'Faturalanmamış Tutar'          emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '15' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_AMNT'   techl = 'FATURALANANTUTAR'             texts = 'Fatura Tutarı'        textl = 'Faturalanan Tutar'             emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '16' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_TOTL'   techl = 'VERGIDAHILFATURALANANTUTAR'   texts = 'Vrg.Dhl.Fat.Tut.'     textl = 'Vrg. Dhl. Faturalanan Tutar'   emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '17' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AG_BAMN'   techl = 'ODENMEMISTUTAR'               texts = 'Ödenmemiş Tutar'      textl = 'Ödenmemiş Tutar'               emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '18' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AG_AMNT'   techl = 'ODENENTUTAR'                  texts = 'Ödenen Tutar'         textl = 'Ödenen Tutar'                  emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '19' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AG_AMNT'   techl = 'ESLENMISTUTAR'                texts = 'Eşlenmiş Tutar'       textl = 'Eşlenmiş Tutar'                emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '18' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AG_BAMN'   techl = 'ESLENMEMISTUTAR'              texts = 'Eşlenmemiş Tutar'     textl = 'Eşlenmemiş Tutar'              emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '19' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WAERK'     techl = 'RAPORPARABIRIMI'              texts = 'Rapor PB'             textl = 'Rapor Para Birimi'             emphs = 'C300' shide = 'X' spgrp = 1 isgrp = '61' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'CWAER'     techl = 'SIPARISPARABIRIMI'            texts = 'Sipariş PB'           textl = 'Sipariş Para Birimi'           emphs = 'C300' shide = ' ' spgrp = 1 isgrp = '62' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_PRIC_2' techl = 'SATISFIYATI'                  texts = 'Satış Fiyatı'         textl = 'Satış Fiyatı'                  emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'W'  ) TO gt_fieldlist.
@@ -8708,20 +8708,20 @@ FORM fill_parameters_en.
     APPEND VALUE #( fname = 'BWART'     techl = 'MOVEMENTTYPE'                   texts = 'Mov.Type'             textl = 'Movement Type'                 emphs = 'C700' shide = 'X' spgrp = 2 isgrp = '20' ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'MBLNR'     techl = 'MATERIALDOCUMENT'               texts = 'Mat.Document'         textl = 'Material Document'             emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'BLDAT'     techl = 'MATERIALISSUEDATE'              texts = 'Mat.IssueDate'        textl = 'Material Issue Date'           emphs = 'C700' shide = 'X' spgrp = 2 isgrp = ' '  ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'FKBEL'     techl = 'INVOICEDOCUMENT'                texts = 'Inv.Doc.'             textl = 'Invoice Document'              emphs = 'C300' shide = ' ' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'FKPOS'     techl = 'INVOICEITEM'                    texts = 'Inv.Doc.Item'         textl = 'Invoice Item'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'FKBEL'     techl = 'BILLINGDOCUMENT'                texts = 'Bil.Doc.'             textl = 'Billing Document'              emphs = 'C300' shide = ' ' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'FKPOS'     techl = 'BILLINGITEM'                    texts = 'Bil.Doc.Item'         textl = 'Billing Item'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'PRSDT'     techl = 'PRICINGDATE'                    texts = 'Pricing Date'         textl = 'Pricing Date'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'FKDAT'     techl = 'INVOICEDATE'                    texts = 'Inv.Date.'            textl = 'Invoice Date'                  emphs = 'C300' shide = ' ' spgrp = 3 isgrp = '21' ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'FKPER'     techl = 'INVOICEPERIOD'                  texts = 'Inv.Period'           textl = 'Invoice Period'                emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '22' ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'FKWEK'     techl = 'INVOICEWEEKNUMBER'              texts = 'Inv.WeekNo'           textl = 'Invoice Week Number'           emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '23' ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'FSTAT'     techl = 'INVOICESTATUS'                  texts = 'Inv.Status'           textl = 'Invoice Status'                emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'FKDAT'     techl = 'BILLINGDATE'                    texts = 'Bil.Date.'            textl = 'Billing Date'                  emphs = 'C300' shide = ' ' spgrp = 3 isgrp = '21' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'FKPER'     techl = 'BILLINGPERIOD'                  texts = 'Bil.Period'           textl = 'Billing Period'                emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '22' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'FKWEK'     techl = 'BILLINGWEEKNUMBER'              texts = 'Bil.WeekNo'           textl = 'Billing Week Number'           emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '23' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'FSTAT'     techl = 'BILLINGSTATUS'                  texts = 'Bil.Status'           textl = 'Billing Status'                emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'BELNR'     techl = 'ACCOUNTINGDOCUMENT'             texts = 'Acc.Document'         textl = 'Accounting Document'           emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'AUGBL'     techl = 'CLEARINGDOCUMENT'               texts = 'Clearing Doc.'        textl = 'Clearing Document'             emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'AUGDT'     techl = 'CLEARINGDATE'                   texts = 'Clr.Doc. Date'        textl = 'Clearing Date'                 emphs = 'C300' shide = 'X' spgrp = 3 isgrp = ' '  ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'GJAHR'     techl = 'INVOICEYEAR'                    texts = 'Inv.Year'             textl = 'Invoice Year'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '24' ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'GMONT'     techl = 'INVOICEMONTH'                   texts = 'Inv.Month'            textl = 'Invoice Month'                 emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '25' ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'GQUAR'     techl = 'INVOICEQUARTER'                 texts = 'Inv.Quarter'          textl = 'Invoice Quarter'               emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '26' ) TO gt_fieldlist.
-    APPEND VALUE #( fname = 'GHALF'     techl = 'INVOICEHALFYEAR'                texts = 'Fatura Yarı Dn.'      textl = 'Invoice Half Year'             emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '27' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'GJAHR'     techl = 'BILLINGYEAR'                    texts = 'Bil.Year'             textl = 'Billing Year'                  emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '24' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'GMONT'     techl = 'BILLINGMONTH'                   texts = 'Bil.Month'            textl = 'Billing Month'                 emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '25' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'GQUAR'     techl = 'BILLINGQUARTER'                 texts = 'Bil.Quarter'          textl = 'Billing Quarter'               emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '26' ) TO gt_fieldlist.
+    APPEND VALUE #( fname = 'GHALF'     techl = 'BILLINGHALFYEAR'                texts = 'Bil.Half Year'        textl = 'Billing Half Year'             emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '27' ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'HKONT'     techl = 'GENERALLEDGERACCOUNT'           texts = 'Gen.Ledger Acc.'      textl = 'General Ledger Account'        emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '28' ) TO gt_fieldlist.
     APPEND VALUE #( fname = 'PRCTR'     techl = 'PROFITCENTER'                   texts = 'Profit Center'        textl = 'Profit Center'                 emphs = 'C300' shide = 'X' spgrp = 3 isgrp = '29' ) TO gt_fieldlist.
   ENDIF.
@@ -8791,9 +8791,9 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'LF_BQUA'   techl = 'UNDELIVEREDQUANTITY'            texts = 'Undeliv. Qty.'        textl = 'Undelivered Quantity'          emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '03' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WA_QUAN'   techl = 'GOODSISSUEQUANTITY'             texts = 'Issue Qty.'           textl = 'Goods Issue Quantity'          emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '04' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WA_BQUA'   techl = 'GOODSISSUESHORTQUANTITY'        texts = 'Issue Sh. Qty.'       textl = 'Goods Issue Short. Quantity'   emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '05' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_QUAN'   techl = 'INVOICEDQUANTITY'               texts = 'Inv. Qty.'            textl = 'Invoiced Quantity'             emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '06' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_BQUA'   techl = 'UNINVOICEDQUANTITY'             texts = 'Uninv. Qty.'          textl = 'Uninvoiced Quantity'           emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '07' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_WQUA'   techl = 'PENDINGINVOICINGQUANTITY'       texts = 'Pend. Inv. Qty.'      textl = 'Pending Invoicing Quantity'    emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '08' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_QUAN'   techl = 'BILLEDQUANTITY'                 texts = 'Bil. Qty.'            textl = 'Billed Quantity'               emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '06' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_BQUA'   techl = 'UNBILLEDQUANTITY'               texts = 'Unbil. Qty.'          textl = 'Unbilled Quantity'             emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '07' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_WQUA'   techl = 'PENDINGBILLINGQUANTITY'         texts = 'Pend. Bil. Qty.'      textl = 'Pending Billing Quantity'      emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '08' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'VRKME'     techl = 'REPORTMEASUREMENTUNIT'          texts = 'RM Unit'              textl = 'Report Measurement Unit'       emphs = 'C700' shide = 'X' spgrp = 1 isgrp = '59' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'CVRKM'     techl = 'ORDERMEASUREMENTUNIT'           texts = 'OM Unit'              textl = 'Order Measurement Unit'        emphs = 'C700' shide = ' ' spgrp = 1 isgrp = '60' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_PRIC'   techl = 'SALESPRICE'                     texts = 'Sales Pr.'            textl = 'Sales Price'                   emphs = 'C100' shide = ' ' spgrp = 7 cumty = 'W' slynr = '09' ) TO gt_fieldlist.
@@ -8802,18 +8802,18 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'TM_AMNT'   techl = 'TERMINAMOUNT'                   texts = 'Term. Amt.'           textl = 'Termin Amount'                 emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_AMNT'   techl = 'DELIVEREDAMOUNT'                texts = 'Del. Amt.'            textl = 'Delivered Amount'              emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '12' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BAMN'   techl = 'UNDELIVEREDAMOUNT'              texts = 'Undlv. Amt.'          textl = 'Undelivered Amount'            emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '13' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_WAMN'   techl = 'PENDINGINVOICINGAMOUNT'         texts = 'Pend. Inv. Amt.'      textl = 'Pending Invoicing Amount'      emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '14' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_BAMN'   techl = 'UNINVOICEDAMOUNT'               texts = 'Uninv. Amt.'          textl = 'Uninvoiced Amount'             emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '15' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_AMNT'   techl = 'INVOICEDAMOUNT'                 texts = 'Inv. Amt.'            textl = 'Invoiced Amount'               emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '16' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_TOTL'   techl = 'TAXINCLUSIVEINVOICEDAMOUNT'     texts = 'Tax-Incl.Inv.Amt.'    textl = 'Tax-Inclusive Invoiced Amount' emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '17' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AG_BAMN'   techl = 'UNPAIDAMOUNT'                   texts = 'Unpaid Amt.'          textl = 'Unpaid Amount'                 emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '18' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AG_AMNT'   techl = 'PAIDAMOUNT'                     texts = 'Paid Amt.'            textl = 'Paid Amount'                   emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '19' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_WAMN'   techl = 'PENDINGBILLINGAMOUNT'           texts = 'Pend. Bil. Amt.'      textl = 'Pending Billing Amount'        emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '14' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_BAMN'   techl = 'UNBILLEDAMOUNT'                 texts = 'Unbil. Amt.'          textl = 'Unbilled Amount'               emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '15' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_AMNT'   techl = 'BILLEDAMOUNT'                   texts = 'Bil. Amt.'            textl = 'Billed Amount'                 emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '16' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_TOTL'   techl = 'TAXINCLUSIVEBILLEDAMOUNT'       texts = 'Tax-Incl.Bil.Amt.'    textl = 'Tax-Inclusive Billed Amount'   emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '17' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AG_AMNT'   techl = 'CLEAREDAMOUNT'                  texts = 'Cleared Amt.'         textl = 'Cleared Amount'                emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '18' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AG_BAMN'   techl = 'UNCLEAREDAMOUNT'                texts = 'Uncleared Amt.'       textl = 'Uncleared Amount'              emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '19' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WAERK'     techl = 'REPORTCURRENCY'                 texts = 'Rep.Curr.'            textl = 'Report Currency'               emphs = 'C300' shide = 'X' spgrp = 1 isgrp = '61' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'CWAER'     techl = 'ORDERCURRENCY'                  texts = 'Ord.Curr.'            textl = 'Order Currency'                emphs = 'C300' shide = ' ' spgrp = 1 isgrp = '62' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_PRIC_2' techl = 'SALESPRICE'                     texts = 'Sales Pr.'            textl = 'Sales Price'                   emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'A'  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_TXPR_2' techl = 'TAXINCLUSIVESALESPRICE'         texts = 'Tax-Incl.Sales Pr.'   textl = 'Tax-Inclusive Sales Price'     emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'A'  ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_AMNT_2' techl = 'INVOICEDAMOUNT'                 texts = 'Inv. Amt.'            textl = 'Invoiced Amount'               emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T'  ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'FK_TOTL_2' techl = 'TAXINCLUSIVEINVOICEDAMOUNT'     texts = 'Tax-Incl.Inv.Amt.'    textl = 'Tax-Inclusive Invoiced Amount' emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T'  ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_AMNT_2' techl = 'BILLEDDAMOUNT'                  texts = 'Bil. Amt.'            textl = 'Billed Amount'                 emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T'  ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'FK_TOTL_2' techl = 'TAXINCLUSIVEBILLEDAMOUNT'       texts = 'Tax-Incl.Bil.Amt.'    textl = 'Tax-Inclusive Billed Amount'   emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T'  ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WAERK_2'   techl = 'REPORTCURRENCY_2'               texts = 'Rep. Curr. (2)'       textl = 'Report Currency (2)'           emphs = 'C300' shide = 'X' spgrp = 1 ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'EC_AMNT'   techl = 'EXCHANGERATEDIFFERENCE'         texts = 'Exch. Rate Diff.'     textl = 'Exchange Rate Difference'      emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'T' slynr = '20' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'EC_TAMN'   techl = 'TAXINCLEXCHANGERATEDIFF'        texts = 'Tax-Incl.Exch.Diff.'  textl = 'Tax-Incl. Exchange Rate Diff'  emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'T' ) TO gt_fieldlist.
@@ -8977,8 +8977,8 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'FK_BAMN'   techl = 'NICHTINRECHNUNGBETRAG'          texts = 'NIR-Betrag'          textl = 'Nicht in Rechnung Betrag'       emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '15' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_AMNT'   techl = 'INRECHNUNGBETRAG'               texts = 'IR-Betrag'           textl = 'In Rechnung Betrag'             emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '16' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_TOTL'   techl = 'STEUERINKLINRECHNUNGBETRAG'     texts = 'IR-Betrag in.MwSt.'  textl = 'Steuerinkl. in Rechnung Betrag' emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '17' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AG_BAMN'   techl = 'OFFENERBETRAG'                  texts = 'Offener Betrag'      textl = 'Offener Betrag'                 emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '18' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'AG_AMNT'   techl = 'BEZAHLTERBETRAG'                texts = 'Bezahlter Betrag'    textl = 'Bezahlter Betrag'               emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '19' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AG_AMNT'   techl = 'AUSGEGLICHENERBETRAG'           texts = 'Ausgeglich. Betrag'  textl = 'Ausgeglichener Betrag'          emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '18' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'AG_BAMN'   techl = 'NICHTAUSGEGLICHENERBETRAG'      texts = 'NI-Ausgegl.Betrag'   textl = 'Nicht Ausgeglichener Betrag'    emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '19' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WAERK'     techl = 'BERICHTSSWAHRUNG'               texts = 'B-Währung'           textl = 'Berichtsswährung'               emphs = 'C300' shide = 'X' spgrp = 1 isgrp = '61' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'CWAER'     techl = 'AUFTRAGSWAHRUNG'                texts = 'A-Währung'           textl = 'Auftragswährung'                emphs = 'C300' shide = ' ' spgrp = 1 isgrp = '62' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_PRIC_2' techl = 'VERKAUFSPREIS'                  texts = 'Verkaufspreis'       textl = 'Verkaufspreis'                  emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'W'  ) TO gt_fieldlist.
@@ -9370,7 +9370,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'DS3' text = 'Tree' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DSZ' text = 'Select Demo' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT1' text = 'Order Item' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'DT2' text = 'Delivery and Invoice' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'DT2' text = 'Delivery and Billing' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L11' text = 'Order' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L12' text = 'Options' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L13' text = 'Grouping' ) TO gt_textlist.
@@ -9435,7 +9435,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'PSV' text = 'Selection Variant' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTC' text = 'Use technical names in headers' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTP' text = 'Termin Type' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'PTR' text = 'Output as' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PTR' text = 'Display as' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTW' text = 'Use report unit as reference' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PW1' text = 'Report Currency 1' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PW2' text = 'Report Currency 2' ) TO gt_textlist.
@@ -9465,9 +9465,9 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'S03' text = 'Pending goods issue' ) TO gt_textlist.
   APPEND VALUE #( sym = 'S04' text = 'Payed' ) TO gt_textlist.
   APPEND VALUE #( sym = 'S05' text = 'Partially payed' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'S06' text = 'Invoiced' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'S07' text = 'Partially invoiced' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'S08' text = 'Pending invoice' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'S06' text = 'Billed' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'S07' text = 'Partially billed' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'S08' text = 'Pending billing' ) TO gt_textlist.
   APPEND VALUE #( sym = 'S09' text = 'Delivered' ) TO gt_textlist.
   APPEND VALUE #( sym = 'S10' text = 'Partially delivered' ) TO gt_textlist.
   APPEND VALUE #( sym = 'S11' text = 'Pending delivery' ) TO gt_textlist.
@@ -9480,8 +9480,8 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'SLS' text = 'Delivery Status' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SCD' text = 'Creation Date' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SCR' text = 'Created By' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'SFB' text = 'Invoice Document' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'SFS' text = 'Invoicing Status' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'SFB' text = 'Billing Document' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'SFS' text = 'Billing Status' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SLB' text = 'Delivery Document' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SMB' text = 'Material Document' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SNB' text = 'Accounting Document' ) TO gt_textlist.
@@ -9491,8 +9491,8 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'SVB' text = 'Sales Office' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SVT' text = 'Ref. Document Type' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SWS' text = 'Goods Issue Status' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TFB' text = 'Invoice Balance' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TFK' text = 'Invoice' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TFB' text = 'Billing Balance' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TFK' text = 'Billing' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TIS' text = 'Items' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TLB' text = 'Delivery Balance' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TLF' text = 'Delivery' ) TO gt_textlist.
@@ -9500,7 +9500,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TOI' text = 'Order Item' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TSO' text = 'Open Order Document' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT1' text = '(exch. on delivery)' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TT2' text = '(exch. on invoice)' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TT2' text = '(exch. on billing)' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT3' text = '(current exch. rate)' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT4' text = '(different currencies !!!)' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT5' text = '(different units !!!)' ) TO gt_textlist.
@@ -9544,7 +9544,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'TZT' text = 'GRANDTOTAL' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y01' text = 'Order' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y02' text = 'Delivery' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'Y03' text = 'Invoice' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'Y03' text = 'Billing' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y04' text = 'Material' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y05' text = 'Partner' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y06' text = 'Quantity' ) TO gt_textlist.
@@ -9692,7 +9692,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'DO2' text = 'Erstellungdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DO3' text = 'Verkaufsdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DO4' text = 'Lieferungdatum' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'DO5' text = 'Fakturadatum' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'DO5' text = 'Rechnungdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DO6' text = 'Preisdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DO7' text = 'Ausgleichsdatum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DO8' text = 'Aktuellesdatum' ) TO gt_textlist.
@@ -9702,7 +9702,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'DS3' text = 'Baum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DSZ' text = 'Demo auswählen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT1' text = 'Auftragposition' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'DT2' text = 'Lieferung und Faktura' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'DT2' text = 'Lieferung und Rechnung' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L11' text = 'Auftrag' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L12' text = 'Optionen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L13' text = 'Gruppe' ) TO gt_textlist.
@@ -9813,7 +9813,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'SCD' text = 'Angelegt am' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SCR' text = 'Angelegt von' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SFB' text = 'Rechnungsdokument' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'SFS' text = 'Rechnungsstellungstatus' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'SFS' text = 'Rechnungsstatus' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SLB' text = 'Auslieferungbeleg' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SMB' text = 'Warenauslieferungbeleg' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SNB' text = 'Buchungsbeleg' ) TO gt_textlist.
@@ -9824,7 +9824,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'SVT' text = 'Referenzdokumenttyp' ) TO gt_textlist.
   APPEND VALUE #( sym = 'SWS' text = 'Warenausgangsstatus' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TFB' text = 'Rechnungssaldo' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TFK' text = 'Faktura' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TFK' text = 'Rechnung' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TIS' text = 'Auftrags' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TLB' text = 'Liefersaldo' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TLF' text = 'Lieferung' ) TO gt_textlist.
@@ -9832,7 +9832,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TOI' text = 'Auftragsposition' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TSO' text = 'Auftrag anzeigen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT1' text = '(Wechselkurs am Lieferdatum)' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'TT2' text = '(Wechselkurs am Fakturadatum)' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'TT2' text = '(Wechselkurs am Rechnungdatum)' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT3' text = '(Aktueller Wechselkurs)' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT4' text = '(Unterschiedliche Währungen !!!)' ) TO gt_textlist.
   APPEND VALUE #( sym = 'TT5' text = '(Unterschiedliche Einheiten !!!)' ) TO gt_textlist.
@@ -9876,7 +9876,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'TZT' text = 'GESAMTSUMME' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y01' text = 'Verkauf' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y02' text = 'Lieferung' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'Y03' text = 'Faktura' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'Y03' text = 'Rechnung' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y04' text = 'Material' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y05' text = 'Partner' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Y06' text = 'Menge' ) TO gt_textlist.
@@ -9903,7 +9903,7 @@ FORM set_screen_de.
   %_s_edatu_%_app_%-text = 'Lieferdatum'.
   %_s_erdat_%_app_%-text = 'Angelegt am'.
   %_s_ernam_%_app_%-text = 'Angelegt von'.
-  %_s_fkdat_%_app_%-text = 'Fakturadatum'.
+  %_s_fkdat_%_app_%-text = 'Rechnungdatum'.
   %_s_fstat_%_app_%-text = 'Status'.
   %_s_gbsta_%_app_%-text = 'Gesamtstatus'.
   %_s_inco1_%_app_%-text = 'Incoterms'.
