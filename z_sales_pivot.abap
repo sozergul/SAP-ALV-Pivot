@@ -4505,23 +4505,19 @@ CLASS lcl_main IMPLEMENTATION.
 
     IF p_fld01 NE '' AND p_cnd0 NE '' AND ( ( p_fov0 EQ 'FIELD' AND p_fld02 NE '' ) OR ( p_fov0 EQ 'VALUE' )  ).
 
-      IF VALUE #( gt_fcat[ fieldname = p_fld01 ]-inttype OPTIONAL ) EQ 'P'.
+      IF VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) EQ 'P'.
         REPLACE ALL OCCURRENCES OF ',' IN p_flt02 WITH '.'.
       ENDIF.
-
-      IF VALUE #( gt_fcat[ fieldname = p_fld03 ]-inttype OPTIONAL ) EQ 'P'.
+      IF VALUE #( gt_allfields_text[ name = p_fld03 ]-type OPTIONAL ) EQ 'P'.
         REPLACE ALL OCCURRENCES OF ',' IN p_flt04 WITH '.'.
       ENDIF.
-
-      IF VALUE #( gt_fcat[ fieldname = p_fld05 ]-inttype OPTIONAL ) EQ 'P'.
+      IF VALUE #( gt_allfields_text[ name = p_fld05 ]-type OPTIONAL ) EQ 'P'.
         REPLACE ALL OCCURRENCES OF ',' IN p_flt06 WITH '.'.
       ENDIF.
-
-      IF VALUE #( gt_fcat[ fieldname = p_fld07 ]-inttype OPTIONAL ) EQ 'P'.
+      IF VALUE #( gt_allfields_text[ name = p_fld07 ]-type OPTIONAL ) EQ 'P'.
         REPLACE ALL OCCURRENCES OF ',' IN p_flt08 WITH '.'.
       ENDIF.
-
-      IF VALUE #( gt_fcat[ fieldname = p_fld09 ]-inttype OPTIONAL ) EQ 'P'.
+      IF VALUE #( gt_allfields_text[ name = p_fld09 ]-type OPTIONAL ) EQ 'P'.
         REPLACE ALL OCCURRENCES OF ',' IN p_flt10 WITH '.'.
       ENDIF.
 
@@ -4535,6 +4531,38 @@ CLASS lcl_main IMPLEMENTATION.
       p_fld08 = 't~' && p_fld08.
       p_fld09 = 't~' && p_fld09.
       p_fld10 = 't~' && p_fld10.
+
+      IF VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) EQ 'C'.
+        p_fld01 = | UPPER( | && p_fld01 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld02 ]-type OPTIONAL ) EQ 'C'.
+        p_fld02 = | UPPER( | && p_fld02 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld03 ]-type OPTIONAL ) EQ 'C'.
+        p_fld03 = | UPPER( | && p_fld03 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld04 ]-type OPTIONAL ) EQ 'C'.
+        p_fld04 = | UPPER( | && p_fld04 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld05 ]-type OPTIONAL ) EQ 'C'.
+        p_fld05 = | UPPER( | && p_fld05 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld06 ]-type OPTIONAL ) EQ 'C'.
+        p_fld06 = | UPPER( | && p_fld06 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld07 ]-type OPTIONAL ) EQ 'C'.
+        p_fld07 = | UPPER( | && p_fld07 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld08 ]-type OPTIONAL ) EQ 'C'.
+        p_fld08 = | UPPER( | && p_fld08 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld09 ]-type OPTIONAL ) EQ 'C'.
+        p_fld09 = | UPPER( | && p_fld09 && | ) |.
+      ENDIF.
+      IF VALUE #( gt_allfields_text[ name = p_fld10 ]-type OPTIONAL ) EQ 'C'.
+        p_fld10 = | UPPER( | && p_fld10 && | ) |.
+      ENDIF.
+
 
       REPLACE ALL OCCURRENCES OF '''' IN p_flt02 WITH ''''''.
       REPLACE ALL OCCURRENCES OF '''' IN p_flt04 WITH ''''''.
@@ -4599,9 +4627,9 @@ CLASS lcl_main IMPLEMENTATION.
 
       lv_t_filter = | ( |.
 
-      lv_t_filter = lv_t_filter && | UPPER( | && p_fld01 && | ) | && p_cnd0 && | |.
+      lv_t_filter = lv_t_filter && | | && p_fld01 && |  | && p_cnd0 && | |.
       IF p_fov0 EQ 'FIELD'.
-        lv_t_filter = lv_t_filter && | UPPER( | && p_fld02 && | )|.
+        lv_t_filter = lv_t_filter && | | && p_fld02 && | |.
       ELSE.
         lv_t_filter = lv_t_filter && |'| && p_flt02 && |'|.
         IF p_flt02 CA '#%' or p_flt02 CA '#_'.
@@ -4614,7 +4642,7 @@ CLASS lcl_main IMPLEMENTATION.
         lv_t_filter = lv_t_filter && | | && p_opt1 && | ( ( |.
         lv_t_filter = lv_t_filter && p_fld03 && | | && p_cnd1 && | |.
         IF p_fov1 EQ 'FIELD'.
-          lv_t_filter = lv_t_filter && | UPPER( | && p_fld04 && | )|.
+          lv_t_filter = lv_t_filter && | | && p_fld04 && | |.
         ELSE.
           lv_t_filter = lv_t_filter && |'| && p_flt04 && |'|.
           IF p_flt04 CA '#%' or p_flt04 CA '#_'.
@@ -4627,7 +4655,7 @@ CLASS lcl_main IMPLEMENTATION.
           lv_t_filter = lv_t_filter && | | && p_opt2 && | ( |.
           lv_t_filter = lv_t_filter && p_fld05 && | | && p_cnd2 && | |.
           IF p_fov2 EQ 'FIELD'.
-            lv_t_filter = lv_t_filter && | UPPER( | && p_fld06 && | )|.
+            lv_t_filter = lv_t_filter && | | && p_fld06 && | |.
           ELSE.
             lv_t_filter = lv_t_filter && |'| && p_flt06 && |'|.
             IF p_flt06 CA '#%' or p_flt06 CA '#_'.
@@ -4643,7 +4671,7 @@ CLASS lcl_main IMPLEMENTATION.
         lv_t_filter = lv_t_filter && | | && p_opt3 && | ( ( |.
         lv_t_filter = lv_t_filter && p_fld07 && | | && p_cnd3 && | |.
         IF p_fov3 EQ 'FIELD'.
-          lv_t_filter = lv_t_filter && | UPPER( | && p_fld08 && | )|.
+          lv_t_filter = lv_t_filter && | | && p_fld08 && | |.
         ELSE.
           lv_t_filter = lv_t_filter && |'| && p_flt08 && |'|.
           IF p_flt08 CA '#%' or p_flt08 CA '#_'.
@@ -4656,7 +4684,7 @@ CLASS lcl_main IMPLEMENTATION.
           lv_t_filter = lv_t_filter && | | && p_opt4 && | ( |.
           lv_t_filter = lv_t_filter && p_fld09 && | | && p_cnd4 && | |.
           IF p_fov4 EQ 'FIELD'.
-            lv_t_filter = lv_t_filter && | UPPER( | && p_fld10 && | )|.
+            lv_t_filter = lv_t_filter && | | && p_fld10 && | |.
           ELSE.
             lv_t_filter = lv_t_filter && |'| && p_flt10 && |'|.
             IF p_flt10 CA '#%' or p_flt10 CA '#_'.
@@ -10219,6 +10247,13 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'A06' text = 'Lütfen ekli dosyayı inceleyiniz.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A07' text = 'Sistem dilini değiştirmek istiyor musunuz ?' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A08' text = 'E-posta gönderildi.' ) TO gt_textlist.
+
+  APPEND VALUE #( sym = 'A10' text = 'Alan tipleri uyumlu değil !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A11' text = 'Tarih geçerli değil. Yıl ay gün ardışık rakam girin !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A12' text = 'Saat geçerli değil. Saat dakika saniye ardışık rakam girin !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A13' text = 'Nümerik değer girin !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A14' text = 'Girilebilecek maksimum karakter sayısı : ' ) TO gt_textlist.
+
   APPEND VALUE #( sym = 'B01' text = 'Seçimleri sıfırla' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Dili Değiştir' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B03' text = 'Alan seçimi' ) TO gt_textlist.
@@ -10552,6 +10587,13 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'A06' text = 'Please see attached file.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A07' text = 'Also change system locale language ?' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A08' text = 'E-mail has been sent.' ) TO gt_textlist.
+
+  APPEND VALUE #( sym = 'A10' text = 'Field types are not compatible !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A11' text = 'Date not valid. Enter consecutive digits for year month day !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A12' text = 'Saat geçerli değil. Saat dakika saniye ardışık rakam girin !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A13' text = 'Time is not valid. Enter consecutive digits for hours minutes seconds !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A14' text = 'Maximum number of characters that can be entered : ' ) TO gt_textlist.
+
   APPEND VALUE #( sym = 'B01' text = 'Clear Selection' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Change Language' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B03' text = 'Fields' ) TO gt_textlist.
@@ -10885,6 +10927,13 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'A06' text = 'Anbei finden Sie die Datei zur E-Mail.' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A07' text = 'Ändern Sie auch das lokal Sprache des Systems ? ' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A08' text = 'Die Email wurde verschickt.' ) TO gt_textlist.
+
+  APPEND VALUE #( sym = 'A10' text = 'Feldtypen sind nicht kompatibel !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A11' text = 'Datum ungültig. Geben Sie fortlaufende Ziffern für Jahr, Monat, Tag ein !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A12' text = 'Die Uhrzeit ist ungültig. Geben Sie fortlaufende Ziffern für Stunden, Minuten und Sekunden ein !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A13' text = 'Zahlenwert eingeben !' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A14' text = 'Maximale Anzahl der Zeichen, die eingegeben werden können : ' ) TO gt_textlist.
+
   APPEND VALUE #( sym = 'B01' text = 'Auswahl löschen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Sprache ändern' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B03' text = 'Felder' ) TO gt_textlist.
