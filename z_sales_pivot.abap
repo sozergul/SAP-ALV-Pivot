@@ -144,8 +144,8 @@ TYPES: BEGIN OF ty_struc_type,
          fk_wqua   TYPE kwmeng,
          vrkme     TYPE vrkme,
          cvrkm     TYPE vrkme,
-         nt_pric   TYPE scprcurr,
-         nt_txpr   TYPE scprcurr,
+         nt_pric   TYPE netwr,
+         nt_txpr   TYPE netwr,
          tx_amnt   TYPE netwr,
          tm_amnt   TYPE netwr,
          lf_amnt   TYPE netwr,
@@ -157,8 +157,8 @@ TYPES: BEGIN OF ty_struc_type,
          ag_bamn   TYPE netwr,
          waerk     TYPE waerk,
          cwaer     TYPE waerk,
-         nt_pric_2 TYPE scprcurr,
-         nt_txpr_2 TYPE scprcurr,
+         nt_pric_2 TYPE netwr,
+         nt_txpr_2 TYPE netwr,
          fk_amnt_2 TYPE netwr,
          tx_amnt_2 TYPE netwr,
          fk_totl_2 TYPE netwr,
@@ -174,9 +174,9 @@ TYPES: BEGIN OF ty_struc_type,
          augru_x   TYPE bezei40,
          abgru     TYPE abgru,
          abgru_x   TYPE bezei40,
-         count     TYPE montt, "p LENGTH 16,
+         count     TYPE montt,
          color     TYPE char4,
-         sheet     TYPE montt, "p LENGTH 4,
+         sheet     TYPE montt,
          dumbe     TYPE vrkme,
          dummy     TYPE char1,
        END OF ty_struc_type.
@@ -263,13 +263,22 @@ TYPES: BEGIN OF ty_fields_param,
        END OF  ty_fields_param.
 
 
+" 2024-11
+TYPES: BEGIN OF ty_fields_txt,
+         text TYPE dd03m-scrtext_l,
+         name TYPE dd03m-fieldname,
+         type TYPE c LENGTH 1,
+         leng TYPE p DECIMALS 0,
+         decm TYPE p DECIMALS 0,
+       END OF ty_fields_txt.
+DATA: gt_allfields_text   TYPE TABLE OF ty_fields_txt WITH EMPTY KEY.
+
 
 CLASS lcl_main      DEFINITION DEFERRED .
 DATA: go_main       TYPE REF TO lcl_main.
 
 DATA: gt_textlist   TYPE TABLE OF ty_textlist WITH EMPTY KEY.
 DATA: gt_fieldlist  TYPE TABLE OF ty_fields_param WITH EMPTY KEY.
-DATA: gt_struclist  TYPE TABLE OF ty_struc_type.
 
 DATA: gt_base_data   TYPE TABLE OF ty_base_data.
 DATA: gt_main_data   TYPE TABLE OF ty_base_data.
@@ -309,10 +318,10 @@ DATA gv_from_address  TYPE string.
 DATA gv_max_filesize  TYPE int8.
 DATA gv_max_ordernum  TYPE int8.
 
-DATA gv_lang  TYPE string..
+DATA gv_lang  TYPE string.
 DATA gv_loca  TYPE string.
+DATA gv_decs  TYPE c.
 
-DATA gv_error.
 DATA(gv_halt) = abap_false.
 DATA gv_variant TYPE varid-variant.
 DATA(gv_variant_changed) = abap_false.
@@ -395,6 +404,27 @@ TYPES: BEGIN OF ty_functions,
          modval  TYPE c LENGTH 40,
        END OF ty_functions.
 
+
+" 2024-11
+" Dropdown logic operator
+TYPE-POOLS: vrm_r.
+DATA: ivrm_val_r TYPE vrm_values,
+      xvrm_val_r LIKE LINE OF ivrm_val_r,
+      vrm_name_r TYPE vrm_id.
+
+" Dropdown check condition
+TYPE-POOLS: vrm_o.
+DATA: ivrm_val_o TYPE vrm_values,
+      xvrm_val_o LIKE LINE OF ivrm_val_o,
+      vrm_name_o TYPE vrm_id.
+
+" Dropdown field or value
+TYPE-POOLS: vrm_v.
+DATA: ivrm_val_v TYPE vrm_values,
+      xvrm_val_v LIKE LINE OF ivrm_val_v,
+      vrm_name_v TYPE vrm_id.
+
+
 DATA: gt_functions  TYPE TABLE OF ty_functions WITH EMPTY KEY.
 
 
@@ -460,6 +490,89 @@ SELECTION-SCREEN BEGIN OF SCREEN 1300 AS SUBSCREEN.
     SELECTION-SCREEN COMMENT  48(50) pzr FOR FIELD p_zero.
   SELECTION-SCREEN END   OF LINE .
 SELECTION-SCREEN END   OF SCREEN 1300.
+
+
+*----------------- Filtre
+SELECTION-SCREEN BEGIN OF SCREEN 1350 AS SUBSCREEN.
+  SELECTION-SCREEN BEGIN OF LINE.
+    SELECTION-SCREEN COMMENT  8(1) l_sta1.
+    PARAMETERS: p_flt01(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf01 USER-COMMAND sf01 MODIF ID c1 VISIBLE LENGTH 1.
+    SELECTION-SCREEN COMMENT 40(1) l_spz0.
+    PARAMETERS: p_cnd0 TYPE char5 AS LISTBOX VISIBLE LENGTH 5 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 48(1) l_spz1.
+    PARAMETERS: p_fov0 TYPE char9 AS LISTBOX VISIBLE LENGTH 8 USER-COMMAND srt MODIF ID c1.
+    PARAMETERS: p_flt02(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf02 USER-COMMAND sf02 MODIF ID c1 VISIBLE LENGTH 1.
+  SELECTION-SCREEN END   OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    PARAMETERS: p_opt1 TYPE char6 AS LISTBOX VISIBLE LENGTH 6 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 8(1) l_obr1.
+    PARAMETERS: p_flt03(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf03 USER-COMMAND sf03 MODIF ID c1 VISIBLE LENGTH 1.
+    SELECTION-SCREEN COMMENT 40(1) l_sta2.
+    PARAMETERS: p_cnd1 TYPE char5 AS LISTBOX VISIBLE LENGTH 5 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 48(1) l_sta3.
+    PARAMETERS: p_fov1 TYPE char9 AS LISTBOX VISIBLE LENGTH 8 USER-COMMAND srt MODIF ID c1.
+    PARAMETERS: p_flt04(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf04 USER-COMMAND sf04 MODIF ID c1 VISIBLE LENGTH 1.
+  SELECTION-SCREEN END   OF LINE .
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    PARAMETERS: p_opt2 TYPE char6 AS LISTBOX VISIBLE LENGTH 6 USER-COMMAND srt MODIF ID c1 .
+    SELECTION-SCREEN COMMENT  8(1) l_sta4.
+    PARAMETERS: p_flt05(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf05 USER-COMMAND sf05 MODIF ID c1 VISIBLE LENGTH 1 .
+    SELECTION-SCREEN COMMENT 40(1) l_sta5.
+    PARAMETERS: p_cnd2 TYPE char5 AS LISTBOX VISIBLE LENGTH 5 USER-COMMAND srt MODIF ID c1 .
+    SELECTION-SCREEN COMMENT 48(1) l_sta6.
+    PARAMETERS: p_fov2 TYPE char9 AS LISTBOX VISIBLE LENGTH 8 USER-COMMAND srt MODIF ID c1 .
+    PARAMETERS: p_flt06(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf06 USER-COMMAND sf06 MODIF ID c1 VISIBLE LENGTH 1 .
+    SELECTION-SCREEN COMMENT (1) l_cbr1 .
+  SELECTION-SCREEN END   OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    PARAMETERS: p_opt3 TYPE char6 AS LISTBOX VISIBLE LENGTH 6 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 8(1) l_obr2.
+    PARAMETERS: p_flt07(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf07 USER-COMMAND sf07 MODIF ID c1 VISIBLE LENGTH 1.
+    SELECTION-SCREEN COMMENT 40(1) l_sta7.
+    PARAMETERS: p_cnd3 TYPE char5 AS LISTBOX VISIBLE LENGTH 5 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 48(1) l_sta8.
+    PARAMETERS: p_fov3 TYPE char9 AS LISTBOX VISIBLE LENGTH 8 USER-COMMAND srt MODIF ID c1.
+    PARAMETERS: p_flt08(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf08 USER-COMMAND sf08 MODIF ID c1 VISIBLE LENGTH 1.
+  SELECTION-SCREEN END   OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    PARAMETERS: p_opt4 TYPE char6 AS LISTBOX VISIBLE LENGTH 6 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 8(1) l_sta9.
+    PARAMETERS: p_flt09(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf09 USER-COMMAND sf09 MODIF ID c1 VISIBLE LENGTH 1.
+    SELECTION-SCREEN COMMENT 40(1) l_sta10.
+    PARAMETERS: p_cnd4 TYPE char5 AS LISTBOX VISIBLE LENGTH 5 USER-COMMAND srt MODIF ID c1.
+    SELECTION-SCREEN COMMENT 48(1) l_sta11.
+    PARAMETERS: p_fov4 TYPE char9 AS LISTBOX VISIBLE LENGTH 8 USER-COMMAND srt MODIF ID c1.
+    PARAMETERS: p_flt10(30) TYPE c VISIBLE LENGTH 27.
+    SELECTION-SCREEN: PUSHBUTTON (4) slf10 USER-COMMAND sf10 MODIF ID c1 VISIBLE LENGTH 1.
+    SELECTION-SCREEN COMMENT  (1) l_cbr2.
+  SELECTION-SCREEN END   OF LINE .
+
+  PARAMETERS: p_fld01(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld02(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld03(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld04(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld05(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld06(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld07(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld08(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld09(25) TYPE c NO-DISPLAY.
+  PARAMETERS: p_fld10(25) TYPE c NO-DISPLAY.
+
+SELECTION-SCREEN END   OF SCREEN 1350.
+
 
 *----------------- Gruplama
 SELECTION-SCREEN BEGIN OF SCREEN 1400 AS SUBSCREEN.
@@ -587,6 +700,7 @@ SELECTION-SCREEN END   OF SCREEN 1600.
 SELECTION-SCREEN BEGIN OF TABBED BLOCK tabs FOR 5 LINES.
   SELECTION-SCREEN TAB (50) l11 USER-COMMAND tab_1100 DEFAULT SCREEN 1100.
   SELECTION-SCREEN TAB (50) l12 USER-COMMAND tab_1300 DEFAULT SCREEN 1300.
+  SELECTION-SCREEN TAB (50) l16 USER-COMMAND tab_1350 DEFAULT SCREEN 1350.
   SELECTION-SCREEN TAB (50) l13 USER-COMMAND tab_1400 DEFAULT SCREEN 1400.
   SELECTION-SCREEN TAB (50) l14 USER-COMMAND tab_1500 DEFAULT SCREEN 1500.
   SELECTION-SCREEN TAB (50) l15 USER-COMMAND tab_1600 DEFAULT SCREEN 1600.
@@ -968,6 +1082,8 @@ CLASS lcl_salv_pop_up DEFINITION .
         end_line       TYPE i DEFAULT 6
         start_column   TYPE i DEFAULT 25
         end_column     TYPE i DEFAULT 50
+        show_headers   TYPE boolean DEFAULT ' '
+        only_column    TYPE c DEFAULT ' '
         pop_header     TYPE c
         popup          TYPE boolean DEFAULT ' '
         VALUE(t_table) TYPE table .
@@ -1141,9 +1257,6 @@ AT SELECTION-SCREEN OUTPUT.
   go_main->at_selection_screen_output( ).
 
 START-OF-SELECTION.
-
-  CALL METHOD go_main->check_of_selection( CHANGING cv_error = gv_error ).
-  CHECK gv_error IS INITIAL.
   go_main->start_of_selection( ).
 
 
@@ -1152,8 +1265,13 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD start_of_selection.
 
-    DATA : lv_count_source TYPE i.
-    DATA : x_ans(1) TYPE c.
+    DATA : lv_error(1) TYPE c.
+
+    check_of_selection( CHANGING cv_error = lv_error ).
+
+    IF lv_error = 'X'.
+      RETURN.
+    ENDIF.
 
     IF ( p_excl EQ 'X' OR p_mail EQ 'X' OR ( p_disp EQ '3' AND p_layo IS NOT INITIAL ) ) AND p_expo IS INITIAL.
       CALL METHOD go_main->export_data( ).
@@ -1642,11 +1760,15 @@ CLASS lcl_main IMPLEMENTATION.
 
     ENDLOOP.
 
-    " Varsayılan açık node
-    LOOP AT lt_node_list ASSIGNING FIELD-SYMBOL(<ls_node>).
-      lo_node = lo_nodes->get_node( node_key = <ls_node> ).
-      lo_node->expand( ).
-    ENDLOOP.
+    IF p_hlev IS INITIAL.
+      lo_nodes->expand_all( ).
+    ELSE.
+      " Varsayılan açık node
+      LOOP AT lt_node_list ASSIGNING FIELD-SYMBOL(<ls_node>).
+        lo_node = lo_nodes->get_node( node_key = <ls_node> ).
+        lo_node->expand( ).
+      ENDLOOP.
+    ENDIF.
 
     " ALV TREE için kolonları yeniden adlandır ve gizle
     lo_columns = go_tree->get_columns( ).
@@ -1950,13 +2072,24 @@ CLASS lcl_main IMPLEMENTATION.
       but03 = icon_oo_method  && VALUE #( gt_textlist[ sym = 'B07' ]-text OPTIONAL ).
       but07 = icon_intermediate_sum  && VALUE #( gt_textlist[ sym = 'B08' ]-text OPTIONAL ).
 
+      DATA: L_CHAR(30) TYPE C VALUE IS INITIAL.
+      DATA: L_NUM      TYPE F VALUE IS INITIAL.
+      L_NUM = 11 / 10.
+      WRITE L_NUM TO L_CHAR.
+      SEARCH L_CHAR FOR ','.
+      IF sy-subrc = 0.
+        gv_decs = ','.
+      ELSE.
+        gv_decs = '.'.
+      ENDIF.
+
     ENDIF.
 
   ENDMETHOD.
 
 
   METHOD check_of_selection.
-    CLEAR gv_error.
+    CLEAR cv_error.
 
     IF p_xval IS INITIAL AND s_fnams[] IS INITIAL.
       p_wrks = ' '.
@@ -1970,6 +2103,358 @@ CLASS lcl_main IMPLEMENTATION.
       p_cur2 = '03'.
     ENDIF.
 
+
+   IF p_fov0 EQ 'FIELD'.
+     screen-input = 0.
+     IF p_fld02 IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld02 ]-type OPTIONAL ).
+       p_fld02 = ''.
+       p_flt02 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
+       cv_error = abap_true.
+     ENDIF.
+   ELSEIF p_fov0 EQ 'VALUE'.
+     IF VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) EQ 'D'.
+       IF p_flt02 IS INITIAL.
+         p_flt02 = '00000000'.
+       ENDIF.
+       TRY.
+         DATA(inv_date1) = EXACT d( p_flt02 ).
+         CATCH cx_sy_conversion_no_date.
+       ENDTRY.
+       IF p_flt02 NE '00000000' AND inv_date1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Tarih formatı hatalı, yıl ay gün ardışık girin !
+         p_flt02 = '00000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) EQ 'T'.
+       IF p_flt02 IS INITIAL.
+         p_flt02 = '000000'.
+       ENDIF.
+       TRY.
+         DATA(inv_time1) = EXACT t( p_flt02 ).
+         CATCH cx_sy_conversion_no_time.
+       ENDTRY.
+       IF p_flt02 NE '000000' AND inv_time1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Saat formatı hatalı, saat dakika saniye ardışık girin !
+         p_flt02 = '000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) NE 'C'.
+       DATA: inv_num1(40) TYPE c.
+       CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+         EXPORTING
+           input = p_flt02
+          " internal = 'X'
+         IMPORTING
+           output = inv_num1
+         EXCEPTIONS
+           no_numeric = 1
+           others = 2.
+        IF sy-subrc <> 0.
+          p_flt02 = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Nümerik değer girin !
+          cv_error = abap_true.
+        ELSE.
+          DATA(lv_decm1) = substring_after( val = inv_num1 sub = '.' ).
+          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+            IF VALUE #( gt_allfields_text[ name = p_fld01 ]-decm OPTIONAL ) IS INITIAL.
+              p_flt02 = substring_before( val = inv_num1 sub = '.' ).
+            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld01 ]-decm OPTIONAL ).
+              p_flt02 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld01 ]-decm OPTIONAL ) ).
+            ELSE.
+              p_flt02 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+            ENDIF.
+          ENDIF.
+        ENDIF.
+     ENDIF.
+     IF strlen( p_flt02 ) GT ( VALUE #( gt_allfields_text[ name = p_fld01 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld01 ]-decm OPTIONAL ) ).
+       p_flt02 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+               CONV string( VALUE #( gt_allfields_text[ name = p_fld01 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld01 ]-decm OPTIONAL ) )
+               TYPE 'S' DISPLAY LIKE 'E'.
+       cv_error = abap_true.
+     ENDIF.
+   ENDIF.
+
+   IF p_fov1 EQ 'FIELD' .
+     screen-input = 0.
+     IF p_fld02 IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld03 ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld04 ]-type OPTIONAL ).
+       p_fld04 = ''.
+       p_flt04 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
+       cv_error = abap_true.
+     ENDIF.
+   ELSEIF p_fov0 EQ 'VALUE'.
+     IF VALUE #( gt_allfields_text[ name = p_fld03 ]-type OPTIONAL ) EQ 'D'.
+       IF p_flt04 IS INITIAL.
+         p_flt04 = '00000000'.
+       ENDIF.
+       TRY.
+         inv_date1 = EXACT d( p_flt04 ).
+         CATCH cx_sy_conversion_no_date.
+       ENDTRY.
+       IF p_flt04 NE '00000000' AND inv_date1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Tarih formatı hatalı, yıl ay gün ardışık girin !
+         p_flt04 = '00000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld01 ]-type OPTIONAL ) EQ 'T'.
+       IF p_flt04 IS INITIAL.
+         p_flt04 = '000000'.
+       ENDIF.
+       TRY.
+         inv_time1 = EXACT t( p_flt04 ).
+         CATCH cx_sy_conversion_no_time.
+       ENDTRY.
+       IF p_flt04 NE '000000' AND inv_time1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Saat formatı hatalı, saat dakika saniye ardışık girin !
+         p_flt04 = '000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld03 ]-type OPTIONAL ) NE 'C'.
+       CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+         EXPORTING
+           input = p_flt04
+         IMPORTING
+           output = inv_num1
+         EXCEPTIONS
+           no_numeric = 1
+           others = 2.
+        IF sy-subrc <> 0.
+          p_flt04 = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Nümerik değer girin !
+          cv_error = abap_true.
+        ELSE.
+          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+            IF VALUE #( gt_allfields_text[ name = p_fld03 ]-decm OPTIONAL ) IS INITIAL.
+              p_flt04 = substring_before( val = inv_num1 sub = '.' ).
+            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld03 ]-decm OPTIONAL ).
+              p_flt04 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld03 ]-decm OPTIONAL ) ).
+            ELSE.
+              p_flt04 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+            ENDIF.
+          ENDIF.
+        ENDIF.
+     ENDIF.
+     IF strlen( p_flt04 ) GT ( VALUE #( gt_allfields_text[ name = p_fld03 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld03 ]-decm OPTIONAL ) ).
+       p_flt04 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+               CONV string( VALUE #( gt_allfields_text[ name = p_fld03 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld03 ]-decm OPTIONAL ) )
+               TYPE 'S' DISPLAY LIKE 'E'.
+       cv_error = abap_true.
+     ENDIF.
+   ENDIF.
+
+   IF p_fov2 EQ 'FIELD' .
+     screen-input = 0.
+     IF p_fld05 IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld05 ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld06 ]-type OPTIONAL ).
+       p_fld06 = ''.
+       p_flt06 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
+       cv_error = abap_true.
+     ENDIF.
+   ELSEIF p_fov0 EQ 'VALUE'.
+     IF VALUE #( gt_allfields_text[ name = p_fld05 ]-type OPTIONAL ) EQ 'D'.
+       IF p_flt06 IS INITIAL.
+         p_flt06 = '00000000'.
+       ENDIF.
+       TRY.
+         inv_date1 = EXACT d( p_flt06 ).
+         CATCH cx_sy_conversion_no_date.
+       ENDTRY.
+       IF p_flt06 NE '00000000' AND inv_date1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+         p_flt06 = '00000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld05 ]-type OPTIONAL ) EQ 'T'.
+       IF p_flt06 IS INITIAL.
+         p_flt06 = '000000'.
+       ENDIF.
+       TRY.
+         inv_time1 = EXACT t( p_flt06 ).
+         CATCH cx_sy_conversion_no_time.
+       ENDTRY.
+       IF p_flt06 NE '000000' AND inv_time1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+         p_flt06 = '000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld05 ]-type OPTIONAL ) NE 'C'.
+       CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+         EXPORTING
+           input = p_flt06
+         IMPORTING
+           output = inv_num1
+         EXCEPTIONS
+           no_numeric = 1
+           others = 2.
+        IF sy-subrc <> 0.
+          p_flt06 = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ELSE.
+          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+            IF VALUE #( gt_allfields_text[ name = p_fld05 ]-decm OPTIONAL ) IS INITIAL.
+              p_flt06 = substring_before( val = inv_num1 sub = '.' ).
+            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld05 ]-decm OPTIONAL ).
+              p_flt06 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld05 ]-decm OPTIONAL ) ).
+            ELSE.
+              p_flt06 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+            ENDIF.
+          ENDIF.
+        ENDIF.
+     ENDIF.
+     IF strlen( p_flt06 ) GT ( VALUE #( gt_allfields_text[ name = p_fld05 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld05 ]-decm OPTIONAL ) ).
+       p_flt04 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+               CONV string( VALUE #( gt_allfields_text[ name = p_fld05 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld05 ]-decm OPTIONAL ) )
+               TYPE 'S' DISPLAY LIKE 'E'.
+       cv_error = abap_true.
+     ENDIF.
+   ENDIF.
+
+   IF p_fov3 EQ 'FIELD' .
+     screen-input = 0.
+     IF p_fld07 IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld07 ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld08 ]-type OPTIONAL ).
+       p_fld08 = ''.
+       p_flt08 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
+       cv_error = abap_true.
+     ENDIF.
+   ELSEIF p_fov0 EQ 'VALUE'.
+     IF VALUE #( gt_allfields_text[ name = p_fld07 ]-type OPTIONAL ) EQ 'D'.
+       IF p_flt08 IS INITIAL.
+         p_flt08 = '00000000'.
+       ENDIF.
+       TRY.
+         inv_date1 = EXACT d( p_flt08 ).
+         CATCH cx_sy_conversion_no_date.
+       ENDTRY.
+       IF p_flt08 NE '00000000' AND inv_date1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+         p_flt08 = '00000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld07 ]-type OPTIONAL ) EQ 'T'.
+       IF p_flt08 IS INITIAL.
+         p_flt08 = '000000'.
+       ENDIF.
+       TRY.
+         inv_time1 = EXACT t( p_flt08 ).
+         CATCH cx_sy_conversion_no_time.
+       ENDTRY.
+       IF p_flt08 NE '000000' AND inv_time1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+         p_flt08 = '000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld07 ]-type OPTIONAL ) NE 'C'.
+       CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+         EXPORTING
+           input = p_flt08
+         IMPORTING
+           output = inv_num1
+         EXCEPTIONS
+           no_numeric = 1
+           others = 2.
+        IF sy-subrc <> 0.
+          p_flt08 = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ELSE.
+          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+            IF VALUE #( gt_allfields_text[ name = p_fld07 ]-decm OPTIONAL ) IS INITIAL.
+              p_flt08 = substring_before( val = inv_num1 sub = '.' ).
+            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld07 ]-decm OPTIONAL ).
+              p_flt08 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld07 ]-decm OPTIONAL ) ).
+            ELSE.
+              p_flt08 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+            ENDIF.
+          ENDIF.
+        ENDIF.
+     ENDIF.
+     IF strlen( p_flt08 ) GT ( VALUE #( gt_allfields_text[ name = p_fld07 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld07 ]-decm OPTIONAL ) ).
+       p_flt04 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+               CONV string( VALUE #( gt_allfields_text[ name = p_fld07 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld07 ]-decm OPTIONAL ) )
+               TYPE 'S' DISPLAY LIKE 'E'.
+       cv_error = abap_true.
+     ENDIF.
+   ENDIF.
+
+   IF p_fov4 EQ 'FIELD' .
+     screen-input = 0.
+     IF p_fld09 IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld09 ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld10 ]-type OPTIONAL ).
+       p_fld10 = ''.
+       p_flt10 = ''.
+       MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
+       cv_error = abap_true.
+     ENDIF.
+   ELSEIF p_fov0 EQ 'VALUE'.
+     IF VALUE #( gt_allfields_text[ name = p_fld09 ]-type OPTIONAL ) EQ 'D'.
+       IF p_flt10 IS INITIAL.
+         p_flt10 = '00000000'.
+       ENDIF.
+       TRY.
+         inv_date1 = EXACT d( p_flt10 ).
+         CATCH cx_sy_conversion_no_date.
+       ENDTRY.
+       IF p_flt10 NE '00000000' AND inv_date1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+         p_flt10 = '00000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld09 ]-type OPTIONAL ) EQ 'T'.
+       IF p_flt10 IS INITIAL.
+         p_flt10 = '000000'.
+       ENDIF.
+       TRY.
+         inv_time1 = EXACT t( p_flt10 ).
+         CATCH cx_sy_conversion_no_time.
+       ENDTRY.
+       IF p_flt10 NE '000000' AND inv_time1 IS INITIAL.
+         MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+         p_flt10 = '000000'.
+         cv_error = abap_true.
+       ENDIF.
+     ELSEIF VALUE #( gt_allfields_text[ name = p_fld09 ]-type OPTIONAL ) NE 'C'.
+       CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+         EXPORTING
+           input = p_flt10
+         IMPORTING
+           output = inv_num1
+         EXCEPTIONS
+           no_numeric = 1
+           others = 2.
+        IF sy-subrc <> 0.
+          p_flt10 = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ELSE.
+          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+            IF VALUE #( gt_allfields_text[ name = p_fld09 ]-decm OPTIONAL ) IS INITIAL.
+              p_flt10 = substring_before( val = inv_num1 sub = '.' ).
+            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld09 ]-decm OPTIONAL ).
+              p_flt10 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld09 ]-decm OPTIONAL ) ).
+            ELSE.
+              p_flt10 = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+            ENDIF.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+      IF strlen( p_flt10 ) GT ( VALUE #( gt_allfields_text[ name = p_fld09 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld09 ]-decm OPTIONAL ) ).
+        p_flt04 = ''.
+        MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+                CONV string( VALUE #( gt_allfields_text[ name = p_fld09 ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld09 ]-decm OPTIONAL ) )
+                TYPE 'S' DISPLAY LIKE 'E'.
+        cv_error = abap_true.
+      ENDIF.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -2205,6 +2690,61 @@ CLASS lcl_main IMPLEMENTATION.
           PERFORM submit_demo.
         ENDIF.
 
+
+      " 2024-11
+      WHEN 'SF01' OR 'SF02' OR 'SF03' OR 'SF04' OR 'SF05' OR 'SF06' OR 'SF07' OR 'SF08' OR 'SF09' OR 'SF10'.
+
+        lcl_salv_pop_up=>popup( EXPORTING start_line   = 1
+                                   end_line     = 19
+                                   start_column = 50
+                                   end_column   = 75
+                                   only_column  = 'TEXT'
+                                   pop_header   = VALUE char100( gt_textlist[ sym = 'B03' ]-text OPTIONAL )
+                                   t_table = gt_allfields_text  ).
+
+        IF gv_clicked_row IS NOT INITIAL.
+          CASE sscrfields-ucomm.
+            WHEN 'SF01'.
+              p_flt01 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld01 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+              CLEAR: p_cnd0, p_fov0.
+            WHEN 'SF02'.
+              p_flt02 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld02 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+            WHEN 'SF03'.
+              p_flt03 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld03 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+              CLEAR: p_cnd1, p_fov1.
+            WHEN 'SF04'.
+              p_flt04 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld04 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+            WHEN 'SF05'.
+              p_flt05 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld05 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+              CLEAR: p_cnd2, p_fov2.
+            WHEN 'SF06'.
+              p_flt06 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld06 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+            WHEN 'SF07'.
+              p_flt07 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld07 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+              CLEAR: p_cnd3, p_fov3.
+            WHEN 'SF08'.
+              p_flt08 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld08 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+            WHEN 'SF09'.
+              p_flt09 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld09 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+              CLEAR: p_cnd4, p_fov4.
+            WHEN 'SF10'.
+              p_flt10 = VALUE #( gt_allfields_text[ gv_clicked_row ]-text OPTIONAL ).
+              p_fld10 = VALUE #( gt_allfields_text[ gv_clicked_row ]-name OPTIONAL ).
+          ENDCASE.
+        ENDIF.
+
+        fill_choices( EXPORTING pv_only_fill = abap_true ).
+
+
     ENDCASE.
 
   ENDMETHOD.
@@ -2250,6 +2790,25 @@ CLASS lcl_main IMPLEMENTATION.
         p4_acttb = ''.
       ENDIF.
 
+      " 2024-11
+      IF gt_fcat[] IS INITIAL.
+        gt_fcat = go_main->set_fieldcatalog( ).
+        CLEAR: gt_allfields_text.
+        LOOP AT gt_fcat ASSIGNING FIELD-SYMBOL(<fs_fcat>).
+          IF <fs_fcat>-fieldname NE 'HIERA' AND <fs_fcat>-fieldname NE 'COUNT' AND <fs_fcat>-fieldname NE 'SAYI' AND
+             <fs_fcat>-tech NE 'X' AND substring( val = <fs_fcat>-fieldname off = strlen( <fs_fcat>-fieldname ) - 2 len = 2 ) NE '_2'.
+            APPEND INITIAL LINE TO gt_allfields_text ASSIGNING FIELD-SYMBOL(<ls_allfields_text>).
+            <ls_allfields_text>-text = <fs_fcat>-scrtext_l.
+            <ls_allfields_text>-name = <fs_fcat>-fieldname.
+            <ls_allfields_text>-type = <fs_fcat>-inttype.
+            <ls_allfields_text>-leng = <fs_fcat>-intlen.
+            <ls_allfields_text>-decm = <fs_fcat>-decimals.
+          ENDIF.
+        ENDLOOP.
+        APPEND INITIAL LINE TO gt_allfields_text.
+        SORT gt_allfields_text BY text AS TEXT.
+      ENDIF.
+
     ENDIF.
 
 
@@ -2278,6 +2837,266 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
         WHEN 'P_GRP1' OR 'P_GRP2' OR 'P_GRP3' OR 'P_GRP4' OR 'P_GRP5' OR 'P_GRP6'.
           screen-input = 0.
+
+
+        " 2024-11
+
+        WHEN 'P_OPT1'.
+          IF p_flt01 IS INITIAL OR p_cnd0 IS INITIAL OR p_fov0 IS INITIAL.
+            p_opt1 = ''.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_OPT2'.
+          IF p_flt03 IS INITIAL OR p_cnd1 IS INITIAL OR p_fov1 IS INITIAL.
+            p_opt2 = ''.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_OPT3'.
+          IF p_flt03 IS INITIAL OR p_cnd1 IS INITIAL OR p_fov1 IS INITIAL.
+            p_opt3 = ''.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_OPT4'.
+          IF p_flt07 IS INITIAL OR p_cnd3 IS INITIAL OR p_fov3 IS INITIAL.
+            p_opt4 = ''.
+            screen-input = 0.
+          ENDIF.
+
+        WHEN 'P_FLT01'.
+          screen-input = 0.
+          p_flt01 = VALUE #( gt_allfields_text[ name = p_fld01 ]-text OPTIONAL ).
+        WHEN 'P_FLT03'.
+          screen-input = 0.
+          IF p_opt1 IS INITIAL.
+            p_flt03 = ''.
+          ELSE.
+            p_flt03 = VALUE #( gt_allfields_text[ name = p_fld03 ]-text OPTIONAL ).
+          ENDIF.
+        WHEN 'P_FLT05'.
+          screen-input = 0.
+          IF p_opt2 IS INITIAL.
+            p_flt05 = ''.
+          ELSE.
+            p_flt05 = VALUE #( gt_allfields_text[ name = p_fld05 ]-text OPTIONAL ).
+          ENDIF.
+        WHEN 'P_FLT07'.
+          screen-input = 0.
+          IF p_opt3 IS INITIAL.
+            p_flt07 = ''.
+           ELSE.
+            p_flt07 = VALUE #( gt_allfields_text[ name = p_fld07 ]-text OPTIONAL ).
+          ENDIF.
+        WHEN 'P_FLT09'.
+          screen-input = 0.
+          IF p_opt4 IS INITIAL.
+            p_flt09 = ''.
+          ELSE.
+            p_flt09 = VALUE #( gt_allfields_text[ name = p_fld09 ]-text OPTIONAL ).
+          ENDIF.
+
+        WHEN 'P_FLT02'.
+          IF p_fov0 IS INITIAL .
+            p_flt02 = ''.
+          ENDIF.
+          IF p_fov0 NE 'VALUE'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_FLT04'.
+          IF p_fov1 IS INITIAL .
+            p_flt04 = ''.
+          ENDIF.
+          IF p_fov1 NE 'VALUE'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_FLT06'.
+          IF p_fov2 IS INITIAL .
+            p_flt06 = ''.
+          ENDIF.
+          IF p_fov2 NE 'VALUE'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_FLT08'.
+          IF p_fov3 IS INITIAL .
+            p_flt08 = ''.
+          ENDIF.
+          IF p_fov3 NE 'VALUE'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_FLT10'.
+          IF p_fov4 IS INITIAL .
+            p_flt10 = ''.
+          ENDIF.
+          IF p_fov4 NE 'VALUE'.
+            screen-input = 0.
+          ENDIF.
+
+        WHEN 'P_CND0'.
+          IF p_flt01 IS INITIAL.
+            p_cnd0 = ''.
+            screen-input = 0.
+          ELSEIF p_cnd0 IS INITIAL.
+            p_cnd0 = '='.
+          ENDIF.
+        WHEN 'P_CND1'.
+          IF p_flt03 IS INITIAL.
+            p_cnd1 = ''.
+            screen-input = 0.
+          ELSEIF p_cnd1 IS INITIAL.
+            p_cnd1 = '='.
+          ENDIF.
+        WHEN 'P_CND2'.
+          IF p_flt05 IS INITIAL.
+            p_cnd2 = ''.
+            screen-input = 0.
+          ELSEIF p_cnd2 IS INITIAL.
+            p_cnd2 = '='.
+          ENDIF.
+        WHEN 'P_CND3'.
+          IF p_flt07 IS INITIAL.
+            p_cnd3 = ''.
+            screen-input = 0.
+          ELSEIF p_cnd3 IS INITIAL.
+            p_cnd3 = '='.
+          ENDIF.
+        WHEN 'P_CND4'.
+          IF p_flt09 IS INITIAL.
+            p_cnd4 = ''.
+            screen-input = 0.
+          ELSEIF p_cnd4 IS INITIAL.
+            p_cnd4 = '='.
+          ENDIF.
+
+        WHEN 'P_FOV0'.
+          IF p_fov0 IS INITIAL.
+            p_fov0 = 'VALUE'.
+          ENDIF.
+          IF p_cnd0 IS INITIAL.
+            p_fov0 = ''.
+            p_fld02 = ''.
+            p_flt02 = ''.
+            screen-input = 0.
+          ELSEIF p_fov0 EQ 'VALUE'.
+            IF p_fld02 NE ''.
+              p_flt02 = ''.
+            ENDIF.
+            p_fld02 = ''.
+          ELSE.
+            p_flt02 = VALUE #( gt_allfields_text[ name = p_fld02 ]-text OPTIONAL ).
+          ENDIF.
+
+        WHEN 'P_FOV1'.
+          IF p_fov1 IS INITIAL.
+            p_fov1 = 'VALUE'.
+          ENDIF.
+          IF p_cnd1 IS INITIAL.
+            p_fov1 = ''.
+            p_fld04 = ''.
+            p_flt04 = ''.
+            screen-input = 0.
+          ELSEIF p_fov1 EQ 'VALUE'.
+            IF p_fld04 NE ''.
+              p_flt04 = ''.
+            ENDIF.
+            p_fld04 = ''.
+          ELSE.
+            p_flt04 = VALUE #( gt_allfields_text[ name = p_fld04 ]-text OPTIONAL ).
+          ENDIF.
+
+        WHEN 'P_FOV2'.
+          IF p_fov2 IS INITIAL.
+            p_fov2 = 'VALUE'.
+          ENDIF.
+          IF p_cnd2 IS INITIAL.
+            p_fov2 = ''.
+            p_fld06 = ''.
+            p_flt06 = ''.
+            screen-input = 0.
+          ELSEIF p_fov2 EQ 'VALUE'.
+            IF p_fld06 NE ''.
+              p_flt06 = ''.
+            ENDIF.
+            p_fld06 = ''.
+          ELSE.
+            p_flt06 = VALUE #( gt_allfields_text[ name = p_fld06 ]-text OPTIONAL ).
+          ENDIF.
+
+        WHEN 'P_FOV3'.
+          IF p_fov3 IS INITIAL.
+            p_fov3 = 'VALUE'.
+          ENDIF.
+          IF p_cnd3 IS INITIAL.
+            p_fov3 = ''.
+            p_fld08 = ''.
+            p_flt08 = ''.
+            screen-input = 0.
+          ELSEIF p_fov3 EQ 'VALUE'.
+            IF p_fld08 NE ''.
+              p_flt08 = ''.
+            ENDIF.
+            p_fld08 = ''.
+          ELSE.
+            p_flt08 = VALUE #( gt_allfields_text[ name = p_fld08 ]-text OPTIONAL ).
+          ENDIF.
+
+        WHEN 'P_FOV4'.
+          IF p_fov4 IS INITIAL.
+            p_fov4 = 'VALUE'.
+          ENDIF.
+          IF p_cnd4 IS INITIAL.
+            p_fov4 = ''.
+            p_fld10 = ''.
+            p_flt10 = ''.
+            screen-input = 0.
+          ELSEIF p_fov4 EQ 'VALUE'.
+            IF p_fld10 NE ''.
+              p_flt10 = ''.
+            ENDIF.
+            p_fld10 = ''.
+          ELSE.
+            p_flt10 = VALUE #( gt_allfields_text[ name = p_fld10 ]-text OPTIONAL ).
+          ENDIF.
+
+        WHEN 'SLF02'.
+          IF p_fov0 NE 'FIELD'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF03'.
+          IF p_opt1 IS INITIAL.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF04'.
+          IF p_fov1 NE 'FIELD'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF05'.
+          IF p_opt2 IS INITIAL.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF06'.
+          IF p_fov2 NE 'FIELD'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF07'.
+          IF p_opt3 IS INITIAL.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF08'.
+          IF p_fov3 NE 'FIELD'.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF09'.
+          IF p_opt4 IS INITIAL.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'SLF10'.
+          IF p_fov4 NE 'FIELD'.
+            screen-input = 0.
+          ENDIF.
+
+        " ************************
+
+
+
         WHEN 'P_WAHR'.
           IF p_wahr IS NOT INITIAL AND p_cur1 EQ space.
             p_cur1 = '01'.
@@ -2306,11 +3125,11 @@ CLASS lcl_main IMPLEMENTATION.
             p_addt = ' '.
             screen-input = 0.
           ELSEIF gv_group_count LT 2 AND p_yval IS NOT INITIAL.
-            p_addt = 'X'.
+            p_addt = ' '.
             screen-input = 0.
           ENDIF.
         WHEN 'P_ADDP'.
-          IF gv_max_level EQ 0.
+          IF gv_max_level LE 1.
             p_addp = ' '.
             screen-input = 0.
           ENDIF.
@@ -2335,8 +3154,13 @@ CLASS lcl_main IMPLEMENTATION.
             screen-input = 0.
           ENDIF.
         WHEN 'P_TWOC'.
-          IF p_mein IS INITIAL AND p_wahr IS INITIAL.
+          IF ( p_mein IS INITIAL AND p_wahr IS INITIAL ) OR s_fnams[] IS NOT INITIAL .
             p_twoc = ' '.
+            screen-input = 0.
+          ENDIF.
+        WHEN 'P_SORT'.
+          IF s_fnams[] IS NOT INITIAL .
+            p_sort = ' '.
             screen-input = 0.
           ENDIF.
         WHEN 'P_LAYD'.
@@ -3675,6 +4499,192 @@ CLASS lcl_main IMPLEMENTATION.
 
     ENDLOOP.
 
+
+    " 2024-11
+    DATA lv_t_filter TYPE string.
+
+    IF p_fld01 NE '' AND p_cnd0 NE '' AND ( ( p_fov0 EQ 'FIELD' AND p_fld02 NE '' ) OR ( p_fov0 EQ 'VALUE' )  ).
+
+      IF VALUE #( gt_fcat[ fieldname = p_fld01 ]-inttype OPTIONAL ) EQ 'P'.
+        REPLACE ALL OCCURRENCES OF ',' IN p_flt02 WITH '.'.
+      ENDIF.
+
+      IF VALUE #( gt_fcat[ fieldname = p_fld03 ]-inttype OPTIONAL ) EQ 'P'.
+        REPLACE ALL OCCURRENCES OF ',' IN p_flt04 WITH '.'.
+      ENDIF.
+
+      IF VALUE #( gt_fcat[ fieldname = p_fld05 ]-inttype OPTIONAL ) EQ 'P'.
+        REPLACE ALL OCCURRENCES OF ',' IN p_flt06 WITH '.'.
+      ENDIF.
+
+      IF VALUE #( gt_fcat[ fieldname = p_fld07 ]-inttype OPTIONAL ) EQ 'P'.
+        REPLACE ALL OCCURRENCES OF ',' IN p_flt08 WITH '.'.
+      ENDIF.
+
+      IF VALUE #( gt_fcat[ fieldname = p_fld09 ]-inttype OPTIONAL ) EQ 'P'.
+        REPLACE ALL OCCURRENCES OF ',' IN p_flt10 WITH '.'.
+      ENDIF.
+
+      p_fld01 = 't~' && p_fld01.
+      p_fld02 = 't~' && p_fld02.
+      p_fld03 = 't~' && p_fld03.
+      p_fld04 = 't~' && p_fld04.
+      p_fld05 = 't~' && p_fld05.
+      p_fld06 = 't~' && p_fld06.
+      p_fld07 = 't~' && p_fld07.
+      p_fld08 = 't~' && p_fld08.
+      p_fld09 = 't~' && p_fld09.
+      p_fld10 = 't~' && p_fld10.
+
+      REPLACE ALL OCCURRENCES OF '''' IN p_flt02 WITH ''''''.
+      REPLACE ALL OCCURRENCES OF '''' IN p_flt04 WITH ''''''.
+      REPLACE ALL OCCURRENCES OF '''' IN p_flt06 WITH ''''''.
+      REPLACE ALL OCCURRENCES OF '''' IN p_flt08 WITH ''''''.
+      REPLACE ALL OCCURRENCES OF '''' IN p_flt10 WITH ''''''.
+
+      IF p_flt02 CA '*'.
+        REPLACE ALL OCCURRENCES OF '%' IN p_flt02 WITH '#%'.
+        REPLACE ALL OCCURRENCES OF '_' IN p_flt02 WITH '#_'.
+        REPLACE ALL OCCURRENCES OF '*' IN p_flt02 WITH '%'.
+        IF p_cnd0 NE '='.
+          p_cnd0 = 'NOT LIKE'.
+        ELSE.
+          p_cnd0 = 'LIKE'.
+        ENDIF.
+      ENDIF.
+
+      IF p_flt04 CA '*'.
+        REPLACE ALL OCCURRENCES OF '%' IN p_flt04 WITH '#%'.
+        REPLACE ALL OCCURRENCES OF '_' IN p_flt04 WITH '#_'.
+        REPLACE ALL OCCURRENCES OF '*' IN p_flt04 WITH '%'.
+        IF p_cnd1 NE '='.
+          p_cnd1 = 'NOT LIKE'.
+        ELSE.
+          p_cnd1 = 'LIKE'.
+        ENDIF.
+      ENDIF.
+
+      IF p_flt06 CA '*'.
+        REPLACE ALL OCCURRENCES OF '%' IN p_flt06 WITH '#%'.
+        REPLACE ALL OCCURRENCES OF '_' IN p_flt06 WITH '#_'.
+        REPLACE ALL OCCURRENCES OF '*' IN p_flt06 WITH '%'.
+        IF p_cnd2 NE '='.
+          p_cnd2 = 'NOT LIKE'.
+        ELSE.
+          p_cnd2 = 'LIKE'.
+        ENDIF.
+      ENDIF.
+
+      IF p_flt08 CA '*'.
+        REPLACE ALL OCCURRENCES OF '%' IN p_flt08 WITH '#%'.
+        REPLACE ALL OCCURRENCES OF '_' IN p_flt08 WITH '#_'.
+        REPLACE ALL OCCURRENCES OF '*' IN p_flt08 WITH '%'.
+        IF p_cnd3 NE '='.
+          p_cnd3 = 'NOT LIKE'.
+        ELSE.
+          p_cnd3 = 'LIKE'.
+        ENDIF.
+      ENDIF.
+
+      IF p_flt10 CA '*'.
+        REPLACE ALL OCCURRENCES OF '%' IN p_flt10 WITH '#%'.
+        REPLACE ALL OCCURRENCES OF '_' IN p_flt10 WITH '#_'.
+        REPLACE ALL OCCURRENCES OF '*' IN p_flt10 WITH '%'.
+        IF p_cnd4 NE '='.
+          p_cnd4 = 'NOT LIKE'.
+        ELSE.
+          p_cnd4 = 'LIKE'.
+        ENDIF.
+      ENDIF.
+
+      lv_t_filter = | ( |.
+
+      lv_t_filter = lv_t_filter && | UPPER( | && p_fld01 && | ) | && p_cnd0 && | |.
+      IF p_fov0 EQ 'FIELD'.
+        lv_t_filter = lv_t_filter && | UPPER( | && p_fld02 && | )|.
+      ELSE.
+        lv_t_filter = lv_t_filter && |'| && p_flt02 && |'|.
+        IF p_flt02 CA '#%' or p_flt02 CA '#_'.
+          lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+        ENDIF.
+      ENDIF.
+      lv_t_filter = lv_t_filter && | )|.
+
+      IF p_fld03 NE '' AND p_cnd1 NE '' AND ( ( p_fov1 EQ 'FIELD' AND p_fld04 NE '' ) OR ( p_fov1 EQ 'VALUE' )  ).
+        lv_t_filter = lv_t_filter && | | && p_opt1 && | ( ( |.
+        lv_t_filter = lv_t_filter && p_fld03 && | | && p_cnd1 && | |.
+        IF p_fov1 EQ 'FIELD'.
+          lv_t_filter = lv_t_filter && | UPPER( | && p_fld04 && | )|.
+        ELSE.
+          lv_t_filter = lv_t_filter && |'| && p_flt04 && |'|.
+          IF p_flt04 CA '#%' or p_flt04 CA '#_'.
+            lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+          ENDIF.
+        ENDIF.
+        lv_t_filter = lv_t_filter && | )|.
+
+        IF p_fld05 NE '' AND p_cnd2 NE '' AND ( ( p_fov2 EQ 'FIELD' AND p_fld06 NE '' ) OR ( p_fov2 EQ 'VALUE' )  ).
+          lv_t_filter = lv_t_filter && | | && p_opt2 && | ( |.
+          lv_t_filter = lv_t_filter && p_fld05 && | | && p_cnd2 && | |.
+          IF p_fov2 EQ 'FIELD'.
+            lv_t_filter = lv_t_filter && | UPPER( | && p_fld06 && | )|.
+          ELSE.
+            lv_t_filter = lv_t_filter && |'| && p_flt06 && |'|.
+            IF p_flt06 CA '#%' or p_flt06 CA '#_'.
+              lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+            ENDIF.
+            lv_t_filter = lv_t_filter && | )|.
+          ENDIF.
+        ENDIF.
+        lv_t_filter = lv_t_filter && | )|.
+      ENDIF.
+
+      IF p_fld07 NE '' AND p_cnd3 NE '' AND ( ( p_fov3 EQ 'FIELD' AND p_fld08 NE '' ) OR ( p_fov3 EQ 'VALUE' )  ).
+        lv_t_filter = lv_t_filter && | | && p_opt3 && | ( ( |.
+        lv_t_filter = lv_t_filter && p_fld07 && | | && p_cnd3 && | |.
+        IF p_fov3 EQ 'FIELD'.
+          lv_t_filter = lv_t_filter && | UPPER( | && p_fld08 && | )|.
+        ELSE.
+          lv_t_filter = lv_t_filter && |'| && p_flt08 && |'|.
+          IF p_flt08 CA '#%' or p_flt08 CA '#_'.
+            lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+          ENDIF.
+        ENDIF.
+        lv_t_filter = lv_t_filter && | )|.
+
+        IF p_fld09 NE '' AND p_cnd4 NE '' AND ( ( p_fov4 EQ 'FIELD' AND p_fld10 NE '' ) OR ( p_fov4 EQ 'VALUE' )  ).
+          lv_t_filter = lv_t_filter && | | && p_opt4 && | ( |.
+          lv_t_filter = lv_t_filter && p_fld09 && | | && p_cnd4 && | |.
+          IF p_fov4 EQ 'FIELD'.
+            lv_t_filter = lv_t_filter && | UPPER( | && p_fld10 && | )|.
+          ELSE.
+            lv_t_filter = lv_t_filter && |'| && p_flt10 && |'|.
+            IF p_flt10 CA '#%' or p_flt10 CA '#_'.
+              lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+            ENDIF.
+          ENDIF.
+          lv_t_filter = lv_t_filter && | )|.
+        ENDIF.
+        lv_t_filter = lv_t_filter && | )|.
+      ENDIF.
+
+    ENDIF.
+
+    IF lv_t_filter IS NOT INITIAL.
+
+      SELECT *
+        FROM @gt_main_data AS t
+       WHERE (lv_t_filter)
+        INTO TABLE @DATA(new_data).
+
+        gt_main_data[] = new_data[].
+
+        REFRESH: new_data.
+
+    ENDIF.
+
+
+
   ENDMETHOD.
 
 
@@ -3705,6 +4715,20 @@ CLASS lcl_main IMPLEMENTATION.
 
     gt_fcat = set_fieldcatalog( ).
 
+    LOOP AT gt_fcat ASSIGNING FIELD-SYMBOL(<gs_fcat>).
+      IF <gs_fcat>-inttype EQ 'P'.
+        <gs_fcat>-outputlen = 30.
+        <gs_fcat>-rollname = 'BAPICURR_D'.
+        <gs_fcat>-datatype = 'DEC'.
+        <gs_fcat>-intlen = 23.
+        <gs_fcat>-domname = 'BAPICURR'.
+        <gs_fcat>-decimals_o = 2.
+        <gs_fcat>-dd_outlen = 30.
+        <gs_fcat>-decimals = 4.
+        <gs_fcat>-dd_roll = 'BAPICURR_D'.
+      ENDIF.
+    ENDLOOP.
+
     CALL METHOD cl_alv_table_create=>create_dynamic_table
       EXPORTING
         "   i_style_table             = 'X'
@@ -3716,6 +4740,9 @@ CLASS lcl_main IMPLEMENTATION.
         OTHERS                    = 2.
 
     ASSIGN lr_itab->* TO <gs_group_itab>.
+
+
+    gt_fcat = set_fieldcatalog( ).
 
     CALL METHOD cl_alv_table_create=>create_dynamic_table
       EXPORTING
@@ -3877,6 +4904,8 @@ CLASS lcl_main IMPLEMENTATION.
             ENDLOOP.
             <mc_value> = <mc_value> * 100 / accu .
           ENDIF.
+
+          <mc_value> = round( val = <mc_value> dec = 2 ).
 
           " Negatif değer kırmızı font
           IF <mc_value> LT 0 AND max_group EQ <fs_sub>.
@@ -4048,6 +5077,20 @@ CLASS lcl_main IMPLEMENTATION.
 
     gt_fcat = go_main->set_fieldcatalog( ).
 
+    LOOP AT gt_fcat ASSIGNING FIELD-SYMBOL(<gs_fcat>).
+      IF <gs_fcat>-inttype EQ 'P'.
+        <gs_fcat>-outputlen = 30.
+        <gs_fcat>-rollname = 'BAPICURR_D'.
+        <gs_fcat>-datatype = 'DEC'.
+        <gs_fcat>-intlen = 23.
+        <gs_fcat>-domname = 'BAPICURR'.
+        <gs_fcat>-decimals_o = 2.
+        <gs_fcat>-dd_outlen = 30.
+        <gs_fcat>-decimals = 4.
+        <gs_fcat>-dd_roll = 'BAPICURR_D'.
+      ENDIF.
+    ENDLOOP.
+
     CALL METHOD cl_alv_table_create=>create_dynamic_table
       EXPORTING
         "i_style_table             = 'X'
@@ -4060,6 +5103,8 @@ CLASS lcl_main IMPLEMENTATION.
 
     ASSIGN lr_itab->* TO <gs_group_itab>.
 
+
+    gt_fcat = go_main->set_fieldcatalog( ).
 
     CALL METHOD cl_alv_table_create=>create_dynamic_table
       EXPORTING
@@ -4265,6 +5310,8 @@ CLASS lcl_main IMPLEMENTATION.
             ASSIGN COMPONENT a_name OF STRUCTURE <fs_g_data> TO <ac_value>.
             <mc_value> = <mc_value> * 100 / <ac_value> .
           ENDIF.
+
+          <mc_value> = round( val = <mc_value> dec = 2 ).
 
           " Negatif değer kırmızı font
           IF <mc_value> LT 0 AND max_group EQ <fs_sub>.
@@ -4853,7 +5900,8 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_fcat>-fieldname = 'WADIV' && lv_col_suffix.
         <fs_fcat>-datatype = 'DEC'.
         <fs_fcat>-inttype = 'P'.
-        <fs_fcat>-intlen = 15.
+        <fs_fcat>-intlen = 23.
+        <fs_fcat>-decimals = 3.
         <fs_fcat>-tech = 'X'.
 
       ENDLOOP.
@@ -5101,6 +6149,13 @@ CLASS lcl_main IMPLEMENTATION.
              s_vkorg, s_vtweg, s_spart, s_kunnr, s_kunre, s_kunrg, s_zterm, s_inco1, s_vkaus, s_kunwe, s_kdgrp, s_werks, s_lgort, s_vstel, s_regio, s_augru, s_lfsta,
              s_cntry, s_matnr, s_matkl, s_mtart, s_bwtar, s_charg, s_mvgr1, s_mvgr2, s_mvgr3, s_mvgr4, s_mvgr5, s_mblnr, s_belnr, s_augbl, s_erdat, s_ernam, p_mlto.
 
+    " 2024-11
+    CLEAR: p_flt01, p_flt02, p_flt03, p_flt04, p_flt05, p_flt06, p_flt07, p_flt08, p_flt09, p_flt10,
+           p_fld01, p_fld02, p_fld03, p_fld04, p_fld05, p_fld06, p_fld07, p_fld08, p_fld09, p_fld10,
+           p_cnd0, p_cnd1, p_cnd2, p_cnd3, p_cnd4,
+           p_fov0, p_fov1, p_fov2, p_fov3, p_fov4,
+           p_opt1, p_opt2, p_opt3, p_opt4.
+
     p_term = 'S'.
     p_disp = '1'.
     p_addt = 'X'.
@@ -5260,28 +6315,45 @@ CLASS lcl_main IMPLEMENTATION.
       display_name = <fs_layid>-text.
     ENDLOOP.
 
-    IF sy-batch IS INITIAL.
-      CALL METHOD cl_gui_frontend_services=>get_desktop_directory
-        CHANGING
-          desktop_directory = desktop_path
-        EXCEPTIONS
-          cntl_error        = 1.
-      IF sy-subrc <> 0.
-        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
-                   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-      ENDIF.
-      CALL METHOD cl_gui_cfw=>update_view.
+    IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
 
-      CALL METHOD cl_gui_frontend_services=>get_temp_directory
-        CHANGING
-          temp_dir   = temp_path
-        EXCEPTIONS
-          cntl_error = 1.
-      IF sy-subrc <> 0.
-        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
-                   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-      ENDIF.
-      CALL METHOD cl_gui_cfw=>update_view.
+      SELECT tcode
+        FROM tstc
+       WHERE pgmna  = @sy-cprog
+      INTO TABLE @DATA(lt_tcode).
+
+      LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
+
+        IF <fs_tcode>-tcode = sy-tcode OR sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
+          CALL METHOD cl_gui_frontend_services=>get_desktop_directory
+          CHANGING
+            desktop_directory = desktop_path
+          EXCEPTIONS
+            cntl_error        = 1.
+
+          IF sy-subrc <> 0.
+            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                       WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          ENDIF.
+
+          CALL METHOD cl_gui_cfw=>update_view.
+
+          CALL METHOD cl_gui_frontend_services=>get_temp_directory
+            CHANGING
+              temp_dir   = temp_path
+            EXCEPTIONS
+              cntl_error = 1.
+          IF sy-subrc <> 0.
+            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                       WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          ENDIF.
+
+          CALL METHOD cl_gui_cfw=>update_view.
+          EXIT.
+        ENDIF.
+
+      ENDLOOP.
+
     ENDIF.
 
     documents_path = desktop_path.
@@ -5318,6 +6390,11 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD set_text_variables.
 
+    l_obr1 = '('.
+    l_obr2 = '('.
+    l_cbr1 = ')'.
+    l_cbr2 = ')'.
+
     IF but02 EQ icon_next_page.
       l_grp1 = VALUE #( gt_textlist[ sym = 'R01' ]-text OPTIONAL ).
       l_grp2 = VALUE #( gt_textlist[ sym = 'R02' ]-text OPTIONAL ).
@@ -5341,6 +6418,8 @@ CLASS lcl_main IMPLEMENTATION.
     l13 = VALUE #( gt_textlist[ sym = 'L13' ]-text OPTIONAL ).
     l14 = VALUE #( gt_textlist[ sym = 'L14' ]-text OPTIONAL ).
     l15 = VALUE #( gt_textlist[ sym = 'L15' ]-text OPTIONAL ).
+    " 2024-11
+    l16 = VALUE #( gt_textlist[ sym = 'L16' ]-text OPTIONAL ).
     l21 = VALUE #( gt_textlist[ sym = 'L21' ]-text OPTIONAL ).
     l22 = VALUE #( gt_textlist[ sym = 'L22' ]-text OPTIONAL ).
     l23 = VALUE #( gt_textlist[ sym = 'L23' ]-text OPTIONAL ).
@@ -5610,12 +6689,6 @@ CLASS lcl_main IMPLEMENTATION.
     DATA(ls_meta) = cl_salv_bs_runtime_info=>get_metadata( ).
     cl_salv_bs_runtime_info=>clear_all( ).
 
-    " Result Salv Data
-    DATA(go_salv_ex_res) = cl_salv_ex_util=>factory_result_data_table( r_data          = REF #( <fs_itab> )
-                                                                       t_fieldcatalog  = ls_meta-t_fcat
-                                                                       s_layout        = ls_meta-s_layout
-                                                                       t_sort          = ls_meta-t_sort
-                                                                       t_filter        = ls_meta-t_filter ).
     " get rid off ref_field
     LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<fs_fcat>).
       <fs_fcat>-ref_field = ' '.
@@ -5824,6 +6897,13 @@ CLASS lcl_main IMPLEMENTATION.
             en_string TYPE string.
 
       DATA s_val TYPE c.
+
+      " Result Salv Data
+      DATA(go_salv_ex_res) = cl_salv_ex_util=>factory_result_data_table( r_data          = REF #( <fs_itab> )
+                                                                         t_fieldcatalog  = ls_meta-t_fcat
+                                                                         s_layout        = ls_meta-s_layout
+                                                                         t_sort          = ls_meta-t_sort
+                                                                         t_filter        = ls_meta-t_filter ).
 
       cl_salv_bs_tt_util=>if_salv_bs_tt_util~transform(
         EXPORTING
@@ -7581,6 +8661,119 @@ CLASS lcl_main IMPLEMENTATION.
         id     = vrm_name_l
         values = ivrm_val_l.
 
+
+    " 2024-11
+    CLEAR: ivrm_val_r, ivrm_val_o, ivrm_val_v.
+
+    " Logic Operator
+    xvrm_val_r-key = 'AND'.
+    xvrm_val_r-text = 'AND'.
+    APPEND xvrm_val_r TO ivrm_val_r.
+    xvrm_val_r-key = 'OR'.
+    xvrm_val_r-text = 'OR'.
+    APPEND xvrm_val_r TO ivrm_val_r.
+
+    vrm_name_r = 'p_opt1'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_r
+        values = ivrm_val_r.
+    vrm_name_r = 'p_opt2'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_r
+        values = ivrm_val_r.
+    vrm_name_r = 'p_opt3'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_r
+        values = ivrm_val_r.
+    vrm_name_r = 'p_opt4'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_r
+        values = ivrm_val_r.
+
+    " Condition
+    xvrm_val_o-key = '='.
+    xvrm_val_o-text = '='.
+    APPEND xvrm_val_o TO ivrm_val_o.
+    xvrm_val_o-key = '<>'.
+    xvrm_val_o-text = '<>'.
+    APPEND xvrm_val_o TO ivrm_val_o.
+    xvrm_val_o-key = '>'.
+    xvrm_val_o-text = '>'.
+    APPEND xvrm_val_o TO ivrm_val_o.
+    xvrm_val_o-key = '>='.
+    xvrm_val_o-text = '>='.
+    APPEND xvrm_val_o TO ivrm_val_o.
+    xvrm_val_o-key = '<'.
+    xvrm_val_o-text = '<'.
+    APPEND xvrm_val_o TO ivrm_val_o.
+    xvrm_val_o-key = '<='.
+    xvrm_val_o-text = '<='.
+    APPEND xvrm_val_o TO ivrm_val_o.
+
+    vrm_name_o = 'p_cnd0'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_o
+        values = ivrm_val_o.
+    vrm_name_o = 'p_cnd1'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_o
+        values = ivrm_val_o.
+    vrm_name_o = 'p_cnd2'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_o
+        values = ivrm_val_o.
+    vrm_name_o = 'p_cnd3'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_o
+        values = ivrm_val_o.
+    vrm_name_o = 'p_cnd4'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_o
+        values = ivrm_val_o.
+
+    " Field or Value
+    xvrm_val_v-key = 'FIELD'.
+    xvrm_val_v-text = 'FIELD'.
+    APPEND xvrm_val_v TO ivrm_val_v.
+    xvrm_val_v-key = 'VALUE'.
+    xvrm_val_v-text = 'VALUE'.
+    APPEND xvrm_val_v TO ivrm_val_v.
+
+    vrm_name_v = 'p_fov0'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_v
+        values = ivrm_val_v.
+    vrm_name_v = 'p_fov1'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_v
+        values = ivrm_val_v.
+    vrm_name_v = 'p_fov2'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_v
+        values = ivrm_val_v.
+    vrm_name_v = 'p_fov3'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_v
+        values = ivrm_val_v.
+    vrm_name_v = 'p_fov4'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_v
+        values = ivrm_val_v.
+
   ENDMETHOD.
 
 
@@ -7848,7 +9041,7 @@ CLASS lcl_main IMPLEMENTATION.
           IF VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
 
             LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
-              IF hiera IS NOT INITIAL AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
+              IF hiera IS NOT INITIAL AND hiera NE 0 AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
                 l_num += 1.
                 IF ( p_addp IS INITIAL AND p_disp NE '3' ) OR ( h_num NE 0 AND l_num LE h_num ).
                   ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
@@ -8253,7 +9446,19 @@ CLASS lcl_salv_pop_up IMPLEMENTATION .
       end_line     = end_line ).
 
     DATA(ob_salv_columns) = ob_salv_table->get_columns( ).
-    ob_salv_columns->set_headers_visible( abap_false ).
+
+    IF NOT show_headers EQ abap_true.
+      ob_salv_columns->set_headers_visible( abap_false ).
+    ENDIF.
+
+    IF only_column NE ''.
+      DATA(lt_column_ref) = ob_salv_columns->get( ).
+      LOOP AT lt_column_ref ASSIGNING FIELD-SYMBOL(<column>).
+        IF NOT <column>-columnname EQ only_column.
+          <column>-r_column->set_visible( abap_false ).
+        ENDIF.
+      ENDLOOP.
+    ENDIF.
 
     DATA(ob_salv_settings) = ob_salv_table->get_display_settings( ).
     ob_salv_settings->set_list_header( CONV #( pop_header )  ).
@@ -9044,6 +10249,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'L13' text = 'Grup' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L14' text = 'Düzen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L15' text = 'Aktarım' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'L16' text = 'Filtre' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L21' text = 'Tarih' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L22' text = 'Belge' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L23' text = 'Durum' ) TO gt_textlist.
@@ -9376,6 +10582,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'L13' text = 'Grouping' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L14' text = 'Display' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L15' text = 'Export' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'L16' text = 'Filter' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L21' text = 'Date' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L22' text = 'Document' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L23' text = 'Status' ) TO gt_textlist.
@@ -9708,6 +10915,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'L13' text = 'Gruppe' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L14' text = 'Layout' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L15' text = 'Exportierung' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'L16' text = 'Filter' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L21' text = 'Datum' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L22' text = 'Beleg' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L23' text = 'Status' ) TO gt_textlist.
