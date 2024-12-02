@@ -4497,37 +4497,57 @@ CLASS lcl_main IMPLEMENTATION.
         IF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'C'.
           p_fld1a = | UPPER( t~| && p_fld1a && | ) |.
           p_flt1b = to_upper( p_flt1b ).
+        ELSE.
+          p_fld1a = | t~| && p_fld1a.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld1b ]-type OPTIONAL ) EQ 'C'.
           p_fld1b = | UPPER( t~| && p_fld1b && | ) |.
+        ELSE.
+          p_fld1b = | t~| && p_fld1b.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) EQ 'C'.
           p_fld2a = | UPPER( t~| && p_fld2a && | ) |.
           p_flt2b = to_upper( p_flt2b ).
+        ELSE.
+          p_fld2a = 't~' && p_fld2a.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld2b ]-type OPTIONAL ) EQ 'C'.
           p_fld2b = | UPPER( t~| && p_fld2b && | ) |.
+        ELSE.
+          p_fld2b = 't~' && p_fld2b.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'C'.
           p_fld3a = | UPPER( t~| && p_fld3a && | ) |.
           p_flt3b = to_upper( p_flt3b ).
+        ELSE.
+          p_fld3a = 't~' && p_fld3a.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld3b ]-type OPTIONAL ) EQ 'C'.
           p_fld3b = | UPPER( t~| && p_fld3b && | ) |.
+        ELSE.
+          p_fld3b = 't~' && p_fld3b.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'C'.
           p_fld4a = | UPPER( t~| && p_fld4a && | ) |.
           p_flt4b = to_upper( p_flt4b ).
+        ELSE.
+          p_fld4a = 't~' && p_fld4a.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld4b ]-type OPTIONAL ) EQ 'C'.
           p_fld4b = | UPPER( t~| && p_fld4b && | ) |.
+        ELSE.
+          p_fld4b = 't~' && p_fld4b.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'C'.
           p_fld5a = | UPPER( t~| && p_fld5a && | ) |.
           p_flt5b = to_upper( p_flt5b ).
+        ELSE.
+          p_fld5a = 't~' && p_fld5a.
         ENDIF.
         IF VALUE #( gt_allfields_text[ name = p_fld5b ]-type OPTIONAL ) EQ 'C'.
           p_fld5b = | UPPER( t~| && p_fld5b && | ) |.
+        ELSE.
+          p_fld5b = 't~' && p_fld5b.
         ENDIF.
       ELSE.
         p_fld1a = 't~' && p_fld1a.
