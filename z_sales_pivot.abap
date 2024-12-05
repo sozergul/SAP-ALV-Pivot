@@ -2111,357 +2111,368 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
 
-    IF p_fov1 EQ 'FIELD'.
-      screen-input = 0.
-      IF p_fld1b IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld1b ]-type OPTIONAL ).
-        p_fld1b = ''.
-        p_flt1b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
-        cv_error = abap_true.
-      ENDIF.
-    ELSEIF p_fov1 EQ 'VALUE'.
-      IF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'D'.
-        IF p_flt1b IS INITIAL.
-          p_flt1b = '00000000'.
-        ENDIF.
-        TRY.
-            DATA(inv_date1) = EXACT d( p_flt1b ).
-          CATCH cx_sy_conversion_no_date.
-        ENDTRY.
-        IF p_flt1b NE '00000000' AND inv_date1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Tarih formatı hatalı, yıl ay gün ardışık girin !
-          p_flt1b = '00000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'T'.
-        IF p_flt1b IS INITIAL.
-          p_flt1b = '000000'.
-        ENDIF.
-        TRY.
-            DATA(inv_time1) = EXACT t( p_flt1b ).
-          CATCH cx_sy_conversion_no_time.
-        ENDTRY.
-        IF p_flt1b NE '000000' AND inv_time1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Saat formatı hatalı, saat dakika saniye ardışık girin !
-          p_flt1b = '000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) NE 'C'.
-        DATA: inv_num1(40) TYPE c.
-        CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
-          EXPORTING
-            input      = p_flt1b
-          " internal   = 'X'
-          IMPORTING
-            output     = inv_num1
-          EXCEPTIONS
-            no_numeric = 1
-            OTHERS     = 2.
-        IF sy-subrc <> 0.
+    IF p_fld1a IS NOT INITIAL.
+      IF p_fov1 EQ 'FIELD'.
+        screen-input = 0.
+        IF p_fld1b IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld1b ]-type OPTIONAL ).
+          p_fld1b = ''.
           p_flt1b = ''.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Nümerik değer girin !
+          MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
           cv_error = abap_true.
-        ELSE.
-          DATA(lv_decm1) = substring_after( val = inv_num1 sub = '.' ).
-          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
-            IF VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) IS INITIAL.
-              p_flt1b = substring_before( val = inv_num1 sub = '.' ).
-            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ).
-              p_flt1b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) ).
-            ELSE.
-              p_flt1b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+        ENDIF.
+      ELSEIF p_fov1 EQ 'VALUE'.
+        IF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'D'.
+          IF p_flt1b IS INITIAL.
+            p_flt1b = '00000000'.
+          ENDIF.
+          TRY.
+              DATA(inv_date1) = EXACT d( p_flt1b ).
+            CATCH cx_sy_conversion_no_date.
+          ENDTRY.
+          IF p_flt1b NE '00000000' AND inv_date1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Tarih formatı hatalı, yıl ay gün ardışık girin !
+            p_flt1b = '00000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'T'.
+          IF p_flt1b IS INITIAL.
+            p_flt1b = '000000'.
+          ENDIF.
+          TRY.
+              DATA(inv_time1) = EXACT t( p_flt1b ).
+            CATCH cx_sy_conversion_no_time.
+          ENDTRY.
+          IF p_flt1b NE '000000' AND inv_time1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Saat formatı hatalı, saat dakika saniye ardışık girin !
+            p_flt1b = '000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) NE 'C'.
+          DATA: inv_num1(40) TYPE c.
+          CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+            EXPORTING
+              input      = p_flt1b
+            " internal   = 'X'
+            IMPORTING
+              output     = inv_num1
+            EXCEPTIONS
+              no_numeric = 1
+              OTHERS     = 2.
+          IF sy-subrc <> 0.
+            p_flt1b = ''.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Nümerik değer girin !
+            cv_error = abap_true.
+          ELSE.
+            DATA(lv_decm1) = substring_after( val = inv_num1 sub = '.' ).
+            IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+              IF VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) IS INITIAL.
+                p_flt1b = substring_before( val = inv_num1 sub = '.' ).
+              ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ).
+                p_flt1b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) ).
+              ELSE.
+                p_flt1b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+              ENDIF.
             ENDIF.
           ENDIF.
         ENDIF.
-      ENDIF.
-      IF strlen( p_flt1b ) GT ( VALUE #( gt_allfields_text[ name = p_fld1a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) ).
-        p_flt1b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
-                CONV string( VALUE #( gt_allfields_text[ name = p_fld1a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) )
-                TYPE 'S' DISPLAY LIKE 'E'.
-        cv_error = abap_true.
+        IF strlen( p_flt1b ) GT ( VALUE #( gt_allfields_text[ name = p_fld1a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) ).
+          p_flt1b = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+                  CONV string( VALUE #( gt_allfields_text[ name = p_fld1a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld1a ]-decm OPTIONAL ) )
+                  TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ENDIF.
       ENDIF.
     ENDIF.
 
-    IF p_fov2 EQ 'FIELD' .
-      screen-input = 0.
-      IF p_fld1b IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld2b ]-type OPTIONAL ).
-        p_fld2b = ''.
-        p_flt2b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
-        cv_error = abap_true.
-      ENDIF.
-    ELSEIF p_fov1 EQ 'VALUE'.
-      IF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) EQ 'D'.
-        IF p_flt2b IS INITIAL.
-          p_flt2b = '00000000'.
-        ENDIF.
-        TRY.
-            inv_date1 = EXACT d( p_flt2b ).
-          CATCH cx_sy_conversion_no_date.
-        ENDTRY.
-        IF p_flt2b NE '00000000' AND inv_date1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Tarih formatı hatalı, yıl ay gün ardışık girin !
-          p_flt2b = '00000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'T'.
-        IF p_flt2b IS INITIAL.
-          p_flt2b = '000000'.
-        ENDIF.
-        TRY.
-            inv_time1 = EXACT t( p_flt2b ).
-          CATCH cx_sy_conversion_no_time.
-        ENDTRY.
-        IF p_flt2b NE '000000' AND inv_time1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Saat formatı hatalı, saat dakika saniye ardışık girin !
-          p_flt2b = '000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) NE 'C'.
-        CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
-          EXPORTING
-            input      = p_flt2b
-          IMPORTING
-            output     = inv_num1
-          EXCEPTIONS
-            no_numeric = 1
-            OTHERS     = 2.
-        IF sy-subrc <> 0.
+    IF p_fld2a IS NOT INITIAL.
+      IF p_fov2 EQ 'FIELD' .
+        screen-input = 0.
+        IF p_fld1b IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld2b ]-type OPTIONAL ).
+          p_fld2b = ''.
           p_flt2b = ''.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Nümerik değer girin !
+          MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
           cv_error = abap_true.
-        ELSE.
-          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
-          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
-            IF VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) IS INITIAL.
-              p_flt2b = substring_before( val = inv_num1 sub = '.' ).
-            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ).
-              p_flt2b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) ).
-            ELSE.
-              p_flt2b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+        ENDIF.
+      ELSEIF p_fov1 EQ 'VALUE'.
+        IF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) EQ 'D'.
+          IF p_flt2b IS INITIAL.
+            p_flt2b = '00000000'.
+          ENDIF.
+          TRY.
+              inv_date1 = EXACT d( p_flt2b ).
+            CATCH cx_sy_conversion_no_date.
+          ENDTRY.
+          IF p_flt2b NE '00000000' AND inv_date1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Tarih formatı hatalı, yıl ay gün ardışık girin !
+            p_flt2b = '00000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'T'.
+          IF p_flt2b IS INITIAL.
+            p_flt2b = '000000'.
+          ENDIF.
+          TRY.
+              inv_time1 = EXACT t( p_flt2b ).
+            CATCH cx_sy_conversion_no_time.
+          ENDTRY.
+          IF p_flt2b NE '000000' AND inv_time1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Saat formatı hatalı, saat dakika saniye ardışık girin !
+            p_flt2b = '000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) NE 'C'.
+          CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+            EXPORTING
+              input      = p_flt2b
+            IMPORTING
+              output     = inv_num1
+            EXCEPTIONS
+              no_numeric = 1
+              OTHERS     = 2.
+          IF sy-subrc <> 0.
+            p_flt2b = ''.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Nümerik değer girin !
+            cv_error = abap_true.
+          ELSE.
+            lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+            IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+              IF VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) IS INITIAL.
+                p_flt2b = substring_before( val = inv_num1 sub = '.' ).
+              ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ).
+                p_flt2b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) ).
+              ELSE.
+                p_flt2b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+              ENDIF.
             ENDIF.
           ENDIF.
         ENDIF.
-      ENDIF.
-      IF strlen( p_flt2b ) GT ( VALUE #( gt_allfields_text[ name = p_fld2a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) ).
-        p_flt2b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
-                CONV string( VALUE #( gt_allfields_text[ name = p_fld2a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) )
-                TYPE 'S' DISPLAY LIKE 'E'.
-        cv_error = abap_true.
+        IF strlen( p_flt2b ) GT ( VALUE #( gt_allfields_text[ name = p_fld2a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) ).
+          p_flt2b = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+                  CONV string( VALUE #( gt_allfields_text[ name = p_fld2a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld2a ]-decm OPTIONAL ) )
+                  TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ENDIF.
       ENDIF.
     ENDIF.
 
-    IF p_fov3 EQ 'FIELD' .
-      screen-input = 0.
-      IF p_fld3a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld3b ]-type OPTIONAL ).
-        p_fld3b = ''.
-        p_flt3b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
-        cv_error = abap_true.
-      ENDIF.
-    ELSEIF p_fov1 EQ 'VALUE'.
-      IF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'D'.
-        IF p_flt3b IS INITIAL.
-          p_flt3b = '00000000'.
-        ENDIF.
-        TRY.
-            inv_date1 = EXACT d( p_flt3b ).
-          CATCH cx_sy_conversion_no_date.
-        ENDTRY.
-        IF p_flt3b NE '00000000' AND inv_date1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
-          p_flt3b = '00000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'T'.
-        IF p_flt3b IS INITIAL.
-          p_flt3b = '000000'.
-        ENDIF.
-        TRY.
-            inv_time1 = EXACT t( p_flt3b ).
-          CATCH cx_sy_conversion_no_time.
-        ENDTRY.
-        IF p_flt3b NE '000000' AND inv_time1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
-          p_flt3b = '000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) NE 'C'.
-        CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
-          EXPORTING
-            input      = p_flt3b
-          IMPORTING
-            output     = inv_num1
-          EXCEPTIONS
-            no_numeric = 1
-            OTHERS     = 2.
-        IF sy-subrc <> 0.
+    IF p_fld3a IS NOT INITIAL.
+      IF p_fov3 EQ 'FIELD' .
+        screen-input = 0.
+        IF p_fld3a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld3b ]-type OPTIONAL ).
+          p_fld3b = ''.
           p_flt3b = ''.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
           cv_error = abap_true.
-        ELSE.
-          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
-          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
-            IF VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) IS INITIAL.
-              p_flt3b = substring_before( val = inv_num1 sub = '.' ).
-            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ).
-              p_flt3b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) ).
-            ELSE.
-              p_flt3b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+        ENDIF.
+      ELSEIF p_fov1 EQ 'VALUE'.
+        IF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'D'.
+          IF p_flt3b IS INITIAL.
+            p_flt3b = '00000000'.
+          ENDIF.
+          TRY.
+              inv_date1 = EXACT d( p_flt3b ).
+            CATCH cx_sy_conversion_no_date.
+          ENDTRY.
+          IF p_flt3b NE '00000000' AND inv_date1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            p_flt3b = '00000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'T'.
+          IF p_flt3b IS INITIAL.
+            p_flt3b = '000000'.
+          ENDIF.
+          TRY.
+              inv_time1 = EXACT t( p_flt3b ).
+            CATCH cx_sy_conversion_no_time.
+          ENDTRY.
+          IF p_flt3b NE '000000' AND inv_time1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            p_flt3b = '000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) NE 'C'.
+          CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+            EXPORTING
+              input      = p_flt3b
+            IMPORTING
+              output     = inv_num1
+            EXCEPTIONS
+              no_numeric = 1
+              OTHERS     = 2.
+          IF sy-subrc <> 0.
+            p_flt3b = ''.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            cv_error = abap_true.
+          ELSE.
+            lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+            IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+              IF VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) IS INITIAL.
+                p_flt3b = substring_before( val = inv_num1 sub = '.' ).
+              ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ).
+                p_flt3b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) ).
+              ELSE.
+                p_flt3b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+              ENDIF.
             ENDIF.
           ENDIF.
         ENDIF.
-      ENDIF.
-      IF strlen( p_flt3b ) GT ( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) ).
-        p_flt2b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
-                CONV string( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) )
-                TYPE 'S' DISPLAY LIKE 'E'.
-        cv_error = abap_true.
+        IF strlen( p_flt3b ) GT ( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) ).
+          p_flt2b = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+                  CONV string( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) )
+                  TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ENDIF.
       ENDIF.
     ENDIF.
 
-    IF p_fov4 EQ 'FIELD' .
-      screen-input = 0.
-      IF p_fld4a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld4b ]-type OPTIONAL ).
-        p_fld4b = ''.
-        p_flt4b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
-        cv_error = abap_true.
-      ENDIF.
-    ELSEIF p_fov1 EQ 'VALUE'.
-      IF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'D'.
-        IF p_flt4b IS INITIAL.
-          p_flt4b = '00000000'.
-        ENDIF.
-        TRY.
-            inv_date1 = EXACT d( p_flt4b ).
-          CATCH cx_sy_conversion_no_date.
-        ENDTRY.
-        IF p_flt4b NE '00000000' AND inv_date1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
-          p_flt4b = '00000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'T'.
-        IF p_flt4b IS INITIAL.
-          p_flt4b = '000000'.
-        ENDIF.
-        TRY.
-            inv_time1 = EXACT t( p_flt4b ).
-          CATCH cx_sy_conversion_no_time.
-        ENDTRY.
-        IF p_flt4b NE '000000' AND inv_time1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
-          p_flt4b = '000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) NE 'C'.
-        CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
-          EXPORTING
-            input      = p_flt4b
-          IMPORTING
-            output     = inv_num1
-          EXCEPTIONS
-            no_numeric = 1
-            OTHERS     = 2.
-        IF sy-subrc <> 0.
+    IF p_fld4a IS NOT INITIAL.
+      IF p_fov4 EQ 'FIELD' .
+        screen-input = 0.
+        IF p_fld4a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld4b ]-type OPTIONAL ).
+          p_fld4b = ''.
           p_flt4b = ''.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
           cv_error = abap_true.
-        ELSE.
-          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
-          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
-            IF VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) IS INITIAL.
-              p_flt4b = substring_before( val = inv_num1 sub = '.' ).
-            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ).
-              p_flt4b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) ).
-            ELSE.
-              p_flt4b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+        ENDIF.
+      ELSEIF p_fov1 EQ 'VALUE'.
+        IF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'D'.
+          IF p_flt4b IS INITIAL.
+            p_flt4b = '00000000'.
+          ENDIF.
+          TRY.
+              inv_date1 = EXACT d( p_flt4b ).
+            CATCH cx_sy_conversion_no_date.
+          ENDTRY.
+          IF p_flt4b NE '00000000' AND inv_date1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            p_flt4b = '00000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'T'.
+          IF p_flt4b IS INITIAL.
+            p_flt4b = '000000'.
+          ENDIF.
+          TRY.
+              inv_time1 = EXACT t( p_flt4b ).
+            CATCH cx_sy_conversion_no_time.
+          ENDTRY.
+          IF p_flt4b NE '000000' AND inv_time1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            p_flt4b = '000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) NE 'C'.
+          CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+            EXPORTING
+              input      = p_flt4b
+            IMPORTING
+              output     = inv_num1
+            EXCEPTIONS
+              no_numeric = 1
+              OTHERS     = 2.
+          IF sy-subrc <> 0.
+            p_flt4b = ''.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            cv_error = abap_true.
+          ELSE.
+            lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+            IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+              IF VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) IS INITIAL.
+                p_flt4b = substring_before( val = inv_num1 sub = '.' ).
+              ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ).
+                p_flt4b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) ).
+              ELSE.
+                p_flt4b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+              ENDIF.
             ENDIF.
           ENDIF.
         ENDIF.
-      ENDIF.
-      IF strlen( p_flt4b ) GT ( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) ).
-        p_flt2b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
-                CONV string( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) )
-                TYPE 'S' DISPLAY LIKE 'E'.
-        cv_error = abap_true.
+        IF strlen( p_flt4b ) GT ( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) ).
+          p_flt2b = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+                  CONV string( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) )
+                  TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ENDIF.
       ENDIF.
     ENDIF.
 
-    IF p_fov5 EQ 'FIELD' .
-      screen-input = 0.
-      IF p_fld5a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld5b ]-type OPTIONAL ).
-        p_fld5b = ''.
-        p_flt5b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
-        cv_error = abap_true.
-      ENDIF.
-    ELSEIF p_fov1 EQ 'VALUE'.
-      IF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'D'.
-        IF p_flt5b IS INITIAL.
-          p_flt5b = '00000000'.
-        ENDIF.
-        TRY.
-            inv_date1 = EXACT d( p_flt5b ).
-          CATCH cx_sy_conversion_no_date.
-        ENDTRY.
-        IF p_flt5b NE '00000000' AND inv_date1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
-          p_flt5b = '00000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'T'.
-        IF p_flt5b IS INITIAL.
-          p_flt5b = '000000'.
-        ENDIF.
-        TRY.
-            inv_time1 = EXACT t( p_flt5b ).
-          CATCH cx_sy_conversion_no_time.
-        ENDTRY.
-        IF p_flt5b NE '000000' AND inv_time1 IS INITIAL.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
-          p_flt5b = '000000'.
-          cv_error = abap_true.
-        ENDIF.
-      ELSEIF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) NE 'C'.
-        CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
-          EXPORTING
-            input      = p_flt5b
-          IMPORTING
-            output     = inv_num1
-          EXCEPTIONS
-            no_numeric = 1
-            OTHERS     = 2.
-        IF sy-subrc <> 0.
+    IF p_fld5a IS NOT INITIAL.
+      IF p_fov5 EQ 'FIELD' .
+        screen-input = 0.
+        IF p_fld5a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld5b ]-type OPTIONAL ).
+          p_fld5b = ''.
           p_flt5b = ''.
-          MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A10' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'. "'Alan tipleri uyumlu değil !'
           cv_error = abap_true.
-        ELSE.
-          lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
-          IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
-            IF VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) IS INITIAL.
-              p_flt5b = substring_before( val = inv_num1 sub = '.' ).
-            ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ).
-              p_flt5b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) ).
-            ELSE.
-              p_flt5b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+        ENDIF.
+      ELSEIF p_fov1 EQ 'VALUE'.
+        IF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'D'.
+          IF p_flt5b IS INITIAL.
+            p_flt5b = '00000000'.
+          ENDIF.
+          TRY.
+              inv_date1 = EXACT d( p_flt5b ).
+            CATCH cx_sy_conversion_no_date.
+          ENDTRY.
+          IF p_flt5b NE '00000000' AND inv_date1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A11' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            p_flt5b = '00000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'T'.
+          IF p_flt5b IS INITIAL.
+            p_flt5b = '000000'.
+          ENDIF.
+          TRY.
+              inv_time1 = EXACT t( p_flt5b ).
+            CATCH cx_sy_conversion_no_time.
+          ENDTRY.
+          IF p_flt5b NE '000000' AND inv_time1 IS INITIAL.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A12' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            p_flt5b = '000000'.
+            cv_error = abap_true.
+          ENDIF.
+        ELSEIF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) NE 'C'.
+          CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
+            EXPORTING
+              input      = p_flt5b
+            IMPORTING
+              output     = inv_num1
+            EXCEPTIONS
+              no_numeric = 1
+              OTHERS     = 2.
+          IF sy-subrc <> 0.
+            p_flt5b = ''.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A13' ]-text OPTIONAL ) TYPE 'S' DISPLAY LIKE 'E'.
+            cv_error = abap_true.
+          ELSE.
+            lv_decm1 = substring_after( val = inv_num1 sub = '.' ).
+            IF inv_num1 IS NOT INITIAL AND inv_num1 CA '.'.
+              IF VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) IS INITIAL.
+                p_flt5b = substring_before( val = inv_num1 sub = '.' ).
+              ELSEIF strlen( lv_decm1 ) GT VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ).
+                p_flt5b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' len = VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) ).
+              ELSE.
+                p_flt5b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
+              ENDIF.
             ENDIF.
           ENDIF.
         ENDIF.
-      ENDIF.
-      IF strlen( p_flt5b ) GT ( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) ).
-        p_flt2b = ''.
-        MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
-                CONV string( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) )
-                TYPE 'S' DISPLAY LIKE 'E'.
-        cv_error = abap_true.
+        IF strlen( p_flt5b ) GT ( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) ).
+          p_flt2b = ''.
+          MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
+                  CONV string( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) )
+                  TYPE 'S' DISPLAY LIKE 'E'.
+          cv_error = abap_true.
+        ENDIF.
       ENDIF.
     ENDIF.
+
   ENDMETHOD.
 
 
@@ -4131,7 +4142,6 @@ CLASS lcl_main IMPLEMENTATION.
           lv_time_d TYPE syuzeit,
           lv_result TYPE p DECIMALS 3.
 
-    DATA: cur_rate TYPE kurrf.
     DATA: cur_date TYPE sydate.
     DATA: ein_cur  TYPE kurrf.
     DATA: con_cur  TYPE kurrf.
@@ -4263,85 +4273,7 @@ CLASS lcl_main IMPLEMENTATION.
       <fs_items>-fk_totl_2 = <fs_items>-fk_totl.
 
 
-      IF p_wahr IS NOT INITIAL.
-
-        ein_cur = 1.
-
-        CASE p_cur1.
-          WHEN '01'. cur_date = <fs_items>-audat.
-          WHEN '02'. cur_date = <fs_items>-lfdat.
-          WHEN '03'. cur_date = <fs_items>-fkdat.
-          WHEN '04'. cur_date = <fs_items>-prsdt.
-          WHEN '05'. cur_date = <fs_items>-augdt.
-          WHEN '06'. cur_date = sy-datum.
-        ENDCASE.
-
-        IF cur_date IS NOT INITIAL.
-
-          CALL FUNCTION 'CONVERT_TO_LOCAL_CURRENCY'
-            EXPORTING
-              date             = cur_date
-              foreign_amount   = ein_cur
-              foreign_currency = <fs_items>-cwaer
-              local_currency   = p_wahr
-              type_of_rate     = 'M'
-            IMPORTING
-              local_amount     = con_cur
-            EXCEPTIONS
-              no_rate_found    = 1
-              overflow         = 2
-              no_factors_found = 3
-              no_spread_found  = 4
-              derived_2_times  = 5
-              OTHERS           = 6.
-
-          IF sy-subrc = 0.
-            <fs_items>-nt_pric  = <fs_items>-nt_pric  * con_cur.    " Satış Fiyat
-            <fs_items>-nt_txpr  = <fs_items>-nt_txpr  * con_cur.    " Vergili Satış Fiyat
-            <fs_items>-tx_amnt  = <fs_items>-tx_amnt  * con_cur.    " KDV Tutarı
-            <fs_items>-tm_amnt  = <fs_items>-tm_amnt  * con_cur.    " Termin Tutarı
-            <fs_items>-lf_amnt  = <fs_items>-lf_amnt  * con_cur.    " Teslim Tutarı
-            <fs_items>-lf_bamn  = <fs_items>-lf_bamn  * con_cur.    " Teslim Bakiye Tutarı
-            <fs_items>-fk_amnt  = <fs_items>-fk_amnt  * con_cur.    " Fatura Tutarı
-            <fs_items>-fk_bamn  = <fs_items>-fk_bamn  * con_cur.    " Fatura Bakiye Tutarı
-            <fs_items>-fk_totl  = <fs_items>-fk_totl  * con_cur.    " Fatura Vergiler Dahil Toplam Tutar
-            <fs_items>-ag_amnt  = <fs_items>-ag_amnt  * con_cur.    " Ödeme Tutarı
-            <fs_items>-ag_bamn  = <fs_items>-ag_bamn  * con_cur.    " Ödeme Bakiyesi
-
-            <fs_items>-waerk = p_wahr.
-          ELSE.
-            gv_amt_cnv_all = abap_false.
-          ENDIF.
-
-        ENDIF.
-
-        CALL FUNCTION 'CONVERT_TO_LOCAL_CURRENCY'
-          EXPORTING
-            date             = sy-datum
-            foreign_amount   = ein_cur
-            foreign_currency = <fs_items>-cwaer
-            local_currency   = p_wahr
-            type_of_rate     = 'M'
-          IMPORTING
-            local_amount     = cur_rate
-          EXCEPTIONS
-            no_rate_found    = 1
-            overflow         = 2
-            no_factors_found = 3
-            no_spread_found  = 4
-            derived_2_times  = 5
-            OTHERS           = 6.
-
-        IF sy-subrc = 0.
-          <fs_items>-fk_wamn     = <fs_items>-fk_wamn * cur_rate.    " Faturalama Bekleyen Tutar
-          <fs_items>-ag_bamn     = <fs_items>-ag_bamn * cur_rate.    " Ödeme Bekleyen Tutar
-          <fs_items>-waerk = p_wahr.
-        ELSE.
-          gv_amt_cnv_all = abap_false.
-        ENDIF.
-
-      ENDIF.
-
+      ein_cur = 1.
 
       IF p_wah2 IS NOT INITIAL.
 
@@ -4354,8 +4286,9 @@ CLASS lcl_main IMPLEMENTATION.
           WHEN '06'. cur_date = sy-datum.
         ENDCASE.
 
-        IF cur_date IS NOT INITIAL.
+        IF cur_date IS NOT INITIAL AND <fs_items>-cwaer NE p_wah2.
 
+          con_cur = 0.
           CALL FUNCTION 'CONVERT_TO_LOCAL_CURRENCY'
             EXPORTING
               date             = cur_date
@@ -4373,21 +4306,79 @@ CLASS lcl_main IMPLEMENTATION.
               derived_2_times  = 5
               OTHERS           = 6.
 
-          IF sy-subrc = 0.
-            <fs_items>-nt_pric_2 = <fs_items>-nt_pric_2 * con_cur.    " Satış Fiyat
-            <fs_items>-nt_txpr_2 = <fs_items>-nt_txpr_2 * con_cur.    " Vergili Satış Fiyat
-            <fs_items>-fk_amnt_2 = <fs_items>-fk_amnt_2 * con_cur.    " Fatura Tutarı
-            <fs_items>-fk_totl_2 = <fs_items>-fk_totl_2 * con_cur.    " Fatura Vergiler Dahil Toplam Tutar
-            <fs_items>-waerk = p_wahr.
-          ELSE.
+          IF sy-subrc <> 0.
             gv_amt_cnv_all = abap_false.
           ENDIF.
+
+          <fs_items>-nt_pric_2 = <fs_items>-nt_pric_2 * con_cur.    " Satış Fiyat
+          <fs_items>-nt_txpr_2 = <fs_items>-nt_txpr_2 * con_cur.    " Vergili Satış Fiyat
+          <fs_items>-fk_amnt_2 = <fs_items>-fk_amnt_2 * con_cur.    " Fatura Tutarı
+          <fs_items>-fk_totl_2 = <fs_items>-fk_totl_2 * con_cur.    " Fatura Vergiler Dahil Toplam Tutar
+
         ENDIF.
 
-        <fs_items>-ec_amnt = <fs_items>-fk_amnt_2 - <fs_items>-fk_amnt.
-        <fs_items>-ec_tamn = <fs_items>-fk_totl_2 - <fs_items>-fk_totl.
+        <fs_items>-waerk_2 = p_wah2.
 
       ENDIF.
+
+
+      IF p_wahr IS NOT INITIAL.
+
+        CASE p_cur1.
+          WHEN '01'. cur_date = <fs_items>-audat.
+          WHEN '02'. cur_date = <fs_items>-lfdat.
+          WHEN '03'. cur_date = <fs_items>-fkdat.
+          WHEN '04'. cur_date = <fs_items>-prsdt.
+          WHEN '05'. cur_date = <fs_items>-augdt.
+          WHEN '06'. cur_date = sy-datum.
+        ENDCASE.
+
+        IF cur_date IS NOT INITIAL AND <fs_items>-cwaer NE p_wahr.
+
+          con_cur = 0.
+          CALL FUNCTION 'CONVERT_TO_LOCAL_CURRENCY'
+            EXPORTING
+              date             = cur_date
+              foreign_amount   = ein_cur
+              foreign_currency = <fs_items>-cwaer
+              local_currency   = p_wahr
+              type_of_rate     = 'M'
+            IMPORTING
+              local_amount     = con_cur
+            EXCEPTIONS
+              no_rate_found    = 1
+              overflow         = 2
+              no_factors_found = 3
+              no_spread_found  = 4
+              derived_2_times  = 5
+              OTHERS           = 6.
+
+          IF sy-subrc <> 0.
+             gv_amt_cnv_all = abap_false.
+          ENDIF.
+
+          <fs_items>-nt_pric  = <fs_items>-nt_pric  * con_cur.    " Satış Fiyat
+          <fs_items>-nt_txpr  = <fs_items>-nt_txpr  * con_cur.    " Vergili Satış Fiyat
+          <fs_items>-tx_amnt  = <fs_items>-tx_amnt  * con_cur.    " KDV Tutarı
+          <fs_items>-tm_amnt  = <fs_items>-tm_amnt  * con_cur.    " Termin Tutarı
+          <fs_items>-lf_amnt  = <fs_items>-lf_amnt  * con_cur.    " Teslim Tutarı
+          <fs_items>-lf_bamn  = <fs_items>-lf_bamn  * con_cur.    " Teslim Bakiye Tutarı
+          <fs_items>-fk_amnt  = <fs_items>-fk_amnt  * con_cur.    " Fatura Tutarı
+          <fs_items>-fk_bamn  = <fs_items>-fk_bamn  * con_cur.    " Fatura Bakiye Tutarı
+          <fs_items>-fk_totl  = <fs_items>-fk_totl  * con_cur.    " Fatura Vergiler Dahil Toplam Tutar
+          <fs_items>-ag_amnt  = <fs_items>-ag_amnt  * con_cur.    " Denkleştirme Tutarı
+          <fs_items>-ag_bamn  = <fs_items>-ag_bamn  * con_cur.    " Denkleştirme Bakiyesi
+
+        ENDIF.
+
+        <fs_items>-waerk = p_wahr.
+
+      ENDIF.
+
+
+      " Kur Farkı
+      <fs_items>-ec_amnt = <fs_items>-fk_amnt_2 - <fs_items>-fk_amnt.
+      <fs_items>-ec_tamn = <fs_items>-fk_totl_2 - <fs_items>-fk_totl.
 
 
       " Miktar Dönüşümleri
@@ -7592,8 +7583,10 @@ CLASS lcl_main IMPLEMENTATION.
             IF group_count GT 1 AND p_disp EQ '3'.
               lr_xlrow->set_attribute_ns( name = 'outlineLevel' value = condense( CONV string( level ) ) ).
               " Varsayılan açık grubu belirle
-              IF <f_field> GT CONV int2( p_hlev ) AND <f_field> GT 1.
-                lr_xlrow->set_attribute_ns( name = 'hidden' value = 'true' ).
+              IF p_hlev IS NOT INITIAL.
+                IF <f_field> GT CONV int2( p_hlev ) AND <f_field> GT 1.
+                  lr_xlrow->set_attribute_ns( name = 'hidden' value = 'true' ).
+                ENDIF.
               ENDIF.
             ENDIF.
 
@@ -7656,7 +7649,9 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       IF p_cdec IS INITIAL.
-        REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.###"| .
+        "REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.###"| .
+        REPLACE ALL OCCURRENCES OF |<xf numFmtId="169"| IN lv_xml WITH |<xf numFmtId="0"| .
+        REPLACE ALL OCCURRENCES OF |<xf numFmtId="180"| IN lv_xml WITH |<xf numFmtId="0"| .
         " Tutarları da değişken ondalık istersen aşağıdaki satırı aç
         " REPLACE ALL OCCURRENCES OF |numFmtId="4"| IN lv_xml WITH |numFmtId="0"| .
       ENDIF.
