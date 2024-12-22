@@ -343,8 +343,13 @@ DATA: desktop_path   TYPE string,
       display_code   TYPE string,
       display_name   TYPE string,
       preyear        TYPE string,
-      preperiod      TYPE string,
-      yesterday      TYPE sy-datum.
+      yesterday      TYPE string,
+      monthname      TYPE string,
+      hour           TYPE string,
+      minute         TYPE string,
+      lastyear       TYPE string,
+      premonth       TYPE string,
+      premonthname   TYPE string.
 
 
 " Double click cell
@@ -2600,11 +2605,11 @@ CLASS lcl_main IMPLEMENTATION.
         ret_function_values( ).
 
         lcl_salv_pop_up=>popup( EXPORTING start_line   = 1
-                                          end_line     = 19
+                                          end_line     = 23
                                           start_column = 90
                                           end_column   = 150
                                           pop_header   = VALUE char100( gt_textlist[ sym = 'TXZ' ]-text OPTIONAL )
-                                          t_table = gt_functions  ).
+                                          t_table      = gt_functions  ).
 
         IF gv_clicked_row IS NOT INITIAL.
 
@@ -6331,19 +6336,48 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD ret_function_values.
 
-    preyear = CONV string( CONV #( sy-datum(4) - 1 ) ).
+    lastyear = CONV string( CONV #( sy-datum(4) - 1 ) ).
+
+    DATA(month_num) = sy-datum+4(2).
+
+    SELECT ltx
+    FROM   t247
+    WHERE  spras EQ @sy-langu
+    AND    mnr   EQ @month_num
+    INTO TABLE @DATA(lt_month).
+
+    LOOP AT lt_month ASSIGNING FIELD-SYMBOL(<fs_month>).
+      monthname = <fs_month>-ltx.
+    ENDLOOP.
 
     IF sy-datum+4(2) EQ '01'.
-      preperiod = preyear && '12'.
+      preyear = CONV string( CONV #( sy-datum(4) - 1 ) ).
+      premonth = '12'.
     ELSE.
+      preyear = sy-datum(4).
       IF CONV int2( sy-datum+4(2) ) LT 10.
-        preperiod = sy-datum(4) && '0' && CONV string( CONV int2( sy-datum+4(2) ) - 1 ) .
+        premonth = '0' && CONV string( CONV int2( sy-datum+4(2) ) - 1 ) .
       ELSE.
-        preperiod = sy-datum(4) && CONV string( CONV int2( sy-datum+4(2) ) - 1 ) .
+        premonth = CONV string( CONV int2( sy-datum+4(2) ) - 1 ) .
       ENDIF.
     ENDIF.
 
-    yesterday = sy-datum - 1 .
+    SELECT ltx
+    FROM   t247
+    WHERE  spras EQ @sy-langu
+    AND    mnr   EQ @premonth
+    INTO TABLE @DATA(lt_month2).
+
+    LOOP AT lt_month2 ASSIGNING <fs_month>.
+      premonthname = <fs_month>-ltx.
+    ENDLOOP.
+
+    hour = sy-uzeit(2).
+    minute = sy-uzeit+2(2).
+
+    DATA yt TYPE sy-datum.
+    yt = sy-datum - 1.
+    yesterday =  CONV string( yt ).
 
     " mail ve excel hesaplanan değerler için kullanıcı bilgisi
     SELECT name_text, smtp_addr
@@ -6365,7 +6399,7 @@ CLASS lcl_main IMPLEMENTATION.
       FROM varit
      WHERE langu = @sy-langu
        AND report = @sy-cprog
-       AND variant = @p_vari
+       AND variant = @p_layo
     INTO TABLE @DATA(lt_varid).
 
     LOOP AT lt_varid ASSIGNING FIELD-SYMBOL(<fs_varid>).
@@ -6447,11 +6481,15 @@ CLASS lcl_main IMPLEMENTATION.
     APPEND VALUE #( modtext = '${LAYOUTTITLE}'    modval = display_name    ) TO gt_functions.
     APPEND VALUE #( modtext = '${YEAR}'           modval = sy-datum(4)     ) TO gt_functions.
     APPEND VALUE #( modtext = '${MONTH}'          modval = sy-datum+4(2)   ) TO gt_functions.
+    APPEND VALUE #( modtext = '${MONTHNAME}'      modval = monthname       ) TO gt_functions.
     APPEND VALUE #( modtext = '${DAY}'            modval = sy-datum+6(2)   ) TO gt_functions.
     APPEND VALUE #( modtext = '${DATE}'           modval = sy-datum        ) TO gt_functions.
-    APPEND VALUE #( modtext = '${TIME}'           modval = sy-uzeit(4)     ) TO gt_functions.
+    APPEND VALUE #( modtext = '${HOUR}'           modval = hour            ) TO gt_functions.
+    APPEND VALUE #( modtext = '${MINUTE}'         modval = minute          ) TO gt_functions.
+    APPEND VALUE #( modtext = '${LASTYEAR}'       modval = lastyear        ) TO gt_functions.
     APPEND VALUE #( modtext = '${PREYEAR}'        modval = preyear         ) TO gt_functions.
-    APPEND VALUE #( modtext = '${PREPERIOD}'      modval = preperiod       ) TO gt_functions.
+    APPEND VALUE #( modtext = '${PREMONTH}'       modval = premonth        ) TO gt_functions.
+    APPEND VALUE #( modtext = '${PREMONTHNAME}'   modval = premonthname    ) TO gt_functions.
     APPEND VALUE #( modtext = '${YESTERDAY}'      modval = yesterday       ) TO gt_functions.
 
   ENDMETHOD.
