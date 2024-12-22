@@ -244,6 +244,7 @@ TYPES: BEGIN OF ty_fields_sub,
          fnam TYPE dd03m-scrtext_l,
          text TYPE dd03m-scrtext_l,
          ctot TYPE c LENGTH 4,
+         hlev TYPE c LENGTH 4,
        END OF ty_fields_sub.
 
 TYPES: BEGIN OF ty_fields_param,
@@ -367,12 +368,6 @@ DATA: ivrm_val_x TYPE vrm_values,
       xvrm_val_x LIKE LINE OF ivrm_val_x,
       vrm_name_x TYPE vrm_id.
 
-" Dropdown level-field
-TYPE-POOLS: vrm_l.
-DATA: ivrm_val_l TYPE vrm_values,
-      xvrm_val_l LIKE LINE OF ivrm_val_l,
-      vrm_name_l TYPE vrm_id.
-
 " Dropdown currency date
 TYPE-POOLS: vrm_c.
 DATA: ivrm_val_c TYPE vrm_values,
@@ -397,12 +392,17 @@ DATA: ivrm_val_d TYPE vrm_values,
       xvrm_val_d LIKE LINE OF ivrm_val_d,
       vrm_name_d TYPE vrm_id.
 
+" Dropdown show lable fields
+TYPE-POOLS: vrm_f.
+DATA: ivrm_val_f TYPE vrm_values,
+      xvrm_val_f LIKE LINE OF ivrm_val_f,
+      vrm_name_f TYPE vrm_id.
+
 " Function value table
 TYPES: BEGIN OF ty_functions,
          modtext TYPE c LENGTH 18,
          modval  TYPE c LENGTH 40,
        END OF ty_functions.
-
 
 " Dropdown logic operator
 TYPE-POOLS: vrm_r.
@@ -426,6 +426,13 @@ DATA: ivrm_val_v TYPE vrm_values,
 DATA: gt_functions  TYPE TABLE OF ty_functions WITH EMPTY KEY.
 
 
+  SELECTION-SCREEN BEGIN OF LINE.
+    SELECTION-SCREEN COMMENT 1(68) psvz." FOR FIELD p_varid.
+    PARAMETERS: p_vari TYPE varid-variant MODIF ID m1 AS LISTBOX VISIBLE LENGTH 45 USER-COMMAND uc10.
+    SELECTION-SCREEN: PUSHBUTTON (4) but04 USER-COMMAND uc04 MODIF ID c1 VISIBLE LENGTH 2 .
+  SELECTION-SCREEN END OF LINE.
+
+
 *----------------- Kaynak
 SELECTION-SCREEN BEGIN OF SCREEN 1100 AS SUBSCREEN.
   SELECT-OPTIONS: s_fnams FOR dd03m-scrtext_l NO-DISPLAY.
@@ -435,6 +442,7 @@ SELECTION-SCREEN BEGIN OF SCREEN 1100 AS SUBSCREEN.
   PARAMETERS    : p_loca TYPE tcp0c-langu NO-DISPLAY.
   PARAMETERS    : p_lang TYPE tcp0c-langu NO-DISPLAY.
   PARAMETERS    : p_info TYPE string NO-DISPLAY.
+  PARAMETERS    : p_hlev TYPE char2 NO-DISPLAY.
 
   SELECT-OPTIONS: s_vkorg  FOR vbak-vkorg,
                   s_vtweg  FOR knvv-vtweg,
@@ -580,10 +588,12 @@ SELECTION-SCREEN END   OF SCREEN 1350.
 *----------------- Gruplama
 SELECTION-SCREEN BEGIN OF SCREEN 1400 AS SUBSCREEN.
   SELECTION-SCREEN BEGIN OF LINE.
-    SELECTION-SCREEN: PUSHBUTTON 01(17) but01 USER-COMMAND uc01 MODIF ID c1 .
-    SELECTION-SCREEN: PUSHBUTTON 21(17) but03 USER-COMMAND uc03 MODIF ID c1 .
+    SELECTION-SCREEN COMMENT (1) l_spxxs .
+    SELECTION-SCREEN: PUSHBUTTON (17) but01 USER-COMMAND uc01 MODIF ID c1 .
+    SELECTION-SCREEN COMMENT (2) l_spxxr .
+    SELECTION-SCREEN: PUSHBUTTON (17) but03 USER-COMMAND uc03 MODIF ID c1 .
     SELECTION-SCREEN COMMENT 52(22) pyv FOR FIELD p_yval.
-    PARAMETERS: p_yval TYPE char25 AS LISTBOX VISIBLE LENGTH 25 USER-COMMAND uc00 MODIF ID c1 .
+    PARAMETERS: p_yval TYPE CHAR25 AS LISTBOX VISIBLE LENGTH 25 USER-COMMAND UC00 MODIF ID c1 .
   SELECTION-SCREEN END   OF LINE.
 
   SELECTION-SCREEN BEGIN OF LINE.
@@ -611,54 +621,42 @@ SELECTION-SCREEN BEGIN OF SCREEN 1400 AS SUBSCREEN.
   SELECTION-SCREEN BEGIN OF LINE.
     PARAMETERS: p_addt AS CHECKBOX DEFAULT 'X' MODIF ID c1 .
     SELECTION-SCREEN COMMENT (13) pat FOR FIELD p_addt.
-    SELECTION-SCREEN COMMENT 16(1) l_spx .
+    SELECTION-SCREEN COMMENT 20(1) l_spx .
     PARAMETERS: p_addp AS CHECKBOX DEFAULT ' ' USER-COMMAND srt MODIF ID c1 .
-    SELECTION-SCREEN: PUSHBUTTON 21(17) but07 USER-COMMAND uc07 MODIF ID c1 .
-    SELECTION-SCREEN COMMENT 52(22) phl FOR FIELD p_hlev.
-    PARAMETERS: p_hlev TYPE char25 AS LISTBOX VISIBLE LENGTH 25 MODIF ID c1 .
+    SELECTION-SCREEN: PUSHBUTTON 24(17) but07 USER-COMMAND uc07 MODIF ID c1 .
+    SELECTION-SCREEN COMMENT 52(22) pdd FOR FIELD p_layd.
+    PARAMETERS: p_layd TYPE disvariant-variant  MODIF ID d1.
   SELECTION-SCREEN END   OF LINE .
 SELECTION-SCREEN END   OF SCREEN 1400.
 
 *----------------- Düzen
 SELECTION-SCREEN BEGIN OF SCREEN 1500 AS SUBSCREEN.
-  SELECTION-SCREEN BEGIN OF LINE.
-    SELECTION-SCREEN COMMENT 1(33) psv FOR FIELD p_vari.
-    PARAMETERS: p_vari TYPE varid-variant MODIF ID m1 AS LISTBOX VISIBLE LENGTH 48 USER-COMMAND uc10.
-    SELECTION-SCREEN: PUSHBUTTON (4) but04 USER-COMMAND uc04 MODIF ID c1 VISIBLE LENGTH 2 .
-  SELECTION-SCREEN END OF LINE.
-
-  SELECTION-SCREEN BEGIN OF LINE.
-    SELECTION-SCREEN COMMENT 1(33) psr FOR FIELD p_sort.
-    PARAMETERS: p_sort AS LISTBOX VISIBLE LENGTH 17 USER-COMMAND srt MODIF ID d1.
-    SELECTION-SCREEN COMMENT 53(1) l_spx3 .
-    PARAMETERS: p_asde AS CHECKBOX MODIF ID m3 .
-    SELECTION-SCREEN COMMENT 74(20) pad FOR FIELD p_asde.
-  SELECTION-SCREEN END OF LINE.
-
-  SELECTION-SCREEN BEGIN OF LINE.
-    SELECTION-SCREEN COMMENT 1(33) pdm FOR FIELD p_layo.
-    PARAMETERS: p_layo TYPE disvariant-variant  MODIF ID d1.
-    SELECTION-SCREEN COMMENT 53(1) l_spx1 .
-    PARAMETERS: p_colr AS CHECKBOX MODIF ID d1.
-    SELECTION-SCREEN COMMENT 74(22) pco FOR FIELD p_colr.
-  SELECTION-SCREEN END OF LINE.
-
-  SELECTION-SCREEN BEGIN OF LINE.
-    SELECTION-SCREEN COMMENT 1(33) pdd FOR FIELD p_layd.
-    PARAMETERS: p_layd TYPE disvariant-variant  MODIF ID d1.
-    SELECTION-SCREEN COMMENT 53(1) l_spx2 .
-    PARAMETERS: p_tech AS CHECKBOX DEFAULT ' '  MODIF ID d1 .
-    SELECTION-SCREEN COMMENT 74(32) ptc FOR FIELD p_tech.
-  SELECTION-SCREEN END OF LINE.
 
   SELECTION-SCREEN BEGIN OF LINE.
     SELECTION-SCREEN COMMENT 1(33) ptr FOR FIELD p_disp.
     PARAMETERS: p_disp AS LISTBOX VISIBLE LENGTH 12 DEFAULT '1' USER-COMMAND srt MODIF ID d1.
-    SELECTION-SCREEN COMMENT 53(1) l_spx4 .
-    PARAMETERS: p_cdlb AS CHECKBOX DEFAULT ' ' MODIF ID d1 .
-    PARAMETERS: p_nolb DEFAULT ' ' NO-DISPLAY.
-    SELECTION-SCREEN COMMENT 74(30) pcl FOR FIELD p_cdlb.
+    SELECTION-SCREEN COMMENT (11) l_spx1 .
+    PARAMETERS : p_colr  AS CHECKBOX MODIF ID d1.
+    SELECTION-SCREEN COMMENT (22) pco FOR FIELD p_colr.
   SELECTION-SCREEN END   OF LINE .
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    SELECTION-SCREEN COMMENT 1(33) psr FOR FIELD p_sort.
+    PARAMETERS : p_sort AS LISTBOX VISIBLE LENGTH 22 USER-COMMAND srt MODIF ID d1.
+    SELECTION-SCREEN COMMENT (1) l_spx3 .
+    PARAMETERS : p_asde AS CHECKBOX MODIF ID m3 .
+    SELECTION-SCREEN COMMENT (22) pad FOR FIELD p_asde.
+  SELECTION-SCREEN END OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    SELECTION-SCREEN COMMENT (33) plo FOR FIELD p_nolb.
+    PARAMETERS: p_nolb TYPE char25 AS LISTBOX VISIBLE LENGTH 22 USER-COMMAND srt MODIF ID c1 .
+  SELECTION-SCREEN END OF LINE .
+
+  SELECTION-SCREEN BEGIN OF LINE.
+    SELECTION-SCREEN COMMENT 1(33) pdm FOR FIELD p_layo.
+    PARAMETERS: p_layo TYPE disvariant-variant  MODIF ID d1.
+  SELECTION-SCREEN END OF LINE.
 
 SELECTION-SCREEN END   OF SCREEN 1500.
 
@@ -687,9 +685,12 @@ SELECTION-SCREEN BEGIN OF SCREEN 1600 AS SUBSCREEN.
   SELECTION-SCREEN END OF LINE.
 
   SELECTION-SCREEN BEGIN OF LINE.
-    PARAMETERS: p_wrks AS CHECKBOX DEFAULT ' ' USER-COMMAND srt MODIF ID e1.
-    SELECTION-SCREEN COMMENT (31) pws FOR FIELD p_wrks.
-    PARAMETERS: p_xval(3) AS LISTBOX VISIBLE LENGTH 22 MODIF ID c1 .
+    PARAMETERS : p_wrks AS CHECKBOX DEFAULT ' ' USER-COMMAND srt MODIF ID e1.
+    SELECTION-SCREEN COMMENT 3(31) pws FOR FIELD p_xval.
+    PARAMETERS : p_xval(3) AS LISTBOX VISIBLE LENGTH 22 MODIF ID c1 .
+    SELECTION-SCREEN COMMENT 58(1) l_spa5 .
+    PARAMETERS :  p_tech  AS CHECKBOX DEFAULT ' ' MODIF ID d1.
+    SELECTION-SCREEN COMMENT 74(32) ptc FOR FIELD p_tech.
   SELECTION-SCREEN END   OF LINE .
 
   SELECTION-SCREEN BEGIN OF LINE.
@@ -992,7 +993,7 @@ INITIALIZATION.
   gv_max_ycolumns = 99.
   gv_max_ordernum = 500000.
   gv_max_xlsheets = 53.
-  gv_xl_zoomscale = 80.
+  gv_xl_zoomscale = 85.
   gv_max_filesize = 20971520. " 20 MB
   gv_iso_week = abap_false.
   gv_change_locale = abap_true.
@@ -1340,7 +1341,6 @@ CLASS lcl_main IMPLEMENTATION.
   ENDMETHOD.
 
 
-
   METHOD display_data.
 
     IF <gs_itab> IS INITIAL.
@@ -1482,7 +1482,11 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
     " optimize
-    lo_columns->set_optimize( 'X' ).
+    IF p_colr EQ ' ' .
+      IF ( gv_detail_view = abap_false AND p_layo EQ ' ' ) OR ( gv_detail_view = abap_true AND p_layd EQ ' ' ).
+        lo_columns->set_optimize( abap_true ).
+      ENDIF.
+    ENDIF.
 
     " hide all
     DATA(lo_cols) = lo_columns->get( ).
@@ -1538,6 +1542,7 @@ CLASS lcl_main IMPLEMENTATION.
         lo_col_tab->set_long_text( <fs_fcat>-scrtext_l ).
         lo_col_tab->set_medium_text( <fs_fcat>-scrtext_m ).
         lo_col_tab->set_short_text( <fs_fcat>-scrtext_s ).
+
         lo_col_tab->set_output_length( <fs_fcat>-outputlen ).
         lo_col_tab->set_decimals( <fs_fcat>-decimals_o ).
 
@@ -1695,16 +1700,14 @@ CLASS lcl_main IMPLEMENTATION.
         ASSIGN (name) TO <comp>.
         lv_node_text = <comp>.
 
-        IF p_nolb IS INITIAL.
-          name = VALUE #( gt_fieldlist[ fname = s_subts[ <f_field> ]-low ]-grpx1 OPTIONAL ).
-          IF name IS NOT INITIAL.
-            name = '<f_line>-' && name.
-            ASSIGN (name) TO <comp>.
-            IF p_cdlb EQ 'X'.
-              lv_node_text = <comp>.
-            ELSE.
-              lv_node_text = lv_node_text && | | && <comp>.
-            ENDIF.
+        name = VALUE #( gt_fieldlist[ fname = s_subts[ <f_field> ]-low ]-grpx1 OPTIONAL ).
+        IF name IS NOT INITIAL.
+          name = '<f_line>-' && name.
+          ASSIGN (name) TO <comp>.
+          IF p_nolb IS INITIAL.
+            lv_node_text = lv_node_text && | | && <comp>.
+          ELSEIF p_nolb EQ 'Z'.
+            lv_node_text = <comp>.
           ENDIF.
         ENDIF.
       ENDIF.
@@ -1780,7 +1783,12 @@ CLASS lcl_main IMPLEMENTATION.
 
     " ALV TREE için kolonları yeniden adlandır ve gizle
     lo_columns = go_tree->get_columns( ).
-    lo_columns->set_optimize( abap_true ).
+
+    IF p_colr EQ ' ' .
+      IF ( gv_detail_view = abap_false AND p_layo EQ ' ' ) OR ( gv_detail_view = abap_true AND p_layd EQ ' ' ).
+        lo_columns->set_optimize( abap_true ).
+      ENDIF.
+    ENDIF.
 
     DATA(lo_col) = lo_columns->get( ).
 
@@ -1797,9 +1805,9 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       " set text
-      lo_column->set_short_text( ' ' ).
-      lo_column->set_medium_text( ' ' ).
       lo_column->set_long_text( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-scrtext_l OPTIONAL ) ).
+      lo_column->set_medium_text( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-scrtext_m OPTIONAL ) ).
+      lo_column->set_short_text( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-scrtext_s OPTIONAL ) ).
       lo_column->set_output_length( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-outputlen OPTIONAL ) ).
       lo_column->set_decimals( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-decimals_o OPTIONAL ) ).
 
@@ -1840,8 +1848,6 @@ CLASS lcl_main IMPLEMENTATION.
     lo_settings->set_hierarchy_header( CONV #( hier_head ) ).
 
   ENDMETHOD.
-
-
 
 
   METHOD show_alv.
@@ -1906,8 +1912,8 @@ CLASS lcl_main IMPLEMENTATION.
           too_many_lines                = 3
           OTHERS                        = 4.
 
-      go_grid->register_edit_event( cl_gui_alv_grid=>mc_evt_modified ).
-      go_grid->register_edit_event( cl_gui_alv_grid=>mc_evt_enter ).
+      "  go_grid->register_edit_event( cl_gui_alv_grid=>mc_evt_modified ).
+      "  go_grid->register_edit_event( cl_gui_alv_grid=>mc_evt_enter ).
 
     ELSE.
 
@@ -1990,8 +1996,8 @@ CLASS lcl_main IMPLEMENTATION.
           too_many_lines                = 3
           OTHERS                        = 4.
 
-      go_grid2->register_edit_event( cl_gui_alv_grid=>mc_evt_modified ).
-      go_grid2->register_edit_event( cl_gui_alv_grid=>mc_evt_enter ).
+      " go_grid2->register_edit_event( cl_gui_alv_grid=>mc_evt_modified ).
+      " go_grid2->register_edit_event( cl_gui_alv_grid=>mc_evt_enter ).
 
     ELSE.
 
@@ -2053,6 +2059,8 @@ CLASS lcl_main IMPLEMENTATION.
 
       set_fieldlist( ).
       set_text_variables( ).
+      fill_aggrs( ).
+      fill_subts( ).
       fill_choices( EXPORTING pv_only_fill = abap_true ) .
 
       functxt-icon_id = icon_reject.
@@ -2090,6 +2098,8 @@ CLASS lcl_main IMPLEMENTATION.
         gv_decs = '.'.
       ENDIF.
 
+      gv_variant_changed = abap_false.
+
     ENDIF.
 
   ENDMETHOD.
@@ -2097,10 +2107,6 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD check_of_selection.
     CLEAR cv_error.
-
-    IF p_xval IS INITIAL AND s_fnams[] IS INITIAL.
-      "  p_wrks = ' '.
-    ENDIF.
 
     IF p_wahr IS NOT INITIAL AND p_cur1 IS INITIAL.
       p_cur1 = '01'.
@@ -2553,7 +2559,7 @@ CLASS lcl_main IMPLEMENTATION.
         lcl_popup_subt_setup=>display_popup( EXPORTING start_line   = 1
                                                        end_line     = CONV i( gv_max_level + 1 )
                                                        start_column = 40
-                                                       end_column   = 80
+                                                       end_column   = 98
                                                        pop_header   = VALUE char100( gt_textlist[ sym = 'TXP' ]-text OPTIONAL )
                                                        t_table = gt_subtotal_fields  ).
 
@@ -2587,11 +2593,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         CLEAR p_info.
         LOOP AT it_text ASSIGNING FIELD-SYMBOL(<fs_text>).
-          IF p_info IS INITIAL OR strlen( condense( <fs_text> ) ) EQ 72.
-            CONCATENATE p_info <fs_text> INTO p_info .
-          ELSE.
-            CONCATENATE p_info <fs_text> INTO p_info SEPARATED BY space.
-          ENDIF.
+          CONCATENATE p_info <fs_text> INTO p_info RESPECTING BLANKS.
         ENDLOOP.
 
       WHEN 'UC05' OR 'UC06'.
@@ -2771,7 +2773,6 @@ CLASS lcl_main IMPLEMENTATION.
       IF gt_fieldlist[] IS INITIAL OR sy-slset NE gv_variant.
         gv_variant_changed = abap_true.
         go_main->initialization( ).
-        gv_variant_changed = abap_false.
         gv_variant = sy-slset.
       ENDIF.
 
@@ -2824,12 +2825,13 @@ CLASS lcl_main IMPLEMENTATION.
 
             p_vari = gv_variant.
             go_main->initialization( ).
-            gv_variant_changed = abap_false.
+
           ENDIF.
         WHEN 'P_TERM'.
-          IF gv_group_count < 2.
+          IF gv_group_count = 0.
             p_yval = ' '.
           ENDIF.
+
         WHEN 'P_GRP1' OR 'P_GRP2' OR 'P_GRP3' OR 'P_GRP4' OR 'P_GRP5' OR 'P_GRP6'.
           screen-input = 0.
 
@@ -3048,6 +3050,16 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt5b = VALUE #( gt_allfields_text[ name = p_fld5b ]-text OPTIONAL ).
           ENDIF.
 
+        WHEN 'P_CASE'.
+          IF NOT ( ( VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'C' AND p_fov1 EQ 'VALUE' ) OR
+                   ( VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) EQ 'C' AND p_fov2 EQ 'VALUE' ) OR
+                   ( VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'C' AND p_fov3 EQ 'VALUE' ) OR
+                   ( VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'C' AND p_fov4 EQ 'VALUE' ) OR
+                   ( VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'C' AND p_fov5 EQ 'VALUE' ) ).
+            p_case = ' '.
+            screen-input = 0.
+          ENDIF.
+
         WHEN 'SLF02'.
           IF p_fov1 NE 'FIELD'.
             screen-input = 0.
@@ -3084,10 +3096,6 @@ CLASS lcl_main IMPLEMENTATION.
           IF p_fov5 NE 'FIELD'.
             screen-input = 0.
           ENDIF.
-
-          " ************************
-
-
 
         WHEN 'P_WAHR'.
           IF p_wahr IS NOT INITIAL AND p_cur1 EQ space.
@@ -3179,11 +3187,6 @@ CLASS lcl_main IMPLEMENTATION.
         WHEN 'P_PATH'.
           IF p_excl IS INITIAL AND p_mail IS INITIAL .
             p_path = ' '.
-            screen-input = 0.
-          ENDIF.
-        WHEN 'P_HLEV'.
-          IF p_disp NE '3' OR gv_max_level EQ 0.
-            p_hlev =  ' ' .
             screen-input = 0.
           ENDIF.
         WHEN 'P_XVAL'.
@@ -4425,7 +4428,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       " Tanım alanları kod ile
-      IF p_cdlb EQ 'X' .
+      IF p_nolb EQ 'Y'.
         <fs_items>-auart_x  =  condense( <fs_items>-auart  ) && | - | && <fs_items>-auart_x .
         <fs_items>-maktx    =  condense( <fs_items>-matnr  ) && | - | && <fs_items>-maktx   .
         <fs_items>-wgbez    =  condense( <fs_items>-matkl  ) && | - | && <fs_items>-wgbez   .
@@ -4468,6 +4471,14 @@ CLASS lcl_main IMPLEMENTATION.
 
     IF p_fld1a NE '' AND p_cnd1 NE '' AND ( ( p_fov1 EQ 'FIELD' AND p_fld1b NE '' ) OR ( p_fov1 EQ 'VALUE' )  ).
 
+      LOOP AT gt_functions ASSIGNING FIELD-SYMBOL(<fs_functions>).
+        REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_flt1b WITH <fs_functions>-modval.
+        REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_flt2b WITH <fs_functions>-modval.
+        REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_flt3b WITH <fs_functions>-modval.
+        REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_flt4b WITH <fs_functions>-modval.
+        REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_flt5b WITH <fs_functions>-modval.
+      ENDLOOP.
+
       IF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'P'.
         REPLACE ALL OCCURRENCES OF ',' IN p_flt1b WITH '.'.
       ENDIF.
@@ -4485,61 +4496,46 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       IF p_case NE 'X'.
-        IF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'C'.
-          p_fld1a = | UPPER( t~| && p_fld1a && | ) |.
+        IF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) EQ 'C' AND p_fov1 EQ 'VALUE'.
+          p_fld1a = |UPPER( t~| && p_fld1a && | )|.
           p_flt1b = to_upper( p_flt1b ).
         ELSE.
-          p_fld1a = | t~| && p_fld1a.
+          p_fld1a = 't~' && p_fld1a.
         ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld1b ]-type OPTIONAL ) EQ 'C'.
-          p_fld1b = | UPPER( t~| && p_fld1b && | ) |.
-        ELSE.
-          p_fld1b = | t~| && p_fld1b.
-        ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) EQ 'C'.
-          p_fld2a = | UPPER( t~| && p_fld2a && | ) |.
+        p_fld1b = 't~' && p_fld1b.
+
+        IF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) EQ 'C' AND p_fov2 EQ 'VALUE'.
+          p_fld2a = |UPPER( t~| && p_fld2a && | )|.
           p_flt2b = to_upper( p_flt2b ).
         ELSE.
           p_fld2a = 't~' && p_fld2a.
         ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld2b ]-type OPTIONAL ) EQ 'C'.
-          p_fld2b = | UPPER( t~| && p_fld2b && | ) |.
-        ELSE.
-          p_fld2b = 't~' && p_fld2b.
-        ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'C'.
+        p_fld2b = 't~' && p_fld2b.
+
+        IF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) EQ 'C' AND p_fov3 EQ 'VALUE'.
           p_fld3a = | UPPER( t~| && p_fld3a && | ) |.
           p_flt3b = to_upper( p_flt3b ).
         ELSE.
           p_fld3a = 't~' && p_fld3a.
         ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld3b ]-type OPTIONAL ) EQ 'C'.
-          p_fld3b = | UPPER( t~| && p_fld3b && | ) |.
-        ELSE.
-          p_fld3b = 't~' && p_fld3b.
-        ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'C'.
-          p_fld4a = | UPPER( t~| && p_fld4a && | ) |.
+        p_fld3b = 't~' && p_fld3b.
+
+        IF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) EQ 'C' AND p_fov4 EQ 'VALUE'.
+          p_fld4a = |UPPER( t~| && p_fld4a && | )|.
           p_flt4b = to_upper( p_flt4b ).
         ELSE.
           p_fld4a = 't~' && p_fld4a.
         ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld4b ]-type OPTIONAL ) EQ 'C'.
-          p_fld4b = | UPPER( t~| && p_fld4b && | ) |.
-        ELSE.
-          p_fld4b = 't~' && p_fld4b.
-        ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'C'.
-          p_fld5a = | UPPER( t~| && p_fld5a && | ) |.
+        p_fld4b = 't~' && p_fld4b.
+
+        IF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) EQ 'C' AND p_fov5 EQ 'VALUE'.
+          p_fld5a = |UPPER( t~| && p_fld5a && | )|.
           p_flt5b = to_upper( p_flt5b ).
         ELSE.
           p_fld5a = 't~' && p_fld5a.
         ENDIF.
-        IF VALUE #( gt_allfields_text[ name = p_fld5b ]-type OPTIONAL ) EQ 'C'.
-          p_fld5b = | UPPER( t~| && p_fld5b && | ) |.
-        ELSE.
-          p_fld5b = 't~' && p_fld5b.
-        ENDIF.
+        p_fld5b = 't~' && p_fld5b.
+
       ELSE.
         p_fld1a = 't~' && p_fld1a.
         p_fld1b = 't~' && p_fld1b.
@@ -4615,41 +4611,41 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
       ENDIF.
 
-      lv_t_filter = | ( ( |.
+      lv_t_filter = | ( (|.
 
-      lv_t_filter = lv_t_filter && | | && p_fld1a && |  | && p_cnd1 && | |.
+      lv_t_filter = lv_t_filter && | | && p_fld1a && | | && p_cnd1.
       IF p_fov1 EQ 'FIELD'.
-        lv_t_filter = lv_t_filter && | | && p_fld1b && | |.
+        lv_t_filter = lv_t_filter && | | && p_fld1b.
       ELSE.
-        lv_t_filter = lv_t_filter && |'| && p_flt1b && |'|.
+        lv_t_filter = lv_t_filter && | '| && p_flt1b && |'|.
         IF p_flt1b CA '#%' OR p_flt1b CA '#_'.
-          lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+          lv_t_filter = lv_t_filter && | ESCAPE '#'|.
         ENDIF.
       ENDIF.
       lv_t_filter = lv_t_filter && | )|.
 
       IF p_fld2a NE '' AND p_cnd2 NE '' AND ( ( p_fov2 EQ 'FIELD' AND p_fld2b NE '' ) OR ( p_fov2 EQ 'VALUE' )  ).
         lv_t_filter = lv_t_filter && | | && p_opt2 && | ( ( |.
-        lv_t_filter = lv_t_filter && p_fld2a && | | && p_cnd2 && | |.
+        lv_t_filter = lv_t_filter && p_fld2a && | | && p_cnd2.
         IF p_fov2 EQ 'FIELD'.
-          lv_t_filter = lv_t_filter && | | && p_fld2b && | |.
+          lv_t_filter = lv_t_filter && | | && p_fld2b.
         ELSE.
-          lv_t_filter = lv_t_filter && |'| && p_flt2b && |'|.
+          lv_t_filter = lv_t_filter && | '| && p_flt2b && |'|.
           IF p_flt2b CA '#%' OR p_flt2b CA '#_'.
-            lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+            lv_t_filter = lv_t_filter && | ESCAPE '#'|.
           ENDIF.
         ENDIF.
         lv_t_filter = lv_t_filter && | )|.
 
         IF p_fld3a NE '' AND p_cnd3 NE '' AND ( ( p_fov3 EQ 'FIELD' AND p_fld3b NE '' ) OR ( p_fov3 EQ 'VALUE' )  ).
           lv_t_filter = lv_t_filter && | | && p_opt3 && | ( |.
-          lv_t_filter = lv_t_filter && p_fld3a && | | && p_cnd3 && | |.
+          lv_t_filter = lv_t_filter && p_fld3a && | | && p_cnd3.
           IF p_fov3 EQ 'FIELD'.
-            lv_t_filter = lv_t_filter && | | && p_fld3b && | |.
+            lv_t_filter = lv_t_filter && | | && p_fld3b.
           ELSE.
-            lv_t_filter = lv_t_filter && |'| && p_flt3b && |'|.
+            lv_t_filter = lv_t_filter && | '| && p_flt3b && |'|.
             IF p_flt3b CA '#%' OR p_flt3b CA '#_'.
-              lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+              lv_t_filter = lv_t_filter && | ESCAPE '#'|.
             ENDIF.
             lv_t_filter = lv_t_filter && | )|.
           ENDIF.
@@ -4660,31 +4656,30 @@ CLASS lcl_main IMPLEMENTATION.
       IF p_fld4a NE '' AND p_cnd4 NE '' AND ( ( p_fov4 EQ 'FIELD' AND p_fld4b NE '' ) OR ( p_fov4 EQ 'VALUE' )  ).
         lv_t_filter = lv_t_filter && | )|.
         lv_t_filter = lv_t_filter && | | && p_opt4 && | ( ( |.
-        lv_t_filter = lv_t_filter && p_fld4a && | | && p_cnd4 && | |.
+        lv_t_filter = lv_t_filter && p_fld4a && | | && p_cnd4.
         IF p_fov4 EQ 'FIELD'.
-          lv_t_filter = lv_t_filter && | | && p_fld4b && | |.
+          lv_t_filter = lv_t_filter && | | && p_fld4b.
         ELSE.
-          lv_t_filter = lv_t_filter && |'| && p_flt4b && |'|.
+          lv_t_filter = lv_t_filter && | '| && p_flt4b && |'|.
           IF p_flt4b CA '#%' OR p_flt4b CA '#_'.
-            lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+            lv_t_filter = lv_t_filter && | ESCAPE '#'|.
           ENDIF.
         ENDIF.
         lv_t_filter = lv_t_filter && | )|.
 
         IF p_fld5a NE '' AND p_cnd5 NE '' AND ( ( p_fov5 EQ 'FIELD' AND p_fld5b NE '' ) OR ( p_fov5 EQ 'VALUE' )  ).
           lv_t_filter = lv_t_filter && | | && p_opt5 && | ( |.
-          lv_t_filter = lv_t_filter && p_fld5a && | | && p_cnd5 && | |.
+          lv_t_filter = lv_t_filter && p_fld5a && | | && p_cnd5.
           IF p_fov5 EQ 'FIELD'.
-            lv_t_filter = lv_t_filter && | | && p_fld5b && | |.
+            lv_t_filter = lv_t_filter && | | && p_fld5b.
           ELSE.
-            lv_t_filter = lv_t_filter && |'| && p_flt5b && |'|.
+            lv_t_filter = lv_t_filter && | '| && p_flt5b && |'|.
             IF p_flt5b CA '#%' OR p_flt5b CA '#_'.
-              lv_t_filter = lv_t_filter && | ESCAPE '#' |.
+              lv_t_filter = lv_t_filter && | ESCAPE '#'|.
             ENDIF.
           ENDIF.
           lv_t_filter = lv_t_filter && | )|.
         ENDIF.
-        lv_t_filter = lv_t_filter && | )|.
       ENDIF.
       lv_t_filter = lv_t_filter && | )|.
     ENDIF.
@@ -4921,13 +4916,15 @@ CLASS lcl_main IMPLEMENTATION.
               ASSIGN COMPONENT m_name OF STRUCTURE <fs_p_itab> TO FIELD-SYMBOL(<pc_value>).
               accu += <pc_value>.
             ENDLOOP.
-            <mc_value> = <mc_value> * 100 / accu .
+            IF accu NE 0 .
+              <mc_value> = <mc_value> * 100 / accu .
+            ENDIF.
           ENDIF.
 
           <mc_value> = round( val = <mc_value> dec = 2 ).
 
           " Negatif değer kırmızı font
-          IF <mc_value> LT 0 AND max_group EQ <fs_sub>.
+          IF <mc_value> LT 0 AND hiera EQ max_hiera. "max_group EQ <fs_sub>.
             APPEND INITIAL LINE TO <t_cellcolors> ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-color-col = 6.
             <fs_cellcolor>-color-int = 0.
@@ -5122,8 +5119,7 @@ CLASS lcl_main IMPLEMENTATION.
 
     ASSIGN lr_itab->* TO <gs_group_itab>.
 
-
-    gt_fcat = go_main->set_fieldcatalog( ).
+    gt_fcat = go_main->set_fieldcatalog( ).  " ???
 
     CALL METHOD cl_alv_table_create=>create_dynamic_table
       EXPORTING
@@ -5213,16 +5209,20 @@ CLASS lcl_main IMPLEMENTATION.
           <fs_group_data_columns>-text = '-'.
         ENDIF.
 
+        IF lv_list IS NOT INITIAL.
+          lv_list = |{ lv_list }| && |,|.
+        ENDIF.
+
         IF lv_col_suffix EQ ( 100 + col_count + 1 ).
 
           IF lv_aggrtype EQ 'W'  .
-            lv_list = |{ lv_list }| && |, ROUND( SUM( | && |{ lv_colfield }| &&  | * TM_QUAN ), 6 ) AS | && | MENGE| && lv_col_suffix.
+            lv_list = |{ lv_list }| && | ROUND( SUM( | && |{ lv_colfield }| &&  | * TM_QUAN ), 6 ) AS | && | MENGE| && lv_col_suffix.
           ELSEIF lv_aggrtype EQ 'M'.
-            lv_list = |{ lv_list }| && |, MAX( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
+            lv_list = |{ lv_list }| && | MAX( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
           ELSEIF lv_aggrtype EQ 'L'.
-            lv_list = |{ lv_list }| && |, MIN( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
+            lv_list = |{ lv_list }| && | MIN( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
           ELSE.
-            lv_list = |{ lv_list }| && |, SUM( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
+            lv_list = |{ lv_list }| && | SUM( | && |{ lv_colfield }| &&  | ) AS | && | MENGE| && lv_col_suffix.
           ENDIF.
 
           IF lv_aggrtype EQ 'W' .
@@ -5234,13 +5234,13 @@ CLASS lcl_main IMPLEMENTATION.
         ELSE.
 
           IF lv_aggrtype EQ 'W'  .
-            lv_list = |{ lv_list }| && |, ROUND( SUM( CASE | && gv_pivot_fieldname .
+            lv_list = |{ lv_list }| && | ROUND( SUM( CASE | && gv_pivot_fieldname .
           ELSEIF lv_aggrtype EQ 'M'.
-            lv_list = |{ lv_list }| && |, MAX( CASE | && gv_pivot_fieldname .
+            lv_list = |{ lv_list }| && | MAX( CASE | && gv_pivot_fieldname .
           ELSEIF lv_aggrtype EQ 'L'.
-            lv_list = |{ lv_list }| && |, MIN( CASE | && gv_pivot_fieldname .
+            lv_list = |{ lv_list }| && | MIN( CASE | && gv_pivot_fieldname .
           ELSE.
-            lv_list = |{ lv_list }| && |, SUM( CASE | && gv_pivot_fieldname .
+            lv_list = |{ lv_list }| && | SUM( CASE | && gv_pivot_fieldname .
           ENDIF.
 
           IF <fs_group_data_columns>-text = '-' .
@@ -5327,13 +5327,15 @@ CLASS lcl_main IMPLEMENTATION.
             DATA(tot_col_number) = 100 + col_count + 1 .
             a_name = 'MENGE' && tot_col_number.
             ASSIGN COMPONENT a_name OF STRUCTURE <fs_g_data> TO <ac_value>.
-            <mc_value> = <mc_value> * 100 / <ac_value> .
+            IF <mc_value> IS NOT INITIAL AND <ac_value> IS NOT INITIAL.
+              <mc_value> = <mc_value> * 100 / <ac_value> .
+            ENDIF.
           ENDIF.
 
           <mc_value> = round( val = <mc_value> dec = 2 ).
 
           " Negatif değer kırmızı font
-          IF <mc_value> LT 0 AND max_group EQ <fs_sub>.
+          IF <mc_value> LT 0 AND hiera EQ max_hiera. "max_group EQ <fs_sub>.
             APPEND INITIAL LINE TO <t_cellcolors> ASSIGNING <fs_cellcolor>.
             <fs_cellcolor>-color-col = 6.
             <fs_cellcolor>-color-int = 0.
@@ -5636,7 +5638,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       " Kod açıklama ile ise kod gizle
-      IF p_cdlb EQ 'X' AND p_layo EQ ' ' AND VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
+      IF p_nolb EQ 'Y' AND p_layo EQ ' ' AND VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
         <fs_fcat>-no_out = 'X'.
       ENDIF.
 
@@ -5651,7 +5653,6 @@ CLASS lcl_main IMPLEMENTATION.
 
       IF s_fnams[] IS INITIAL.
 
-        " Sayı
         IF <fs_fcat>-datatype EQ 'DEC'.
           <fs_fcat>-decimals_o = '0'.
         ENDIF.
@@ -5669,7 +5670,6 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
 
         IF <fs_fcat>-datatype EQ 'CURR' .
-          " Tutar
           IF p_twoc EQ 'X'.
             <fs_fcat>-cfieldname = 'CWAER'.
           ELSE.
@@ -5705,6 +5705,8 @@ CLASS lcl_main IMPLEMENTATION.
               <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && p_wah2 && to_upper( curdat_txt ).
             ENDIF.
           ELSE.
+            <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' (2)'.
+            <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' (2)'.
             <fs_fcat>-tech = 'X'.
           ENDIF.
 
@@ -5712,11 +5714,11 @@ CLASS lcl_main IMPLEMENTATION.
 
           IF p_wahr IS NOT INITIAL.
             curdat_sym = 'M' && p_cur1.
-            IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' .
-              curdat_txt = VALUE #( gt_textlist[ sym = 'M06' ]-text OPTIONAL ).
-            ELSE.
+            "IF <fs_fcat>-fieldname EQ 'FK_WAMN' OR <fs_fcat>-fieldname EQ 'LF_BAMN' .
+            "  curdat_txt = VALUE #( gt_textlist[ sym = 'M06' ]-text OPTIONAL ).
+            "ELSE.
               curdat_txt = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
-            ENDIF.
+            "ENDIF.
 
             IF p_tech IS INITIAL.
               IF <fs_fcat>-fieldname EQ 'EC_AMNT' OR <fs_fcat>-fieldname EQ 'EC_TAMN' .
@@ -5761,6 +5763,7 @@ CLASS lcl_main IMPLEMENTATION.
       OR substring_before( val = <fs_fcat>-fieldname sub = '00' ) EQ 'SORT'
       OR VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-fname OPTIONAL ) IS INITIAL.
         <fs_fcat>-tech = 'X'.
+        <fs_fcat>-no_out = 'X'.
       ENDIF.
 
       IF p_yval IS INITIAL.
@@ -5771,8 +5774,17 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       " Kolon optimize
-      IF p_colr EQ 'X'.
-        <fs_fcat>-col_opt = 'X'.
+      IF p_colr EQ ' ' .
+        IF ( gv_detail_view = abap_false AND p_layo EQ ' ' ) OR ( gv_detail_view = abap_true AND p_layd EQ ' ' ).
+          <fs_fcat>-col_opt = 'X'.
+        ENDIF.
+      ENDIF.
+
+      IF p_colr EQ 'X' AND <fs_fcat>-inttype = 'P'.
+        IF ( gv_detail_view = abap_false AND p_layo EQ ' ' ) OR ( gv_detail_view = abap_true AND p_layd EQ ' ' ).
+          <fs_fcat>-scrtext_m = ''.
+          <fs_fcat>-scrtext_s = ''.
+        ENDIF.
       ENDIF.
 
       IF p_tech EQ 'X'.
@@ -5809,7 +5821,7 @@ CLASS lcl_main IMPLEMENTATION.
             <fs_fcat>-no_out = ' '.
             <fs_fcat>-key = 'X'.
             " Kod açıklama ile ise kod gizle
-            IF p_cdlb EQ 'X' AND p_layo EQ ' ' AND VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
+            IF p_nolb EQ 'Y' AND p_layo EQ ' ' AND VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
               <fs_fcat>-no_out = 'X'.
             ENDIF.
           ENDIF.
@@ -5841,6 +5853,7 @@ CLASS lcl_main IMPLEMENTATION.
       wa_fieldcat-fieldname = 'SCOL_TAB'.
       wa_fieldcat-ref_field = 'COLTAB'.
       wa_fieldcat-ref_table = 'CALENDAR_TYPE'.
+      wa_fieldcat-tech = 'X'.
       APPEND wa_fieldcat TO rt_fcat.
 
     ENDIF.
@@ -5865,7 +5878,7 @@ CLASS lcl_main IMPLEMENTATION.
         MOVE-CORRESPONDING ls_new_column TO <fs_fcat>.
 
         ADD 1 TO lv_col_suffix.
-        <fs_fcat>-col_pos   = lv_col_suffix.
+        <fs_fcat>-col_pos = lv_col_suffix.
 
         <fs_fcat>-fieldname = 'MENGE' && lv_col_suffix.
 
@@ -5873,12 +5886,6 @@ CLASS lcl_main IMPLEMENTATION.
           IF lv_aggrtype = 'T' .
             <fs_fcat>-do_sum = 'X'.
           ENDIF.
-        ENDIF.
-
-        IF p_colr EQ 'X'.
-          <fs_fcat>-col_opt = 'X'.
-        ELSE.
-          <fs_fcat>-outputlen = <fs_fcat>-intlen + 4.
         ENDIF.
 
         " Column Text
@@ -5912,7 +5919,7 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_fcat>-reptext = lv_coltext.
 
         IF <fs_group_data_columns>-fnam IS NOT INITIAL.
-          IF p_cdlb IS INITIAL.
+          IF p_nolb IS INITIAL.
             <fs_fcat>-coltext = lv_coltext && | - | && <fs_group_data_columns>-fnam.
           ELSE.
             <fs_fcat>-coltext = <fs_group_data_columns>-fnam.
@@ -5927,34 +5934,34 @@ CLASS lcl_main IMPLEMENTATION.
         <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_m =  <fs_fcat>-scrtext_l = <fs_fcat>-coltext .
 
         " Datatype
-        CASE <fs_fcat>-datatype.
-
-          WHEN 'INT4' OR 'INT8' .
-            <fs_fcat>-decimals_o = 0.
-            <fs_fcat>-inttype = 'I'.
-
-          WHEN 'DEC'  .
-            <fs_fcat>-decimals_o = 2.
-            <fs_fcat>-inttype = 'P'.
-
-          WHEN 'QUAN'.
-            IF p_cdec EQ 'X'.
-              <fs_fcat>-qfieldname = ' '.
-              <fs_fcat>-decimals_o = 3.
-            ELSE.
-              <fs_fcat>-qfieldname = 'DUMBE'.
-            ENDIF.
-            <fs_fcat>-inttype = 'P'.
-            <fs_fcat>-intlen = 15.
-
-          WHEN 'CURR'.
-            <fs_fcat>-cfieldname = ' '.
-            "  <fs_fcat>-datatype = 'DEC'.
-            <fs_fcat>-inttype = 'P'.
-            <fs_fcat>-intlen = 15.
-            <fs_fcat>-decimals_o = 2.
-
-        ENDCASE.
+        "CASE <fs_fcat>-datatype.
+        "
+        "  WHEN 'INT4' OR 'INT8' .
+        "    <fs_fcat>-decimals_o = 0.
+        "    <fs_fcat>-inttype = 'I'.
+        "
+        "  WHEN 'DEC'  .
+        "    <fs_fcat>-decimals_o = 2.
+        "    <fs_fcat>-inttype = 'P'.
+        "
+        "  WHEN 'QUAN'.
+        "    IF p_cdec EQ 'X'.
+        "      <fs_fcat>-qfieldname = ' '.
+        "      <fs_fcat>-decimals_o = 3.
+        "    ELSE.
+        "      <fs_fcat>-qfieldname = 'DUMBE'.
+        "    ENDIF.
+        "    <fs_fcat>-inttype = 'P'.
+        "    <fs_fcat>-intlen = 15.
+        "
+        "  WHEN 'CURR'.
+        "    <fs_fcat>-cfieldname = ' '.
+        "    "  <fs_fcat>-datatype = 'DEC'.
+        "    <fs_fcat>-inttype = 'P'.
+        "    <fs_fcat>-intlen = 15.
+        "    <fs_fcat>-decimals_o = 2.
+        "
+        "ENDCASE.
 
       ENDLOOP.
 
@@ -5967,7 +5974,6 @@ CLASS lcl_main IMPLEMENTATION.
 
         ADD 1 TO lv_col_suffix.
         <fs_fcat>-col_pos   = lv_col_suffix.
-
         <fs_fcat>-fieldname = 'WADIV' && lv_col_suffix.
         <fs_fcat>-datatype = 'DEC'.
         <fs_fcat>-inttype = 'P'.
@@ -6011,7 +6017,6 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
-
 
 
   METHOD f4_fpath.
@@ -6230,12 +6235,6 @@ CLASS lcl_main IMPLEMENTATION.
     p_disp = '1'.
     p_addt = 'X'.
     p_oprp = 'X'.
-
-    "DATA: s_abgru_wa LIKE LINE OF s_abgru.
-    "s_abgru_wa-sign = 'I'.
-    "s_abgru_wa-option = 'EQ'.
-    "s_abgru_wa-low = space.
-    "APPEND s_abgru_wa TO s_abgru.
 
     fill_subts( ).
     fill_aggrs( ).
@@ -6513,23 +6512,20 @@ CLASS lcl_main IMPLEMENTATION.
     poc = VALUE #( gt_textlist[ sym = 'POC' ]-text OPTIONAL ).
     pzr = VALUE #( gt_textlist[ sym = 'PZR' ]-text OPTIONAL ).
     pyv = VALUE #( gt_textlist[ sym = 'PYV' ]-text OPTIONAL ).
-    phl = VALUE #( gt_textlist[ sym = 'PHL' ]-text OPTIONAL ).
-    phl = VALUE #( gt_textlist[ sym = 'PHL' ]-text OPTIONAL ).
     pat = VALUE #( gt_textlist[ sym = 'PAT' ]-text OPTIONAL ).
     pbd = VALUE #( gt_textlist[ sym = 'PBD' ]-text OPTIONAL ).
-    psv = VALUE #( gt_textlist[ sym = 'PSV' ]-text OPTIONAL ).
     psr = VALUE #( gt_textlist[ sym = 'PSR' ]-text OPTIONAL ).
     pad = VALUE #( gt_textlist[ sym = 'PAD' ]-text OPTIONAL ).
     pdm = VALUE #( gt_textlist[ sym = 'PDM' ]-text OPTIONAL ).
     pco = VALUE #( gt_textlist[ sym = 'PCO' ]-text OPTIONAL ).
     pcs = VALUE #( gt_textlist[ sym = 'PCS' ]-text OPTIONAL ).
-    pcl = VALUE #( gt_textlist[ sym = 'PCL' ]-text OPTIONAL ).
     ptc = VALUE #( gt_textlist[ sym = 'PTC' ]-text OPTIONAL ).
     pdd = VALUE #( gt_textlist[ sym = 'PDD' ]-text OPTIONAL ).
     ptr = VALUE #( gt_textlist[ sym = 'PTR' ]-text OPTIONAL ).
     pml = VALUE #( gt_textlist[ sym = 'PML' ]-text OPTIONAL ).
     psb = VALUE #( gt_textlist[ sym = 'PSB' ]-text OPTIONAL ).
     pex = VALUE #( gt_textlist[ sym = 'PEX' ]-text OPTIONAL ).
+    plo = VALUE #( gt_textlist[ sym = 'PLO' ]-text OPTIONAL ).
     pws = VALUE #( gt_textlist[ sym = 'PWS' ]-text OPTIONAL ).
     pdr = VALUE #( gt_textlist[ sym = 'PDR' ]-text OPTIONAL ).
     pox = VALUE #( gt_textlist[ sym = 'POX' ]-text OPTIONAL ).
@@ -6661,7 +6657,7 @@ CLASS lcl_main IMPLEMENTATION.
         tz0 = VALUE #( gt_textlist[ sym = 'TZ0' ]-text OPTIONAL ).
         CONCATENATE tz0 '_' sy-datum '_' sy-uzeit(4) '.xlsx' INTO lv_file_name.
 
-        IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
+        IF p_excl EQ 'X' AND sy-batch IS INITIAL AND sy-binpt IS INITIAL.
           cl_gui_frontend_services=>file_save_dialog(
             EXPORTING
               window_title        = CONV string( VALUE #( gt_textlist[ sym = 'TXF' ]-text OPTIONAL ) )
@@ -6842,22 +6838,18 @@ CLASS lcl_main IMPLEMENTATION.
     "**************************************************
     "**************************************************
 
-
     DATA(max_hiera) = 0.
 
-    "IF p_addp EQ 'X'.
     LOOP AT <fs_itab> ASSIGNING FIELD-SYMBOL(<fs_dummy>).
       ASSIGN COMPONENT 'HIERA' OF STRUCTURE <fs_dummy> TO <f_field>.
       IF <f_field> GT max_hiera.
         max_hiera = <f_field>.
       ENDIF.
     ENDLOOP.
-    "ENDIF.
 
     IF p_wrks EQ 'X'.
       max_hiera -= 1.
     ENDIF.
-
 
     " CALC WORKSHEETS +TITLES
     IF p_wrks IS NOT INITIAL.
@@ -6899,9 +6891,9 @@ CLASS lcl_main IMPLEMENTATION.
         ASSIGN COMPONENT lv_x_field OF STRUCTURE <fs_group_item> TO <f_field>.
         IF <f_field> IS NOT INITIAL.
           lv_sheet_title = <f_field>.
-          IF lv_x_field_desc IS NOT INITIAL AND p_nolb IS INITIAL.
+          IF lv_x_field_desc IS NOT INITIAL.
             ASSIGN COMPONENT lv_x_field_desc OF STRUCTURE <fs_group_item> TO <f_field>.
-            IF p_cdlb IS INITIAL.
+            IF p_nolb IS INITIAL.
               lv_sheet_title = lv_sheet_title && | - | && <f_field>.
             ELSE.
               lv_sheet_title = <f_field>.
@@ -6961,7 +6953,8 @@ CLASS lcl_main IMPLEMENTATION.
       DATA: lv_footer  TYPE string.
 
       DATA: rownum_str TYPE string.
-      DATA: cell_rval TYPE string.
+      DATA: cell_rval  TYPE string.
+      DATA: col_width  TYPE int4.
 
       DATA: st_string TYPE string,
             en_string TYPE string.
@@ -7180,12 +7173,10 @@ CLASS lcl_main IMPLEMENTATION.
             ASSIGN COMPONENT 'SHEET' OF STRUCTURE <f_line> TO <f_field>.
             ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<f_hiera>).
             " Genel toplam yoksa en üst kategori satırı yok
-            "    IF NOT ( p_addt IS INITIAL AND <f_hiera> = 1 ).
             IF <f_field> NE 0 AND <f_field> EQ lv_sheet_num .
               APPEND INITIAL LINE TO <fs_itab_sheet> ASSIGNING <s_line>.
               MOVE-CORRESPONDING <f_line> TO <s_line>.
             ENDIF.
-            "   ENDIF.
           ENDLOOP.
         ELSE.
           <fs_itab_sheet>[] = <ls_itab>[].
@@ -7224,7 +7215,7 @@ CLASS lcl_main IMPLEMENTATION.
                 lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
               ENDIF.
             ENDIF.
-            IF p_cdlb EQ 'X'.
+            IF p_nolb EQ 'Y'.
               IF VALUE #( gt_fieldlist[ fname = <ls_col>-columnname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
                 lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
               ENDIF.
@@ -7308,7 +7299,7 @@ CLASS lcl_main IMPLEMENTATION.
             hide_stc += 1.
           ENDIF.
           DATA(hide_enc) = hide_stc.
-          IF p_cdlb IS INITIAL AND p_nolb IS INITIAL.
+          IF p_nolb IS INITIAL.
             IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx1 OPTIONAL ) IS NOT INITIAL.
               hide_enc += 1.
             ENDIF.
@@ -7337,6 +7328,11 @@ CLASS lcl_main IMPLEMENTATION.
           """"""""""""""""""""""""""""""""""""
           """"""""""""""""""""""""""""""""""""
           IF p_colr IS NOT INITIAL.
+            col_width = lr_xlcol->get_attribute_ns( name = 'width' ).
+            IF col_width GT 40.
+              lr_xlcol->set_attribute_ns( name = 'width' value = '40' ).
+            ENDIF.
+
             CASE lt_ctyp[ sy-index ].
               WHEN 'Q'.
                 lr_xlcol->set_attribute_ns( name = 'width' value = '14' ).
@@ -7891,9 +7887,43 @@ CLASS lcl_main IMPLEMENTATION.
                 pattern     = '\w+(\.\w+)*@(\w+\.)+(\w{2,4})'
                 ignore_case = abap_true.
 
+
+            TYPES: BEGIN OF ty_mail_list,
+                     mail TYPE AD_SMTPADR,
+                   END OF ty_mail_list.
+
+            DATA: lt_mail_list TYPE TABLE OF ty_mail_list .
+
+            LOOP AT p_mlto ASSIGNING FIELD-SYMBOL(<s_mlto>).
+
+                  SELECT t1~uname, t2~name_text, t2~smtp_addr
+                    FROM agr_users as t1
+               LEFT JOIN puser002 as t2
+                      ON t2~bname EQ t1~uname
+                   WHERE t1~agr_name = @<s_mlto>-low
+              INTO TABLE @DATA(lt_role_users).
+
+              IF sy-subrc = 0.
+                LOOP at lt_role_users ASSIGNING FIELD-SYMBOL(<ls_user>).
+                  IF <ls_user>-smtp_addr IS NOT INITIAL.
+                    READ TABLE lt_mail_list with key mail = <ls_user>-smtp_addr transporting no fields.
+                    IF sy-subrc <> 0.
+                       APPEND VALUE #( mail = <ls_user>-smtp_addr ) TO lt_mail_list.
+                    ENDIF.
+                  ENDIF.
+                ENDLOOP.
+              ELSE.
+                READ TABLE lt_mail_list with key mail = <s_mlto>-low transporting no fields.
+                IF sy-subrc <> 0.
+                  APPEND VALUE #( mail = <s_mlto>-low ) TO lt_mail_list.
+                ENDIF.
+              ENDIF.
+
+            ENDLOOP.
+
             "Set Recipient | This method has options to set CC/BCC as well
-            LOOP AT p_mlto ASSIGNING FIELD-SYMBOL(<ls_mlto>).
-              lv_address = <ls_mlto>-low.
+            LOOP AT lt_mail_list ASSIGNING FIELD-SYMBOL(<ls_mlto>).
+              lv_address = <ls_mlto>-mail.
               REPLACE ALL OCCURRENCES OF '${USERMAIL}' IN lv_address WITH user_mailaddr .
 
               lo_matcher = lo_regex->create_matcher( text = lv_address ).
@@ -7901,7 +7931,7 @@ CLASS lcl_main IMPLEMENTATION.
               IF lo_matcher->match( ) IS INITIAL.
                 lv_message = VALUE #( gt_textlist[ sym = 'A05' ]-text OPTIONAL ) && lv_address.
                 MESSAGE lv_message TYPE 'I'.
-                DELETE p_mlto INDEX sy-tabix.
+                DELETE lt_mail_list INDEX sy-tabix.
               ELSE.
                 lo_send_request->add_recipient( i_recipient = cl_cam_address_bcs=>create_internet_address(
                                                                 i_address_string = CONV #( lv_address )
@@ -7910,7 +7940,7 @@ CLASS lcl_main IMPLEMENTATION.
               ENDIF.
             ENDLOOP.
 
-            IF p_mlto[] IS NOT INITIAL.
+            IF lt_mail_list[] IS NOT INITIAL.
               "Send Email
               DATA(lv_sent_to_all) = lo_send_request->send( ).
               COMMIT WORK.
@@ -8219,73 +8249,51 @@ CLASS lcl_main IMPLEMENTATION.
 
     REFRESH: gt_aggregation_fields.
 
-    " Toplama alanları listesi
-    IF s_aggrs[] IS INITIAL.
+    LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
+      "IF VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-cumty OPTIONAL ) IS INITIAL OR <f_aggrs>-high IS INITIAL.
+      "  DELETE s_aggrs WHERE low = <f_aggrs>-low .
+      "ENDIF.
+      IF VALUE #( gt_allfields_text[ name = <f_aggrs>-low ]-text OPTIONAL ) IS INITIAL.
+        DELETE s_aggrs WHERE low = <f_aggrs>-low .
+      ENDIF.
+    ENDLOOP.
 
-      LOOP AT gt_fieldlist ASSIGNING FIELD-SYMBOL(<ls_fieldlist>).
-        IF <ls_fieldlist>-cumty IS NOT INITIAL.
-          APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING FIELD-SYMBOL(<ls_aggregation_fields>).
-          <ls_aggregation_fields>-fnam = <ls_fieldlist>-fname.
+    LOOP AT gt_fieldlist ASSIGNING FIELD-SYMBOL(<ls_fieldlist>) WHERE cumty NE ' ' .
 
-          DATA(offset) = strlen( <ls_fieldlist>-fname ) - 2.
-          IF <ls_fieldlist>-fname+offset(2) EQ '_2'.
-            <ls_aggregation_fields>-text = <ls_fieldlist>-textl && ' (2)'.
-          ELSE.
-            <ls_aggregation_fields>-text = <ls_fieldlist>-textl.
-          ENDIF.
-          <ls_aggregation_fields>-type = <ls_fieldlist>-cumty.
-          <ls_aggregation_fields>-ctot = icon_wd_radio_button_empty.
-          <ls_aggregation_fields>-cper = icon_wd_radio_button_empty.
-          <ls_aggregation_fields>-cavg = icon_wd_radio_button_empty.
-          <ls_aggregation_fields>-cwga = icon_wd_radio_button_empty.
-          <ls_aggregation_fields>-cmax = icon_wd_radio_button_empty.
-          <ls_aggregation_fields>-cmin = icon_wd_radio_button_empty.
-          CASE <ls_fieldlist>-cumty.
-            WHEN 'T'. <ls_aggregation_fields>-ctot = icon_radiobutton.
-            WHEN 'P'. <ls_aggregation_fields>-cper = icon_radiobutton.
-            WHEN 'A'. <ls_aggregation_fields>-cavg = icon_radiobutton.
-            WHEN 'W'. <ls_aggregation_fields>-cwga = icon_radiobutton.
-            WHEN 'M'. <ls_aggregation_fields>-cmax = icon_radiobutton.
-            WHEN 'L'. <ls_aggregation_fields>-cmin = icon_radiobutton.
-          ENDCASE.
-        ENDIF.
-      ENDLOOP.
+      APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING FIELD-SYMBOL(<ls_aggregation_fields>).
+      <ls_aggregation_fields>-fnam = <ls_fieldlist>-fname.
+      <ls_aggregation_fields>-text = <ls_fieldlist>-textl.
+      DATA(offset) = strlen( <ls_fieldlist>-fname ) - 2.
 
-    ELSE.
+      IF <ls_fieldlist>-fname+offset(2) EQ '_2'.
+        <ls_aggregation_fields>-text = <ls_aggregation_fields>-text && ' (2)'.
+      ENDIF.
 
-      LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
-        APPEND INITIAL LINE TO gt_aggregation_fields ASSIGNING <ls_aggregation_fields>.
-        <ls_aggregation_fields>-fnam = <f_aggrs>-low.
-        <ls_aggregation_fields>-text = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-textl OPTIONAL ).
-        offset = strlen( <f_aggrs>-low ) - 2.
-        DATA(spgrp) = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-spgrp OPTIONAL ).
+      READ TABLE s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggr>) WITH KEY low = <ls_fieldlist>-fname.
 
-        IF <f_aggrs>-low+offset(2) EQ '_2'.
-          <ls_aggregation_fields>-text = <ls_aggregation_fields>-text && ' (2)'.
-        ENDIF.
+      IF NOT <f_aggr> IS ASSIGNED.
+        <ls_aggregation_fields>-type = <ls_fieldlist>-cumty.
+      ELSE.
+        <ls_aggregation_fields>-type = <f_aggr>-high.
+        UNASSIGN <f_aggr>.
+      ENDIF.
 
-        IF <f_aggrs>-high IS INITIAL.
-          <ls_aggregation_fields>-type = VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-cumty OPTIONAL ).
-        ELSE.
-          <ls_aggregation_fields>-type = <f_aggrs>-high.
-        ENDIF.
-        <ls_aggregation_fields>-ctot = icon_wd_radio_button_empty.
-        <ls_aggregation_fields>-cper = icon_wd_radio_button_empty.
-        <ls_aggregation_fields>-cavg = icon_wd_radio_button_empty.
-        <ls_aggregation_fields>-cwga = icon_wd_radio_button_empty.
-        <ls_aggregation_fields>-cmax = icon_wd_radio_button_empty.
-        <ls_aggregation_fields>-cmin = icon_wd_radio_button_empty.
-        CASE <ls_aggregation_fields>-type.
-          WHEN 'T'. <ls_aggregation_fields>-ctot = icon_radiobutton.
-          WHEN 'P'. <ls_aggregation_fields>-cper = icon_radiobutton.
-          WHEN 'A'. <ls_aggregation_fields>-cavg = icon_radiobutton.
-          WHEN 'W'. <ls_aggregation_fields>-cwga = icon_radiobutton.
-          WHEN 'M'. <ls_aggregation_fields>-cmax = icon_radiobutton.
-          WHEN 'L'. <ls_aggregation_fields>-cmin = icon_radiobutton.
-        ENDCASE.
-      ENDLOOP.
+      <ls_aggregation_fields>-ctot = icon_wd_radio_button_empty.
+      <ls_aggregation_fields>-cper = icon_wd_radio_button_empty.
+      <ls_aggregation_fields>-cavg = icon_wd_radio_button_empty.
+      <ls_aggregation_fields>-cwga = icon_wd_radio_button_empty.
+      <ls_aggregation_fields>-cmax = icon_wd_radio_button_empty.
+      <ls_aggregation_fields>-cmin = icon_wd_radio_button_empty.
+      CASE <ls_aggregation_fields>-type.
+        WHEN 'T'. <ls_aggregation_fields>-ctot = icon_radiobutton.
+        WHEN 'P'. <ls_aggregation_fields>-cper = icon_radiobutton.
+        WHEN 'A'. <ls_aggregation_fields>-cavg = icon_radiobutton.
+        WHEN 'W'. <ls_aggregation_fields>-cwga = icon_radiobutton.
+        WHEN 'M'. <ls_aggregation_fields>-cmax = icon_radiobutton.
+        WHEN 'L'. <ls_aggregation_fields>-cmin = icon_radiobutton.
+      ENDCASE.
 
-    ENDIF.
+     ENDLOOP.
 
   ENDMETHOD.
 
@@ -8307,16 +8315,18 @@ CLASS lcl_main IMPLEMENTATION.
 
     " Toplama alanları listesi
     IF s_subts[] IS INITIAL.
-      DO gv_max_level TIMES.
+
+      DO gv_max_level - 1 TIMES.
         APPEND INITIAL LINE TO gt_subtotal_fields ASSIGNING FIELD-SYMBOL(<ls_subtotal_fields>).
         <ls_subtotal_fields>-fnam = VALUE #( gt_selected_group_fields[ sy-index ]-fnam OPTIONAL ).
         <ls_subtotal_fields>-text = VALUE #( gt_selected_group_fields[ sy-index ]-text OPTIONAL ).
         <ls_subtotal_fields>-ctot = 'X'.
+        <ls_subtotal_fields>-hlev = ' '.
       ENDDO.
 
     ELSE.
 
-      DO gv_max_level TIMES.
+      DO gv_max_level - 1 TIMES.
         APPEND INITIAL LINE TO gt_subtotal_fields ASSIGNING <ls_subtotal_fields>.
         <ls_subtotal_fields>-fnam = VALUE #( gt_selected_group_fields[ sy-index ]-fnam OPTIONAL ).
         <ls_subtotal_fields>-text = VALUE #( gt_selected_group_fields[ sy-index ]-text OPTIONAL ).
@@ -8326,6 +8336,14 @@ CLASS lcl_main IMPLEMENTATION.
         ELSE.
           <ls_subtotal_fields>-ctot = 'X'.
         ENDIF.
+
+        IF VALUE #( s_subts[ low = <ls_subtotal_fields>-fnam ]-sign OPTIONAL ) EQ 'E'.
+          <ls_subtotal_fields>-hlev = 'X'.
+          p_hlev = CONV char2( sy-index ).
+        ELSE.
+          <ls_subtotal_fields>-hlev = ' '.
+        ENDIF.
+
       ENDDO.
 
     ENDIF.
@@ -8336,10 +8354,28 @@ CLASS lcl_main IMPLEMENTATION.
   METHOD set_subts.
 
     REFRESH: s_subts.
+    p_hlev = ' '.
 
-    DO gv_max_level TIMES.
-      APPEND VALUE #( sign = 'I' option = 'EQ' low = VALUE #( gt_subtotal_fields[ sy-index ]-fnam OPTIONAL ) high = VALUE #( gt_subtotal_fields[ sy-index ]-ctot OPTIONAL ) ) TO s_subts.
+    DATA lv_sign TYPE c LENGTH 1.
+    DO gv_max_level - 1 TIMES.
+      IF VALUE #( gt_subtotal_fields[ sy-index ]-hlev OPTIONAL ) EQ 'X'.
+        lv_sign = 'E'.
+        p_hlev = CONV char2( sy-index ).
+      ELSE.
+        lv_sign = 'I'.
+      ENDIF.
+      APPEND VALUE #( sign = lv_sign
+                      option = 'EQ'
+                      low = VALUE #( gt_subtotal_fields[ sy-index ]-fnam OPTIONAL )
+                      high = VALUE #( gt_subtotal_fields[ sy-index ]-ctot OPTIONAL ) ) TO s_subts.
     ENDDO.
+
+    IF gv_max_level GT 0.
+      APPEND VALUE #( sign = 'I'
+                      option = 'EQ'
+                      low = VALUE #( gt_selected_group_fields[ gv_max_level ]-fnam OPTIONAL )
+                      high = 'X' ) TO s_subts.
+    ENDIF.
 
   ENDMETHOD.
 
@@ -8392,7 +8428,7 @@ CLASS lcl_main IMPLEMENTATION.
         APPEND <ls_groupable_fields> TO gt_selected_group_fields.
         nr_pos = nr_pos + 1.
 
-        IF p_yval IS INITIAL OR nr_pos < nr_count OR nr_count EQ 1.
+        IF p_yval IS INITIAL OR nr_pos < nr_count.
 
           APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
           <ls_group_key_columns>-fnam = <f_fnams>-low.
@@ -8470,7 +8506,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         nr_pos = nr_pos + 1.
 
-        IF p_yval IS INITIAL OR nr_pos < nr_count OR nr_count EQ 1.
+        IF p_yval IS INITIAL OR nr_pos < nr_count.
 
           APPEND INITIAL LINE TO gt_group_key_columns ASSIGNING <ls_group_key_columns>.
           <ls_group_key_columns>-fnam = <ls_selected_group_fields>-fnam.
@@ -8505,6 +8541,7 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
 
       ENDLOOP.
+
     ENDIF.
 
     " Grup ve hiyerarşi sayısı
@@ -8539,13 +8576,12 @@ CLASS lcl_main IMPLEMENTATION.
     ENDLOOP.
     p_hlev = lv_hlev.
 
-
     """""""""""""""
     " Dropdowns
     """""""""""""""
     DATA: text_val TYPE string.
     DATA: lv_aggrtype TYPE string.
-    CLEAR: ivrm_val, ivrm_val_x, ivrm_val_c, ivrm_val_t, ivrm_val_s, ivrm_val_d.
+    CLEAR: ivrm_val, ivrm_val_f, ivrm_val_c, ivrm_val_t, ivrm_val_s, ivrm_val_d.
 
     " Y Field
     vrm_name = 'p_yval'.
@@ -8671,6 +8707,25 @@ CLASS lcl_main IMPLEMENTATION.
         id     = vrm_name_d
         values = ivrm_val_d.
 
+    " Display lable fields
+    CLEAR: ivrm_val_f.
+
+    xvrm_val_f-key = 'X'.
+    xvrm_val_f-text = VALUE #( gt_textlist[ sym = 'PNL' ]-text OPTIONAL ).
+    APPEND xvrm_val_f TO ivrm_val_f.
+    xvrm_val_f-key = 'Y'.
+    xvrm_val_f-text = VALUE #( gt_textlist[ sym = 'PCL' ]-text OPTIONAL ).
+    APPEND xvrm_val_f TO ivrm_val_f.
+    xvrm_val_f-key = 'Z'.
+    xvrm_val_f-text = VALUE #( gt_textlist[ sym = 'PZL' ]-text OPTIONAL ).
+    APPEND xvrm_val_f TO ivrm_val_f.
+
+    vrm_name_f = 'p_nolb'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_f
+        values = ivrm_val_f.
+
     " Sheet Fields
     vrm_name_x = 'p_xval'.
     CLEAR: ivrm_val_x.
@@ -8699,23 +8754,22 @@ CLASS lcl_main IMPLEMENTATION.
         id     = vrm_name_x
         values = ivrm_val_x.
 
-
-    " Expand tree level
-    vrm_name_l = 'p_hlev'.
-    CLEAR: ivrm_val_l.
-    LOOP AT s_fnams[] ASSIGNING FIELD-SYMBOL(<ls_fnams>).
-      IF NOT ( p_yval IS NOT INITIAL AND sy-tabix EQ gv_group_count ).
-        xvrm_val_l-key  = CONV char2( sy-tabix ).
-        xvrm_val_l-text = VALUE #( gt_fieldlist[ fname = <ls_fnams>-low ]-textl OPTIONAL ).
-        APPEND xvrm_val_l TO ivrm_val_l.
-        CLEAR: xvrm_val_l.
-      ENDIF.
-    ENDLOOP.
-
-    CALL FUNCTION 'VRM_SET_VALUES'
-      EXPORTING
-        id     = vrm_name_l
-        values = ivrm_val_l.
+   " Expand tree level
+   " vrm_name_l = 'p_hlev'.
+   " CLEAR: ivrm_val_l.
+   " LOOP AT s_fnams[] ASSIGNING FIELD-SYMBOL(<ls_fnams>).
+   "   IF NOT ( p_yval IS NOT INITIAL AND sy-tabix EQ gv_group_count ).
+   "     xvrm_val_l-key  = CONV char2( sy-tabix ).
+   "     xvrm_val_l-text = VALUE #( gt_fieldlist[ fname = <ls_fnams>-low ]-textl OPTIONAL ).
+   "     APPEND xvrm_val_l TO ivrm_val_l.
+   "     CLEAR: xvrm_val_l.
+   "   ENDIF.
+   " ENDLOOP.
+   "
+   " CALL FUNCTION 'VRM_SET_VALUES'
+   "   EXPORTING
+   "     id     = vrm_name_l
+   "     values = ivrm_val_l.
 
 
     CLEAR: ivrm_val_r, ivrm_val_o, ivrm_val_v.
@@ -9144,16 +9198,19 @@ CLASS lcl_main IMPLEMENTATION.
 
             ENDIF.
 
-            IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-            lv_aggrtype = VALUE #( gt_aggregation_fields[ fnam = k_field ]-type OPTIONAL ).
-            " Toplam ve yüzdede sıfırdan farklılar, max min için =hücre değeri
-            IF lv_aggrtype EQ 'M' OR lv_aggrtype EQ 'L'.
-              ASSIGN COMPONENT iv_column OF STRUCTURE <f_line> TO <f_field>.
-              DATA(cell_value) = CONV string( <f_field> ) .
-              CONDENSE cell_value NO-GAPS.
-              gv_filter_where = gv_filter_where && k_field && | EQ '| && cell_value && |'|.
-            ELSE.
-              gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
+            IF k_field IS NOT INITIAL AND k_field NE '&Hierarchy'.
+              lv_aggrtype = VALUE #( gt_aggregation_fields[ fnam = k_field ]-type OPTIONAL ).
+              " Toplam, ağ.ortalama sıfırdan farklılar; max, min için = hücre değeri
+              IF lv_aggrtype EQ 'M' OR lv_aggrtype EQ 'L'.
+                IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+                ASSIGN COMPONENT iv_column OF STRUCTURE <f_line> TO <f_field>.
+                DATA(cell_value) = CONV string( <f_field> ) .
+                CONDENSE cell_value NO-GAPS.
+                gv_filter_where = gv_filter_where && k_field && | EQ '| && cell_value && |'|.
+              ELSEIF lv_aggrtype EQ 'T' OR lv_aggrtype EQ 'W'.
+                IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+                gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
+              ENDIF.
             ENDIF.
 
             gv_detail_view = abap_true.
@@ -9261,16 +9318,9 @@ CLASS lcl_popup_aggr_setup IMPLEMENTATION .
       CATCH cx_salv_not_found.
     ENDTRY.
 
-
 *   Get the event object
     DATA: lo_events TYPE REF TO cl_salv_events_table.
     lo_events = ob_salv_table->get_event( ).
-*
-*   Instantiate the event handler object
-    "   DATA: lo_event_handler TYPE REF TO lcl_event_handler.
-    "   CREATE OBJECT lo_event_handler.
-    "   *   event handler
-    "   SET HANDLER lo_event_handler->on_link_click FOR lo_events.
 
     DATA: ob_salv_events    TYPE REF TO cl_salv_events_table.
     ob_salv_events = ob_salv_table->get_event( ).
@@ -9390,8 +9440,13 @@ CLASS lcl_popup_subt_setup IMPLEMENTATION .
 
         lo_column ?= lo_cols->get_column( 'CTOT' ).
         lo_column->set_cell_type( if_salv_c_cell_type=>checkbox_hotspot ).
-        lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'TXS' ]-text OPTIONAL ) ).
-        lo_column->set_output_length( 10 ).
+        lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'PAP' ]-text OPTIONAL ) ).
+        lo_column->set_output_length( 15 ).
+
+        lo_column ?= lo_cols->get_column( 'HLEV' ).
+        lo_column->set_cell_type( if_salv_c_cell_type=>checkbox_hotspot ).
+        lo_column->set_long_text( VALUE #( gt_textlist[ sym = 'PHL' ]-text OPTIONAL ) ).
+        lo_column->set_output_length( 20 ).
 
       CATCH cx_salv_not_found.
     ENDTRY.
@@ -9399,12 +9454,6 @@ CLASS lcl_popup_subt_setup IMPLEMENTATION .
 *   Get the event object
     DATA: lo_events TYPE REF TO cl_salv_events_table.
     lo_events = ob_salv_table->get_event( ).
-*
-*   Instantiate the event handler object
-    "   DATA: lo_event_handler TYPE REF TO lcl_event_handler.
-    "   CREATE OBJECT lo_event_handler.
-    "   *   event handler
-    "   SET HANDLER lo_event_handler->on_link_click FOR lo_events.
 
     DATA: ob_salv_events    TYPE REF TO cl_salv_events_table.
     ob_salv_events = ob_salv_table->get_event( ).
@@ -9439,6 +9488,17 @@ CLASS lcl_popup_subt_setup IMPLEMENTATION .
           <lfs_data>-ctot = 'X'.
         ELSE.
           <lfs_data>-ctot = ''.
+          <lfs_data>-hlev = ''.
+        ENDIF.
+
+      WHEN 'HLEV'.
+        IF <lfs_data>-hlev IS INITIAL AND <lfs_data>-ctot = 'X'.
+          LOOP AT t_subtotal_fields ASSIGNING FIELD-SYMBOL(<lfs_dat>).
+             <lfs_dat>-hlev = ' '.
+          ENDLOOP.
+          <lfs_data>-hlev = 'X'.
+        ELSE.
+          <lfs_data>-hlev = ''.
         ENDIF.
     ENDCASE.
 
@@ -9676,7 +9736,6 @@ FORM submit_report.
                     WITH p_hlev  EQ p_hlev
                     WITH p_colr  EQ p_colr
                     WITH p_tech  EQ p_tech
-                    WITH p_cdlb  EQ p_cdlb
                     WITH p_sort  EQ p_sort
                     WITH p_asde  EQ p_asde
                     WITH p_path  EQ p_path
@@ -10393,7 +10452,10 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'PDM' text = 'Düzen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PDR' text = 'Raporu görüntüle' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PEX' text = 'Excel''e kaydet / Dosya adı' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLO' text = 'Tanım alanları' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PML' text = 'E-Posta gönder -> Alıcı' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PNL' text = 'Tanımlar yok' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PZL' text = 'Grup başlıkları sadece tanım ile' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POA' text = 'Onaylı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POC' text = 'Sıralanan eş değerleri birleştirme' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PON' text = 'Onay bekleyen' ) TO gt_textlist.
@@ -10414,7 +10476,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'PWA' text = 'Ağırlıklı ortalama hesapla' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PWS' text = 'Çalışma sayfaları oluştur' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PYV' text = 'Son grup kolonlarda' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'PHL' text = 'Ağaç görünümünde açık' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PHL' text = 'Ağaç görünümünde kapalı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PZR' text = 'Sıfır değerleri görüntüleme' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Q01' text = '1.ÇEYREK' ) TO gt_textlist.
   APPEND VALUE #( sym = 'Q02' text = '2.ÇEYREK' ) TO gt_textlist.
@@ -10734,7 +10796,10 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'PDM' text = 'Layout' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PDR' text = 'Display Report' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PEX' text = 'Save to Excel / File name' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLO' text = 'Definition Fields' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PML' text = 'Send Email -> Recipient' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PNL' text = 'No definition fields' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PZL' text = 'Definition only on group labels' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POA' text = 'Approved' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POC' text = 'Without cell merging during sorts' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PON' text = 'Pending Approval' ) TO gt_textlist.
@@ -11075,7 +11140,10 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'PDM' text = 'Layout' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PDR' text = 'Bericht anzeigen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PEX' text = 'In Excel speichern / Dateiname' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLO' text = 'Definition Felder' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PML' text = 'E-Mail senden -> Empfänger' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PNL' text = 'Keine Definition Felder' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PZL' text = 'Nur Definition auf Gruppenetiketten' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POA' text = 'Genehmigt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POC' text = 'ohne Zusammenfassen von Eintragen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PON' text = 'Genehmigung ausstehend' ) TO gt_textlist.
