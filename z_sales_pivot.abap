@@ -1709,10 +1709,10 @@ CLASS lcl_main IMPLEMENTATION.
         IF name IS NOT INITIAL.
           name = '<f_line>-' && name.
           ASSIGN (name) TO <comp>.
-          IF p_nolb IS INITIAL.
-            lv_node_text = lv_node_text && | | && <comp>.
-          ELSEIF p_nolb EQ 'Z'.
+          IF p_nolb EQ 'Y'.
             lv_node_text = <comp>.
+          ELSE.
+            lv_node_text = lv_node_text && | | && <comp>.
           ENDIF.
         ENDIF.
       ENDIF.
@@ -1817,28 +1817,39 @@ CLASS lcl_main IMPLEMENTATION.
       lo_column->set_decimals( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-decimals_o OPTIONAL ) ).
 
       " Kolonları gizle
-      IF VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-key OPTIONAL ) EQ 'X' OR
-         VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-no_out OPTIONAL ) EQ 'X'.
-        IF VALUE #( s_subts[ 1 ]-high OPTIONAL ) EQ 'X'.
-          lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
-        ENDIF.
+      IF VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-no_out OPTIONAL ) EQ 'X'.
+        lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
       ENDIF.
-
 
       IF VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-tech OPTIONAL ) EQ 'X'.
         lo_column->set_technical( value = if_salv_c_bool_sap=>true ).
       ENDIF.
 
+      DATA(row_num) = 0.
+      DATA(last_num) = 0.
+      DATA(tot_num) = 0.
+      LOOP AT gt_subtotal_fields ASSIGNING FIELD-SYMBOL(<fs_subtotal_fields>).
+        row_num += 1.
+        IF <fs_subtotal_fields>-ctot EQ 'X'.
+          tot_num += 1.
+          last_num = row_num.
+        ENDIF.
+      ENDLOOP.
+
       " Grup Hiyerarşisi için başlık
+      row_num = 0.
       LOOP AT s_fnams[] ASSIGNING FIELD-SYMBOL(<fs_fnams>).
+        row_num += 1.
         IF <fs_fnams>-low EQ <fs_col>-columnname.
-          node_text = VALUE #( gt_fieldlist[ fname = <fs_fnams>-low ]-texts OPTIONAL ).
-          IF hier_head IS INITIAL.
-            hier_head = node_text.
-          ELSE.
-            CONCATENATE hier_head
-                        node_text
-            INTO hier_head SEPARATED BY ' / '.
+          IF row_num LE last_num OR lines( gt_subtotal_fields ) EQ tot_num .
+            node_text = VALUE #( gt_fieldlist[ fname = <fs_fnams>-low ]-texts OPTIONAL ).
+            IF hier_head IS INITIAL.
+              hier_head = node_text.
+            ELSE.
+              CONCATENATE hier_head
+                          node_text
+              INTO hier_head SEPARATED BY ' / '.
+            ENDIF.
           ENDIF.
         ENDIF.
       ENDLOOP.
@@ -2113,6 +2124,9 @@ CLASS lcl_main IMPLEMENTATION.
   METHOD check_of_selection.
     CLEAR cv_error.
 
+    DATA: inv_num1(40) TYPE c.
+    DATA: p_flt(40) TYPE c.
+
     IF p_wahr IS NOT INITIAL AND p_cur1 IS INITIAL.
       p_cur1 = '01'.
     ENDIF.
@@ -2123,6 +2137,13 @@ CLASS lcl_main IMPLEMENTATION.
 
 
     IF p_fld1a IS NOT INITIAL.
+
+      IF VALUE #( gt_functions[ modtext = p_flt1b ]-modval OPTIONAL ) IS NOT INITIAL.
+        p_flt = VALUE #( gt_functions[ modtext = p_flt1b ]-modval OPTIONAL ).
+      ELSE.
+        p_flt = p_flt1b.
+      ENDIF.
+
       IF p_fov1 EQ 'FIELD'.
         screen-input = 0.
         IF p_fld1b IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld1b ]-type OPTIONAL ).
@@ -2137,7 +2158,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt1b = '00000000'.
           ENDIF.
           TRY.
-              DATA(inv_date1) = EXACT d( p_flt1b ).
+              DATA(inv_date1) = EXACT d( p_flt ).
             CATCH cx_sy_conversion_no_date.
           ENDTRY.
           IF p_flt1b NE '00000000' AND inv_date1 IS INITIAL.
@@ -2150,7 +2171,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt1b = '000000'.
           ENDIF.
           TRY.
-              DATA(inv_time1) = EXACT t( p_flt1b ).
+              DATA(inv_time1) = EXACT t( p_flt ).
             CATCH cx_sy_conversion_no_time.
           ENDTRY.
           IF p_flt1b NE '000000' AND inv_time1 IS INITIAL.
@@ -2159,10 +2180,9 @@ CLASS lcl_main IMPLEMENTATION.
             cv_error = abap_true.
           ENDIF.
         ELSEIF VALUE #( gt_allfields_text[ name = p_fld1a ]-type OPTIONAL ) NE 'C'.
-          DATA: inv_num1(40) TYPE c.
           CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
             EXPORTING
-              input      = p_flt1b
+              input      = p_flt
             " internal   = 'X'
             IMPORTING
               output     = inv_num1
@@ -2197,6 +2217,13 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
     IF p_fld2a IS NOT INITIAL.
+
+      IF VALUE #( gt_functions[ modtext = p_flt2b ]-modval OPTIONAL ) IS NOT INITIAL.
+        p_flt = VALUE #( gt_functions[ modtext = p_flt2b ]-modval OPTIONAL ).
+      ELSE.
+        p_flt = p_flt2b.
+      ENDIF.
+
       IF p_fov2 EQ 'FIELD' .
         screen-input = 0.
         IF p_fld1b IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld2b ]-type OPTIONAL ).
@@ -2211,7 +2238,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt2b = '00000000'.
           ENDIF.
           TRY.
-              inv_date1 = EXACT d( p_flt2b ).
+              inv_date1 = EXACT d( p_flt ).
             CATCH cx_sy_conversion_no_date.
           ENDTRY.
           IF p_flt2b NE '00000000' AND inv_date1 IS INITIAL.
@@ -2224,7 +2251,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt2b = '000000'.
           ENDIF.
           TRY.
-              inv_time1 = EXACT t( p_flt2b ).
+              inv_time1 = EXACT t( p_flt ).
             CATCH cx_sy_conversion_no_time.
           ENDTRY.
           IF p_flt2b NE '000000' AND inv_time1 IS INITIAL.
@@ -2235,7 +2262,8 @@ CLASS lcl_main IMPLEMENTATION.
         ELSEIF VALUE #( gt_allfields_text[ name = p_fld2a ]-type OPTIONAL ) NE 'C'.
           CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
             EXPORTING
-              input      = p_flt2b
+              input      = p_flt
+            " internal   = 'X'
             IMPORTING
               output     = inv_num1
             EXCEPTIONS
@@ -2269,6 +2297,13 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
     IF p_fld3a IS NOT INITIAL.
+
+      IF VALUE #( gt_functions[ modtext = p_flt3b ]-modval OPTIONAL ) IS NOT INITIAL.
+        p_flt = VALUE #( gt_functions[ modtext = p_flt3b ]-modval OPTIONAL ).
+      ELSE.
+        p_flt = p_flt3b.
+      ENDIF.
+
       IF p_fov3 EQ 'FIELD' .
         screen-input = 0.
         IF p_fld3a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld3b ]-type OPTIONAL ).
@@ -2283,7 +2318,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt3b = '00000000'.
           ENDIF.
           TRY.
-              inv_date1 = EXACT d( p_flt3b ).
+              inv_date1 = EXACT d( p_flt ).
             CATCH cx_sy_conversion_no_date.
           ENDTRY.
           IF p_flt3b NE '00000000' AND inv_date1 IS INITIAL.
@@ -2296,7 +2331,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt3b = '000000'.
           ENDIF.
           TRY.
-              inv_time1 = EXACT t( p_flt3b ).
+              inv_time1 = EXACT t( p_flt ).
             CATCH cx_sy_conversion_no_time.
           ENDTRY.
           IF p_flt3b NE '000000' AND inv_time1 IS INITIAL.
@@ -2307,7 +2342,8 @@ CLASS lcl_main IMPLEMENTATION.
         ELSEIF VALUE #( gt_allfields_text[ name = p_fld3a ]-type OPTIONAL ) NE 'C'.
           CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
             EXPORTING
-              input      = p_flt3b
+              input      = p_flt
+            " internal   = 'X'
             IMPORTING
               output     = inv_num1
             EXCEPTIONS
@@ -2341,6 +2377,13 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
     IF p_fld4a IS NOT INITIAL.
+
+      IF VALUE #( gt_functions[ modtext = p_flt4b ]-modval OPTIONAL ) IS NOT INITIAL.
+        p_flt = VALUE #( gt_functions[ modtext = p_flt4b ]-modval OPTIONAL ).
+      ELSE.
+        p_flt = p_flt4b.
+      ENDIF.
+
       IF p_fov4 EQ 'FIELD' .
         screen-input = 0.
         IF p_fld4a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld4b ]-type OPTIONAL ).
@@ -2355,7 +2398,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt4b = '00000000'.
           ENDIF.
           TRY.
-              inv_date1 = EXACT d( p_flt4b ).
+              inv_date1 = EXACT d( p_flt ).
             CATCH cx_sy_conversion_no_date.
           ENDTRY.
           IF p_flt4b NE '00000000' AND inv_date1 IS INITIAL.
@@ -2368,7 +2411,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt4b = '000000'.
           ENDIF.
           TRY.
-              inv_time1 = EXACT t( p_flt4b ).
+              inv_time1 = EXACT t( p_flt ).
             CATCH cx_sy_conversion_no_time.
           ENDTRY.
           IF p_flt4b NE '000000' AND inv_time1 IS INITIAL.
@@ -2379,7 +2422,8 @@ CLASS lcl_main IMPLEMENTATION.
         ELSEIF VALUE #( gt_allfields_text[ name = p_fld4a ]-type OPTIONAL ) NE 'C'.
           CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
             EXPORTING
-              input      = p_flt4b
+              input      = p_flt
+            " internal   = 'X'
             IMPORTING
               output     = inv_num1
             EXCEPTIONS
@@ -2413,6 +2457,13 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
     IF p_fld5a IS NOT INITIAL.
+
+      IF VALUE #( gt_functions[ modtext = p_flt5b ]-modval OPTIONAL ) IS NOT INITIAL.
+        p_flt = VALUE #( gt_functions[ modtext = p_flt5b ]-modval OPTIONAL ).
+      ELSE.
+        p_flt = p_flt5b.
+      ENDIF.
+
       IF p_fov5 EQ 'FIELD' .
         screen-input = 0.
         IF p_fld5a IS NOT INITIAL AND VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) NE VALUE #( gt_allfields_text[ name = p_fld5b ]-type OPTIONAL ).
@@ -2427,7 +2478,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt5b = '00000000'.
           ENDIF.
           TRY.
-              inv_date1 = EXACT d( p_flt5b ).
+              inv_date1 = EXACT d( p_flt ).
             CATCH cx_sy_conversion_no_date.
           ENDTRY.
           IF p_flt5b NE '00000000' AND inv_date1 IS INITIAL.
@@ -2440,7 +2491,7 @@ CLASS lcl_main IMPLEMENTATION.
             p_flt5b = '000000'.
           ENDIF.
           TRY.
-              inv_time1 = EXACT t( p_flt5b ).
+              inv_time1 = EXACT t( p_flt ).
             CATCH cx_sy_conversion_no_time.
           ENDTRY.
           IF p_flt5b NE '000000' AND inv_time1 IS INITIAL.
@@ -2451,7 +2502,8 @@ CLASS lcl_main IMPLEMENTATION.
         ELSEIF VALUE #( gt_allfields_text[ name = p_fld5a ]-type OPTIONAL ) NE 'C'.
           CALL FUNCTION 'CATS_NUMERIC_INPUT_CHECK'
             EXPORTING
-              input      = p_flt5b
+              input      = p_flt
+            " internal   = 'X'
             IMPORTING
               output     = inv_num1
             EXCEPTIONS
@@ -4741,7 +4793,7 @@ CLASS lcl_main IMPLEMENTATION.
         <gs_fcat>-datatype = 'DEC'.
         <gs_fcat>-intlen = 23.
         <gs_fcat>-domname = 'BAPICURR'.
-        <gs_fcat>-decimals_o = 2.
+        <gs_fcat>-decimals_o = 4.
         <gs_fcat>-dd_outlen = 30.
         <gs_fcat>-decimals = 4.
         <gs_fcat>-dd_roll = 'BAPICURR_D'.
@@ -5105,7 +5157,7 @@ CLASS lcl_main IMPLEMENTATION.
         <gs_fcat>-datatype = 'DEC'.
         <gs_fcat>-intlen = 23.
         <gs_fcat>-domname = 'BAPICURR'.
-        <gs_fcat>-decimals_o = 2.
+        <gs_fcat>-decimals_o = 4.
         <gs_fcat>-dd_outlen = 30.
         <gs_fcat>-decimals = 4.
         <gs_fcat>-dd_roll = 'BAPICURR_D'.
@@ -5337,7 +5389,7 @@ CLASS lcl_main IMPLEMENTATION.
             ENDIF.
           ENDIF.
 
-          <mc_value> = round( val = <mc_value> dec = 2 ).
+          "<mc_value> = round( val = <mc_value> dec = 3 ).
 
           " Negatif değer kırmızı font
           IF <mc_value> LT 0 AND hiera EQ max_hiera. "max_group EQ <fs_sub>.
@@ -5817,6 +5869,17 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
       ENDLOOP.
 
+      DATA(row_num) = 0.
+      DATA(last_num) = 0.
+      DATA(tot_num) = 0.
+      LOOP AT gt_subtotal_fields ASSIGNING FIELD-SYMBOL(<fs_subtotal_fields>).
+        row_num += 1.
+        IF <fs_subtotal_fields>-ctot EQ 'X'.
+          tot_num += 1.
+          last_num = row_num.
+        ENDIF.
+      ENDLOOP.
+
       " Grup kolonları sırala ve göster
       LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
         LOOP AT rt_fcat ASSIGNING <fs_fcat>.
@@ -5827,6 +5890,10 @@ CLASS lcl_main IMPLEMENTATION.
             <fs_fcat>-key = 'X'.
             " Kod açıklama ile ise kod gizle
             IF p_nolb EQ 'Y' AND p_layo EQ ' ' AND VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
+              <fs_fcat>-no_out = 'X'.
+            ENDIF.
+            IF p_disp EQ '3' AND p_layo EQ ' '
+                AND ( CONV int4( <fs_group_key_columns>-grup ) - 1 LE last_num OR lines( gt_subtotal_fields ) EQ tot_num ).
               <fs_fcat>-no_out = 'X'.
             ENDIF.
           ENDIF.
@@ -7239,7 +7306,9 @@ CLASS lcl_main IMPLEMENTATION.
 
           LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<ls_fcat>).
             IF <ls_fcat>-fieldname EQ <ls_col>-columnname AND ( <ls_fcat>-no_out EQ 'X' OR <ls_fcat>-tech EQ 'X' ).
-              lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
+              IF p_layo IS NOT INITIAL OR NOT ( p_disp EQ '3' AND <ls_fcat>-key EQ 'X' ).
+                lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
+              ENDIF.
             ENDIF.
           ENDLOOP.
 
@@ -7376,6 +7445,10 @@ CLASS lcl_main IMPLEMENTATION.
                 lr_xlcol->set_attribute_ns( name = 'width' value = '14' ).
               WHEN 'C'.
                 lr_xlcol->set_attribute_ns( name = 'width' value = '15' ).
+              WHEN 'D'.
+                lr_xlcol->set_attribute_ns( name = 'width' value = '10' ).
+              WHEN 'T'.
+                lr_xlcol->set_attribute_ns( name = 'width' value = '8' ).
             ENDCASE.
           ENDIF.
         ENDDO.
@@ -9165,7 +9238,6 @@ CLASS lcl_main IMPLEMENTATION.
         SET PARAMETER ID 'GJR' FIELD <gjahr>.
         CALL TRANSACTION 'FB03' WITH AUTHORITY-CHECK AND SKIP FIRST SCREEN.
 
-
       WHEN OTHERS.
 
         CHECK s_fnams[] IS NOT INITIAL.
@@ -9175,7 +9247,9 @@ CLASS lcl_main IMPLEMENTATION.
 
         DATA: lv_aggrtype TYPE string.
 
-        IF gv_detail_view = abap_false.
+        IF gv_detail_view = abap_false AND
+           iv_column NE '&Hierarchy'   AND
+           VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
 
           ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO <f_field>.
           hiera = <f_field>.
@@ -9188,9 +9262,15 @@ CLASS lcl_main IMPLEMENTATION.
           IF VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
 
             LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
+
               IF hiera IS NOT INITIAL AND hiera NE 0 AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
-                l_num += 1.
-                IF ( p_addp IS INITIAL AND p_disp NE '3' ) OR ( h_num NE 0 AND l_num LE h_num ).
+
+                IF VALUE #( gt_subtotal_fields[ fnam = <fs_group_key_columns>-fnam ]-ctot OPTIONAL ) EQ 'X' OR
+                   VALUE #( gt_subtotal_fields[ fnam = <fs_group_key_columns>-fnam ]-fnam OPTIONAL ) EQ ' '.
+                  l_num += 1.
+                ENDIF.
+
+                IF ( p_addp IS INITIAL AND p_disp NE '3' )  OR ( h_num NE 0 AND l_num LE h_num ).
                   ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
                   CONDENSE <fs_group_key_columns>-fnam NO-GAPS .
                   IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
@@ -9201,6 +9281,7 @@ CLASS lcl_main IMPLEMENTATION.
                   ENDIF.
                 ENDIF.
               ENDIF.
+
             ENDLOOP.
 
             IF gv_pivot_fieldname IS NOT INITIAL.
