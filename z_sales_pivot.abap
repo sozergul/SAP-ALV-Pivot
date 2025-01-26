@@ -226,6 +226,8 @@ TYPES: BEGIN OF ty_fields_key,
          fnam TYPE dd03m-scrtext_l,
          grup TYPE dd03m-position,
          ikey TYPE dd03m-keyflag,
+         ctot TYPE c LENGTH 4,
+         hlev TYPE c LENGTH 4,
        END OF ty_fields_key.
 
 TYPES: BEGIN OF ty_fields_agr,
@@ -302,6 +304,8 @@ DATA: gt_sheets      TYPE TABLE OF ty_sheets WITH EMPTY KEY.
 DATA(gv_detail_view) = abap_false.
 DATA(gv_mng_cnv_all) = abap_false.
 DATA(gv_amt_cnv_all) = abap_false.
+DATA(gv_gui_available) = abap_false.
+DATA(gv_layout_filtered) = abap_false.
 DATA gv_disable_bytrm TYPE bool.
 DATA gv_change_locale TYPE bool.
 DATA gv_clgui_enabled TYPE bool.
@@ -311,6 +315,8 @@ DATA gv_group_count   TYPE int2.
 DATA gv_max_level     TYPE int2.
 DATA gv_max_ycolumns  TYPE int4.
 DATA gv_max_xlsheets  TYPE int4.
+DATA gv_max_mailcols  TYPE int4.
+DATA gv_max_mailrows  TYPE int4.
 DATA gv_xl_zoomscale  TYPE int2.
 DATA gv_alv_title     TYPE c LENGTH 150.
 DATA gv_initial_dir   TYPE string.
@@ -631,6 +637,8 @@ SELECTION-SCREEN BEGIN OF SCREEN 1400 AS SUBSCREEN.
     SELECTION-SCREEN: PUSHBUTTON 24(17) but07 USER-COMMAND uc07 MODIF ID c1 .
     SELECTION-SCREEN COMMENT 52(22) pdd FOR FIELD p_layd.
     PARAMETERS: p_layd TYPE disvariant-variant  MODIF ID d1.
+    SELECTION-SCREEN COMMENT (2) lyd_flts.
+    SELECTION-SCREEN COMMENT (4) lyd_fltr.
   SELECTION-SCREEN END   OF LINE .
 SELECTION-SCREEN END   OF SCREEN 1400.
 
@@ -661,6 +669,8 @@ SELECTION-SCREEN BEGIN OF SCREEN 1500 AS SUBSCREEN.
   SELECTION-SCREEN BEGIN OF LINE.
     SELECTION-SCREEN COMMENT 1(33) pdm FOR FIELD p_layo.
     PARAMETERS: p_layo TYPE disvariant-variant  MODIF ID d1.
+    SELECTION-SCREEN COMMENT (2) lyt_flts.
+    SELECTION-SCREEN COMMENT (4) lyt_fltr.
   SELECTION-SCREEN END OF LINE.
 
 SELECTION-SCREEN END   OF SCREEN 1500.
@@ -995,9 +1005,10 @@ INITIALIZATION.
 
   gv_initial_dir = 'Desktop'.
   gv_from_address = 'sapmail@company.com'.
-  gv_max_ycolumns = 99.
   gv_max_ordernum = 500000.
+  gv_max_ycolumns = 99.
   gv_max_xlsheets = 53.
+  gv_max_mailcols = 24.
   gv_xl_zoomscale = 85.
   gv_max_filesize = 20971520. " 20 MB
   gv_iso_week = abap_false.
@@ -1287,7 +1298,7 @@ CLASS lcl_main IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF ( p_excl EQ 'X' OR p_mail EQ 'X' OR ( p_disp EQ '3' AND p_layo IS NOT INITIAL ) ) AND p_expo IS INITIAL.
+    IF ( p_excl EQ 'X' OR p_mail EQ 'X' OR ( p_disp EQ '3' AND gv_layout_filtered EQ abap_true ) ) AND p_expo IS INITIAL.
       CALL METHOD go_main->export_data( ).
       RETURN.
     ELSE.
@@ -2114,6 +2125,19 @@ CLASS lcl_main IMPLEMENTATION.
         gv_decs = '.'.
       ENDIF.
 
+      IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
+        SELECT tcode
+          FROM tstc
+         WHERE pgmna  = @sy-cprog
+        INTO TABLE @DATA(lt_tcode).
+
+        LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
+          IF <fs_tcode>-tcode = sy-tcode OR sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
+            gv_gui_available = abap_true.
+          ENDIF.
+        ENDLOOP.
+      ENDIF.
+
       gv_variant_changed = abap_false.
 
     ENDIF.
@@ -2203,6 +2227,7 @@ CLASS lcl_main IMPLEMENTATION.
               ELSE.
                 p_flt1b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
               ENDIF.
+              p_flt = p_flt1b.
             ENDIF.
           ENDIF.
         ENDIF.
@@ -2283,6 +2308,7 @@ CLASS lcl_main IMPLEMENTATION.
               ELSE.
                 p_flt2b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
               ENDIF.
+              p_flt = p_flt2b.
             ENDIF.
           ENDIF.
         ENDIF.
@@ -2363,11 +2389,12 @@ CLASS lcl_main IMPLEMENTATION.
               ELSE.
                 p_flt3b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
               ENDIF.
+              p_flt = p_flt3b.
             ENDIF.
           ENDIF.
         ENDIF.
-        IF strlen( p_flt3b ) GT ( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) ).
-          p_flt2b = ''.
+        IF strlen( p_flt ) GT ( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) ).
+          p_flt3b = ''.
           MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
                   CONV string( VALUE #( gt_allfields_text[ name = p_fld3a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld3a ]-decm OPTIONAL ) )
                   TYPE 'S' DISPLAY LIKE 'E'.
@@ -2443,11 +2470,12 @@ CLASS lcl_main IMPLEMENTATION.
               ELSE.
                 p_flt4b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
               ENDIF.
+              p_flt = p_flt4b.
             ENDIF.
           ENDIF.
         ENDIF.
-        IF strlen( p_flt4b ) GT ( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) ).
-          p_flt2b = ''.
+        IF strlen( p_flt ) GT ( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) ).
+          p_flt4b = ''.
           MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
                   CONV string( VALUE #( gt_allfields_text[ name = p_fld4a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld4a ]-decm OPTIONAL ) )
                   TYPE 'S' DISPLAY LIKE 'E'.
@@ -2523,11 +2551,12 @@ CLASS lcl_main IMPLEMENTATION.
               ELSE.
                 p_flt5b = substring_before( val = inv_num1 sub = '.' ) && gv_decs && substring_after( val = inv_num1 sub = '.' ).
               ENDIF.
+              p_flt = p_flt5b.
             ENDIF.
           ENDIF.
         ENDIF.
-        IF strlen( p_flt5b ) GT ( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) ).
-          p_flt2b = ''.
+        IF strlen( p_flt ) GT ( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) ).
+          p_flt5b = ''.
           MESSAGE VALUE #( gt_textlist[ sym = 'A14' ]-text OPTIONAL ) && | | &&
                   CONV string( VALUE #( gt_allfields_text[ name = p_fld5a ]-leng OPTIONAL ) + VALUE #( gt_allfields_text[ name = p_fld5a ]-decm OPTIONAL ) )
                   TYPE 'S' DISPLAY LIKE 'E'.
@@ -2657,7 +2686,7 @@ CLASS lcl_main IMPLEMENTATION.
         ret_function_values( ).
 
         lcl_salv_pop_up=>popup( EXPORTING start_line   = 1
-                                          end_line     = 23
+                                          end_line     = 26
                                           start_column = 90
                                           end_column   = 150
                                           pop_header   = VALUE char100( gt_textlist[ sym = 'TXZ' ]-text OPTIONAL )
@@ -2771,7 +2800,7 @@ CLASS lcl_main IMPLEMENTATION.
       WHEN 'SF01' OR 'SF02' OR 'SF03' OR 'SF04' OR 'SF05' OR 'SF06' OR 'SF07' OR 'SF08' OR 'SF09' OR 'SF10'.
 
         lcl_salv_pop_up=>popup( EXPORTING start_line   = 1
-                                   end_line     = 19
+                                   end_line     = 26
                                    start_column = 50
                                    end_column   = 85
                                    only_column  = 'TEXT'
@@ -2824,6 +2853,14 @@ CLASS lcl_main IMPLEMENTATION.
 
 
   METHOD at_selection_screen_output.
+
+    DATA: WA_LTDX      TYPE LTDX,
+          V_VARKEY     TYPE LTDXKEY,
+          IT_FCAT      TYPE STANDARD TABLE OF LTDXDATA,
+          IT_SORT_INFO TYPE STANDARD TABLE OF LTDXDATA,
+          IT_FILTER    TYPE STANDARD TABLE OF LTDXDATA.
+
+    CONSTANTS: C_RELID TYPE LTDX-RELID VALUE 'LT'.
 
     IF sy-dynnr = 1000.
 
@@ -2884,6 +2921,66 @@ CLASS lcl_main IMPLEMENTATION.
             go_main->initialization( ).
 
           ENDIF.
+
+        WHEN 'P_LAYO'.
+          SELECT SINGLE * FROM LTDX INTO @WA_LTDX
+          WHERE RELID = @C_RELID
+          AND REPORT =  @sy-cprog
+          AND VARIANT = @p_layo.
+
+          IF SY-SUBRC = 0.
+            MOVE-CORRESPONDING WA_LTDX TO V_VARKEY.
+          ENDIF.
+
+          CALL FUNCTION 'LT_DBDATA_READ_FROM_LTDX'
+             EXPORTING
+               I_TOOL       = C_RELID
+               IS_VARKEY    = V_VARKEY
+             TABLES
+               T_DBFIELDCAT = IT_FCAT         " To create Field Catalog
+               T_DBSORTINFO = IT_SORT_INFO    " Sort category set
+               T_DBFILTER   = IT_FILTER   .   " Filter category set
+
+
+          IF IT_FILTER[] IS INITIAL.
+            lyt_fltr = ' '.
+            gv_layout_filtered = abap_false.
+          ELSE.
+            lyt_fltr = icon_filter.
+            gv_layout_filtered = abap_true.
+          ENDIF.
+
+        WHEN 'P_LAYD'.
+          IF s_fnams[] IS INITIAL.
+            p_layd = ' '.
+            screen-input = 0.
+          ELSEIF p_layd IS NOT INITIAL.
+            SELECT SINGLE * FROM LTDX INTO @WA_LTDX
+            WHERE RELID = @C_RELID
+            AND REPORT =  @sy-cprog
+            AND VARIANT = @p_layd.
+
+            IF SY-SUBRC = 0.
+              MOVE-CORRESPONDING WA_LTDX TO V_VARKEY.
+            ENDIF.
+
+            CALL FUNCTION 'LT_DBDATA_READ_FROM_LTDX'
+               EXPORTING
+                 I_TOOL       = C_RELID
+                 IS_VARKEY    = V_VARKEY
+               TABLES
+                 T_DBFIELDCAT = IT_FCAT         " To create Field Catalog
+                 T_DBSORTINFO = IT_SORT_INFO    " Sort category set
+                 T_DBFILTER   = IT_FILTER   .   " Filter category set
+
+
+            IF IT_FILTER[] IS INITIAL.
+              lyd_fltr = ' '.
+            ELSE.
+              lyd_fltr = icon_filter.
+            ENDIF.
+          ENDIF.
+
         WHEN 'P_TERM'.
           IF gv_group_count = 0.
             p_yval = ' '.
@@ -3221,7 +3318,7 @@ CLASS lcl_main IMPLEMENTATION.
             screen-input = 0.
           ENDIF.
         WHEN 'P_WRKS' .
-          IF ( p_excl IS INITIAL AND p_mail IS INITIAL ).
+          IF p_excl IS INITIAL.
             p_wrks = ' '.
             screen-input = 0.
           ENDIF.
@@ -3237,12 +3334,12 @@ CLASS lcl_main IMPLEMENTATION.
             screen-input = 0.
           ENDIF.
         WHEN 'P_OPXL'.
-          IF p_excl IS INITIAL .
+          IF p_excl IS INITIAL OR p_mail IS NOT INITIAL.
             p_opxl = ' '.
             screen-input = 0.
           ENDIF.
         WHEN 'P_PATH'.
-          IF p_excl IS INITIAL AND p_mail IS INITIAL .
+          IF p_excl IS INITIAL.
             p_path = ' '.
             screen-input = 0.
           ENDIF.
@@ -3250,7 +3347,7 @@ CLASS lcl_main IMPLEMENTATION.
           IF p_wrks IS INITIAL .
             p_xval =  ' ' .
           ENDIF.
-          IF ( p_excl IS INITIAL AND p_mail IS INITIAL ) OR p_wrks IS INITIAL.
+          IF p_excl IS INITIAL OR p_wrks IS INITIAL.
             screen-input = 0.
           ENDIF.
         WHEN 'P_SUBJ'.
@@ -4203,8 +4300,8 @@ CLASS lcl_main IMPLEMENTATION.
           lv_result TYPE p DECIMALS 3.
 
     DATA: cur_date TYPE sydate.
-    DATA: ein_cur  TYPE kurrf.
-    DATA: con_cur  TYPE kurrf.
+    DATA: ein_cur TYPE p DECIMALS 5."kurrf.
+    DATA: con_cur TYPE p DECIMALS 5."kurrf.
     DATA: week_num(6) TYPE n.
 
     IF p_mein IS NOT INITIAL. gv_mng_cnv_all = abap_true. ENDIF.
@@ -4332,8 +4429,7 @@ CLASS lcl_main IMPLEMENTATION.
       <fs_items>-fk_amnt_2 = <fs_items>-fk_amnt.
       <fs_items>-fk_totl_2 = <fs_items>-fk_totl.
 
-
-      ein_cur = 1.
+      ein_cur = 10000.
 
       IF p_wah2 IS NOT INITIAL.
 
@@ -4370,10 +4466,10 @@ CLASS lcl_main IMPLEMENTATION.
             gv_amt_cnv_all = abap_false.
           ENDIF.
 
-          <fs_items>-nt_pric_2 = <fs_items>-nt_pric_2 * con_cur.    " Satış Fiyat
-          <fs_items>-nt_txpr_2 = <fs_items>-nt_txpr_2 * con_cur.    " Vergili Satış Fiyat
-          <fs_items>-fk_amnt_2 = <fs_items>-fk_amnt_2 * con_cur.    " Fatura Tutarı
-          <fs_items>-fk_totl_2 = <fs_items>-fk_totl_2 * con_cur.    " Fatura Vergiler Dahil Toplam Tutar
+          <fs_items>-nt_pric_2 = ( <fs_items>-nt_pric_2 * con_cur ) / 10000.    " Satış Fiyat
+          <fs_items>-nt_txpr_2 = ( <fs_items>-nt_txpr_2 * con_cur ) / 10000.    " Vergili Satış Fiyat
+          <fs_items>-fk_amnt_2 = ( <fs_items>-fk_amnt_2 * con_cur ) / 10000.    " Fatura Tutarı
+          <fs_items>-fk_totl_2 = ( <fs_items>-fk_totl_2 * con_cur ) / 10000.    " Fatura Vergiler Dahil Toplam Tutar
 
         ENDIF.
 
@@ -4417,17 +4513,17 @@ CLASS lcl_main IMPLEMENTATION.
              gv_amt_cnv_all = abap_false.
           ENDIF.
 
-          <fs_items>-nt_pric  = <fs_items>-nt_pric  * con_cur.    " Satış Fiyat
-          <fs_items>-nt_txpr  = <fs_items>-nt_txpr  * con_cur.    " Vergili Satış Fiyat
-          <fs_items>-tx_amnt  = <fs_items>-tx_amnt  * con_cur.    " KDV Tutarı
-          <fs_items>-tm_amnt  = <fs_items>-tm_amnt  * con_cur.    " Termin Tutarı
-          <fs_items>-lf_amnt  = <fs_items>-lf_amnt  * con_cur.    " Teslim Tutarı
-          <fs_items>-lf_bamn  = <fs_items>-lf_bamn  * con_cur.    " Teslim Bakiye Tutarı
-          <fs_items>-fk_amnt  = <fs_items>-fk_amnt  * con_cur.    " Fatura Tutarı
-          <fs_items>-fk_bamn  = <fs_items>-fk_bamn  * con_cur.    " Fatura Bakiye Tutarı
-          <fs_items>-fk_totl  = <fs_items>-fk_totl  * con_cur.    " Fatura Vergiler Dahil Toplam Tutar
-          <fs_items>-ag_amnt  = <fs_items>-ag_amnt  * con_cur.    " Denkleştirme Tutarı
-          <fs_items>-ag_bamn  = <fs_items>-ag_bamn  * con_cur.    " Denkleştirme Bakiyesi
+          <fs_items>-nt_pric  = ( <fs_items>-nt_pric * con_cur ) / 10000.   " Satış Fiyat
+          <fs_items>-nt_txpr  = ( <fs_items>-nt_txpr * con_cur ) / 10000.   " Vergili Satış Fiyat
+          <fs_items>-tx_amnt  = ( <fs_items>-tx_amnt * con_cur ) / 10000.   " KDV Tutarı
+          <fs_items>-tm_amnt  = ( <fs_items>-tm_amnt * con_cur ) / 10000.   " Termin Tutarı
+          <fs_items>-lf_amnt  = ( <fs_items>-lf_amnt * con_cur ) / 10000.   " Teslim Tutarı
+          <fs_items>-lf_bamn  = ( <fs_items>-lf_bamn * con_cur ) / 10000.   " Teslim Bakiye Tutarı
+          <fs_items>-fk_amnt  = ( <fs_items>-fk_amnt * con_cur ) / 10000.   " Fatura Tutarı
+          <fs_items>-fk_bamn  = ( <fs_items>-fk_bamn * con_cur ) / 10000.   " Fatura Bakiye Tutarı
+          <fs_items>-fk_totl  = ( <fs_items>-fk_totl * con_cur ) / 10000.   " Fatura Vergiler Dahil Toplam Tutar
+          <fs_items>-ag_amnt  = ( <fs_items>-ag_amnt * con_cur ) / 10000.   " Denkleştirme Tutarı
+          <fs_items>-ag_bamn  = ( <fs_items>-ag_bamn * con_cur ) / 10000.   " Denkleştirme Bakiyesi
 
         ENDIF.
 
@@ -4444,7 +4540,7 @@ CLASS lcl_main IMPLEMENTATION.
       " Miktar Dönüşümleri
       IF p_mein IS NOT INITIAL.
         IF <fs_items>-vrkme NE p_mein.
-          lv_menge = 1.
+          lv_menge = 10000.
           IF lv_menge NE 0.
             CALL FUNCTION 'MD_CONVERT_MATERIAL_UNIT'
               EXPORTING
@@ -4461,21 +4557,21 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
           IF sy-subrc EQ 0.
             <fs_items>-vrkme  = p_mein.
-            <fs_items>-tm_quan  =  <fs_items>-tm_quan  *  lv_menge.
-            <fs_items>-lf_quan  =  <fs_items>-lf_quan  *  lv_menge.
-            <fs_items>-lf_bqua  =  <fs_items>-lf_bqua  *  lv_menge.
-            <fs_items>-wa_quan  =  <fs_items>-wa_quan  *  lv_menge.
-            <fs_items>-wa_bqua  =  <fs_items>-wa_bqua  *  lv_menge.
-            <fs_items>-fk_quan  =  <fs_items>-fk_quan  *  lv_menge.
-            <fs_items>-fk_bqua  =  <fs_items>-fk_bqua  *  lv_menge.
-            <fs_items>-fk_wqua  =  <fs_items>-fk_wqua  *  lv_menge.
-            <fs_items>-vp_quan  =  <fs_items>-vp_quan  *  lv_menge.
+            <fs_items>-tm_quan  =  ( <fs_items>-tm_quan  *  lv_menge ) / 10000.
+            <fs_items>-lf_quan  =  ( <fs_items>-lf_quan  *  lv_menge ) / 10000.
+            <fs_items>-lf_bqua  =  ( <fs_items>-lf_bqua  *  lv_menge ) / 10000.
+            <fs_items>-wa_quan  =  ( <fs_items>-wa_quan  *  lv_menge ) / 10000.
+            <fs_items>-wa_bqua  =  ( <fs_items>-wa_bqua  *  lv_menge ) / 10000.
+            <fs_items>-fk_quan  =  ( <fs_items>-fk_quan  *  lv_menge ) / 10000.
+            <fs_items>-fk_bqua  =  ( <fs_items>-fk_bqua  *  lv_menge ) / 10000.
+            <fs_items>-fk_wqua  =  ( <fs_items>-fk_wqua  *  lv_menge ) / 10000.
+            <fs_items>-vp_quan  =  ( <fs_items>-vp_quan  *  lv_menge ) / 10000.
 
             IF p_cprc EQ 'X'.
-              <fs_items>-nt_pric  =  <fs_items>-nt_pric  /  lv_menge.
-              <fs_items>-nt_txpr  =  <fs_items>-nt_txpr  /  lv_menge.
-              <fs_items>-nt_pric_2 =  <fs_items>-nt_pric_2  /  lv_menge.
-              <fs_items>-nt_txpr_2 =  <fs_items>-nt_txpr_2  /  lv_menge.
+              <fs_items>-nt_pric   = <fs_items>-nt_pric   / lv_menge / 10000.
+              <fs_items>-nt_txpr   = <fs_items>-nt_txpr   / lv_menge / 10000.
+              <fs_items>-nt_pric_2 = <fs_items>-nt_pric_2 / lv_menge / 10000.
+              <fs_items>-nt_txpr_2 = <fs_items>-nt_txpr_2 / lv_menge / 10000.
             ENDIF.
 
           ELSE.
@@ -6403,6 +6499,24 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD ret_function_values.
 
+    DATA(datefm) = |{ sy-datum DATE = USER }|.
+
+    DATA : l_day TYPE p.
+
+    CALL FUNCTION 'DAY_IN_WEEK'
+      EXPORTING
+        datum = sy-datum
+      IMPORTING
+        wotnr = l_day.
+
+    SELECT langt
+    FROM   t246
+    WHERE  sprsl EQ @sy-langu
+    AND    wotnr EQ @l_day
+    INTO TABLE @DATA(lt_dayname).
+
+    DATA(datenm) = VALUE #( lt_dayname[ 1 ]-langt OPTIONAL ).
+
     lastyear = CONV string( CONV #( sy-datum(4) - 1 ) ).
 
     DATA(month_num) = sy-datum+4(2).
@@ -6413,9 +6527,7 @@ CLASS lcl_main IMPLEMENTATION.
     AND    mnr   EQ @month_num
     INTO TABLE @DATA(lt_month).
 
-    LOOP AT lt_month ASSIGNING FIELD-SYMBOL(<fs_month>).
-      monthname = <fs_month>-ltx.
-    ENDLOOP.
+    monthname = VALUE #( lt_month[ 1 ]-ltx OPTIONAL ).
 
     IF sy-datum+4(2) EQ '01'.
       preyear = CONV string( CONV #( sy-datum(4) - 1 ) ).
@@ -6435,9 +6547,7 @@ CLASS lcl_main IMPLEMENTATION.
     AND    mnr   EQ @premonth
     INTO TABLE @DATA(lt_month2).
 
-    LOOP AT lt_month2 ASSIGNING <fs_month>.
-      premonthname = <fs_month>-ltx.
-    ENDLOOP.
+    premonthname = VALUE #( lt_month2[ 1 ]-ltx OPTIONAL ).
 
     hour = sy-uzeit(2).
     minute = sy-uzeit+2(2).
@@ -6445,6 +6555,22 @@ CLASS lcl_main IMPLEMENTATION.
     DATA yt TYPE sy-datum.
     yt = sy-datum - 1.
     yesterday =  CONV string( yt ).
+
+    DATA(yesterdayfm) = |{ yt DATE = USER }|.
+
+    CALL FUNCTION 'DAY_IN_WEEK'
+      EXPORTING
+        datum = yt
+      IMPORTING
+        wotnr = l_day.
+
+    SELECT langt
+    FROM   t246
+    WHERE  sprsl EQ @sy-langu
+    AND    wotnr EQ @l_day
+    INTO TABLE @DATA(lt_ydayname).
+
+    DATA(yesterdaynm) = VALUE #( lt_ydayname[ 1 ]-langt OPTIONAL ).
 
     " mail ve excel hesaplanan değerler için kullanıcı bilgisi
     SELECT name_text, smtp_addr
@@ -6485,44 +6611,32 @@ CLASS lcl_main IMPLEMENTATION.
       display_name = <fs_layid>-text.
     ENDLOOP.
 
-    IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
+    IF gv_gui_available = abap_true.
 
-      SELECT tcode
-        FROM tstc
-       WHERE pgmna  = @sy-cprog
-      INTO TABLE @DATA(lt_tcode).
+      CALL METHOD cl_gui_frontend_services=>get_desktop_directory
+        CHANGING
+          desktop_directory = desktop_path
+        EXCEPTIONS
+          cntl_error        = 1.
 
-      LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
 
-        IF <fs_tcode>-tcode = sy-tcode OR sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
-          CALL METHOD cl_gui_frontend_services=>get_desktop_directory
-            CHANGING
-              desktop_directory = desktop_path
-            EXCEPTIONS
-              cntl_error        = 1.
+      CALL METHOD cl_gui_cfw=>update_view.
 
-          IF sy-subrc <> 0.
-            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
-                       WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-          ENDIF.
+      CALL METHOD cl_gui_frontend_services=>get_temp_directory
+        CHANGING
+          temp_dir   = temp_path
+        EXCEPTIONS
+          cntl_error = 1.
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
 
-          CALL METHOD cl_gui_cfw=>update_view.
-
-          CALL METHOD cl_gui_frontend_services=>get_temp_directory
-            CHANGING
-              temp_dir   = temp_path
-            EXCEPTIONS
-              cntl_error = 1.
-          IF sy-subrc <> 0.
-            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
-                       WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-          ENDIF.
-
-          CALL METHOD cl_gui_cfw=>update_view.
-          EXIT.
-        ENDIF.
-
-      ENDLOOP.
+      CALL METHOD cl_gui_cfw=>update_view.
 
     ENDIF.
 
@@ -6550,7 +6664,9 @@ CLASS lcl_main IMPLEMENTATION.
     APPEND VALUE #( modtext = '${MONTH}'          modval = sy-datum+4(2)   ) TO gt_functions.
     APPEND VALUE #( modtext = '${MONTHNAME}'      modval = monthname       ) TO gt_functions.
     APPEND VALUE #( modtext = '${DAY}'            modval = sy-datum+6(2)   ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DAYNM}'          modval = datenm          ) TO gt_functions.
     APPEND VALUE #( modtext = '${DATE}'           modval = sy-datum        ) TO gt_functions.
+    APPEND VALUE #( modtext = '${DATEFM}'         modval = datefm          ) TO gt_functions.
     APPEND VALUE #( modtext = '${HOUR}'           modval = hour            ) TO gt_functions.
     APPEND VALUE #( modtext = '${MINUTE}'         modval = minute          ) TO gt_functions.
     APPEND VALUE #( modtext = '${LASTYEAR}'       modval = lastyear        ) TO gt_functions.
@@ -6558,6 +6674,8 @@ CLASS lcl_main IMPLEMENTATION.
     APPEND VALUE #( modtext = '${PREMONTH}'       modval = premonth        ) TO gt_functions.
     APPEND VALUE #( modtext = '${PREMONTHNAME}'   modval = premonthname    ) TO gt_functions.
     APPEND VALUE #( modtext = '${YESTERDAY}'      modval = yesterday       ) TO gt_functions.
+    APPEND VALUE #( modtext = '${YESTERDAYFM}'    modval = yesterdayfm     ) TO gt_functions.
+    APPEND VALUE #( modtext = '${YESTERDAYNM}'    modval = yesterdaynm     ) TO gt_functions.
 
   ENDMETHOD.
 
@@ -6754,15 +6872,28 @@ CLASS lcl_main IMPLEMENTATION.
     CREATE OBJECT lr_xlfile.
     CREATE OBJECT lr_xlshstrfile.
 
+    IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
+      SELECT tcode
+        FROM tstc
+       WHERE pgmna  = @sy-cprog
+      INTO TABLE @DATA(lt_tcode).
+
+      LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
+        IF <fs_tcode>-tcode = sy-tcode OR sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
+          gv_gui_available = abap_true.
+        ENDIF.
+      ENDLOOP.
+    ENDIF.
+
     " FILE NAME
-    IF p_excl EQ 'X' OR p_mail EQ 'X'.
+    IF p_excl EQ 'X'.
       IF p_path IS INITIAL.
 
         DATA tz0 TYPE string.
         tz0 = VALUE #( gt_textlist[ sym = 'TZ0' ]-text OPTIONAL ).
         CONCATENATE tz0 '_' sy-datum '_' sy-uzeit(4) '.xlsx' INTO lv_file_name.
 
-        IF p_excl EQ 'X' AND sy-batch IS INITIAL AND sy-binpt IS INITIAL.
+        IF p_excl EQ 'X' AND gv_gui_available = abap_true.
           cl_gui_frontend_services=>file_save_dialog(
             EXPORTING
               window_title        = CONV string( VALUE #( gt_textlist[ sym = 'TXF' ]-text OPTIONAL ) )
@@ -6860,9 +6991,15 @@ CLASS lcl_main IMPLEMENTATION.
     DATA(ls_meta) = cl_salv_bs_runtime_info=>get_metadata( ).
     cl_salv_bs_runtime_info=>clear_all( ).
 
-    " get rid off ref_field
+    gt_fcat = set_fieldcatalog( ).
+
+    " reset datatype - get rid off ref_field
     LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<fs_fcat>).
       <fs_fcat>-ref_field = ' '.
+
+      IF VALUE #( gt_fcat[ fieldname = <fs_fcat>-fieldname ]-datatype OPTIONAL ) IS NOT INITIAL.
+        <fs_fcat>-datatype = VALUE #( gt_fcat[ fieldname = <fs_fcat>-fieldname ]-datatype OPTIONAL ).
+      ENDIF.
     ENDLOOP.
 
     " As Filtered Internal Table
@@ -7040,877 +7177,887 @@ CLASS lcl_main IMPLEMENTATION.
     ENDIF.
 
 
-    " EXPORT TO EXCEL
-    IF s_fnams[] IS INITIAL.
+    IF s_fnams[] IS NOT INITIAL.
 
-      " ********************************************************************************
-      " Seçilen çalışma sayfası alanı için sheet no ve sıralama önceden yapıldı
-      " Her bir sheet'teki satır sayısı ile sheet1.xml bölünerek yeni sayfalara taşınır.
-      " ********************************************************************************
-
-      DATA: row_start    TYPE int4.
-      DATA: row_end      TYPE int4.
-
-      DATA: lv_header  TYPE string.
-      DATA: lv_temp    TYPE string.
-      DATA: lv_base    TYPE string.
-      DATA: lv_body    TYPE string.
-      DATA: lv_footer  TYPE string.
-
-      DATA: rownum_str TYPE string.
-      DATA: cell_rval  TYPE string.
-      DATA: col_width  TYPE int4.
-
-      DATA: st_string TYPE string,
-            en_string TYPE string.
-
-      DATA s_val TYPE c.
-
-      " Result Salv Data
-      DATA(go_salv_ex_res) = cl_salv_ex_util=>factory_result_data_table( r_data          = REF #( <fs_itab> )
-                                                                         t_fieldcatalog  = ls_meta-t_fcat
-                                                                         s_layout        = ls_meta-s_layout
-                                                                         t_sort          = ls_meta-t_sort
-                                                                         t_filter        = ls_meta-t_filter ).
-
-      cl_salv_bs_tt_util=>if_salv_bs_tt_util~transform(
-        EXPORTING
-          xml_type      = if_salv_bs_xml=>c_type_xlsx
-          xml_version   = cl_salv_bs_a_xml_base=>get_version( )
-          r_result_data = go_salv_ex_res
-          xml_flavour   = if_salv_bs_c_tt=>c_tt_xml_flavour_export
-          gui_type      = if_salv_bs_xml=>c_gui_type_gui
-        IMPORTING
-          xml           = lv_xstring ).
-
-      lr_xlzip->load( lv_xstring ).
-      lr_xlzip->get( EXPORTING name = 'xl/worksheets/sheet1.xml' IMPORTING content = lv_file ).
-
-      IF p_wrks IS NOT INITIAL.
-        lr_xlzip_new->load( lv_xstring ).
-        lr_xlzip_new->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
-      ENDIF.
-
-      cl_bcs_convert=>xstring_to_string(
-             EXPORTING
-               iv_xstr   = lv_file
-               iv_cp     =  1100     " SAP character set identification
-             RECEIVING
-               rv_string = lv_xml
-           ).
-
-      lv_header = substring_before( val = lv_xml sub = |<row r="2"| ).
-      lv_temp = substring_from( val = lv_xml sub = |<row r="2"| ).
-      lv_base = substring_before( val = lv_temp sub = |</sheetData>| ).
-      lv_footer = substring_from( val = lv_xml sub = |</sheetData>| ).
-
-      IF p_zero IS NOT INITIAL.
-        REPLACE ALL OCCURRENCES OF '<v>0</v>' IN lv_base WITH '<v></v>'.
-      ENDIF.
-
-      lv_sheet_num = 1.
-      row_end = 2.
-
-      DO lv_sheet_count TIMES.
-
-        IF p_wrks IS NOT INITIAL.
-
-          READ TABLE gt_sheets INDEX lv_sheet_num ASSIGNING FIELD-SYMBOL(<ls_sheets>).
-
-          lv_sheet_title = <ls_sheets>-title.
-
-          row_start = row_end.
-          st_string = |<row r="| && row_end && |"| .
-
-          row_end = row_end + <ls_sheets>-count.
-          en_string = |<row r="| && row_end && |"| .
-
-          lv_temp = substring_from( val = lv_base sub = st_string ).
-          lv_body = substring_before( val = lv_temp sub = en_string ).
-          IF lv_body IS INITIAL.
-            lv_body = lv_temp.
+        LOOP AT ls_meta-t_fcat ASSIGNING <fs_fcat>.
+          IF <fs_fcat>-inttype EQ 'P'.
+            <fs_fcat>-intlen = 25 .
           ENDIF.
-
-          lv_sheet = lv_header && lv_body && lv_footer.
-        ELSE.
-          lv_sheet = lv_header && lv_base && lv_footer.
-        ENDIF.
-
-        CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
-          EXPORTING
-            text   = lv_sheet
-          IMPORTING
-            buffer = lv_file.
-
-        lr_xlfile->parse_xstring( lv_file ).
-
-        lr_xlsheetview ?= lr_xlfile->find_node( 'sheetView' ).
-        lr_xlsheetview->set_attribute_ns( name = 'zoomScale' value = condense( CONV string( gv_xl_zoomscale ) ) ).
-        lr_xlsheetview->set_attribute_ns( name = 'zoomScaleNormal' value = condense( CONV string( gv_xl_zoomscale ) ) ).
-
-        IF lv_sheet_num GT 1.
-          " selected tab kaldır
-          lr_xlsheetview->remove_attribute_ns( name = 'tabSelected' ).
-
-          " Satır ve hücre yeniden numaralandır
-          lr_xlnode = lr_xlfile->find_node( 'sheetData' ).
-          lr_xlrows = lr_xlnode->get_children( ).
-          DO lr_xlrows->get_length( ) TIMES.
-            lr_xlrow ?= lr_xlrows->get_item( sy-index - 1 ).
-            rownum_str = sy-index.
-            lr_xlrow->set_attribute_ns( name = 'r' value = rownum_str ).
-            lr_xlcells = lr_xlrow->get_elements_by_tag_name( name = 'c' ).
-            DO lr_xlcells->get_length( ) TIMES.
-              lr_xlcell ?= lr_xlcells->get_item( sy-index - 1 ).
-              cell_rval = lr_xlcell->get_attribute_ns( name = 'r' ).
-              REPLACE ALL OCCURRENCES OF REGEX '[\d]' IN cell_rval WITH ''.
-              cell_rval = cell_rval && rownum_str.
-              lr_xlcell->set_attribute_ns( name = 'r' value = cell_rval ).
-            ENDDO.
-          ENDDO.
-        ENDIF.
-
-        " autofilter ekle
-        lr_xlworksheet ?= lr_xlfile->find_node( 'worksheet' ).
-        lr_xldimension ?= lr_xlfile->find_node( 'dimension' ).
-        lv_dim = lr_xlfile->get_node_attribute( name = 'ref' node = lr_xldimension ).
-        IF p_wrks EQ 'X'.
-          DATA(tmp_value) = substring_after( val = lv_dim sub = ':' ).
-          REPLACE ALL OCCURRENCES OF REGEX '[^0-9]' IN tmp_value WITH ''.
-          REPLACE ALL OCCURRENCES OF tmp_value IN lv_dim WITH CONV string( <ls_sheets>-count + 1 ).
-          CONDENSE lv_dim NO-GAPS.
-        ENDIF.
-        lr_xlautofilter = cl_ixml=>create( )->create_document( )->create_element( name = 'autoFilter' ).
-        lr_xlautofilter->set_attribute( name = 'ref' value = lv_dim ).
-        lr_xlphoneticpr ?= lr_xlfile->find_node( 'phoneticPr' ).
-        lr_xlworksheet->if_ixml_node~insert_child( new_child = lr_xlautofilter ref_child = lr_xlphoneticpr ).
-
-        "  tekrar xstring e dönüştür
-        lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
-
-        " geri yaz
-        """"""""""""""""
-        IF p_wrks IS INITIAL.
-          lr_xlzip->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
-          lr_xlzip->add( EXPORTING name = 'xl/worksheets/sheet1.xml' content = lv_file ).
-        ELSE.
-          lv_sheet_name =  'xl/worksheets/sheet' && lv_sheet_num && '.xml'.
-          lr_xlzip_new->add( EXPORTING name = lv_sheet_name content = lv_file ).
-        ENDIF.
-
-        lv_sheet_num += 1.
-
-      ENDDO.
-
-    ELSE.
-
-      " ***********************************************************
-      " Gruplanmış rapor için ilk kolon bazında itab->xml oluştur
-      " elde edilen sheet'ler ayrı bir zip dosyaya kopyalanır
-      " ***********************************************************
-
-      LOOP AT ls_meta-t_fcat ASSIGNING <fs_fcat>.
-        IF <fs_fcat>-inttype EQ 'P'.
-          <fs_fcat>-intlen = 25 .
-        ENDIF.
-      ENDLOOP.
-
-      DATA: wa_fieldcat LIKE LINE OF ls_meta-t_fcat.
-      wa_fieldcat-fieldname = 'SCOL_TAB'.
-      wa_fieldcat-ref_field = 'COLTAB'.
-      wa_fieldcat-ref_table = 'CALENDAR_TYPE'.
-      APPEND wa_fieldcat TO ls_meta-t_fcat.
-
-      " Grup data
-      CALL METHOD cl_alv_table_create=>create_dynamic_table
-        EXPORTING
-          "i_style_table            = 'X'
-          it_fieldcatalog           = ls_meta-t_fcat
-        IMPORTING
-          ep_table                  = lr_table
-        EXCEPTIONS
-          generate_subpool_dir_full = 1
-          OTHERS                    = 2.
-
-      ASSIGN lr_table->* TO <ls_itab>.
-      MOVE-CORRESPONDING <fs_itab> TO <ls_itab>.
-      " Boş satır
-      CREATE DATA new_line LIKE LINE OF <ls_itab>.
-      ASSIGN new_line->* TO <f_line>.
-
-      " Grup data sheet
-      CALL METHOD cl_alv_table_create=>create_dynamic_table
-        EXPORTING
-          "i_style_table             = 'X'
-          it_fieldcatalog           = ls_meta-t_fcat
-        IMPORTING
-          ep_table                  = ls_table
-        EXCEPTIONS
-          generate_subpool_dir_full = 1
-          OTHERS                    = 2.
-
-      ASSIGN ls_table->* TO <fs_itab_sheet>.
-      " Boş satır
-      CREATE DATA nsh_line LIKE LINE OF <fs_itab_sheet>.
-      ASSIGN nsh_line->* TO <s_line>.
-
-      """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-      " Gruplanmış
-      DATA(group_count) = gv_group_count.
-
-      IF p_wrks EQ 'X'.
-        group_count -= 1.
-      ENDIF.
-
-      IF p_yval IS NOT INITIAL.
-        group_count -= 1.
-      ENDIF.
-      """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-      lv_sheet_num = 1.
-
-      DO lv_sheet_count TIMES.
-
-        CLEAR <fs_itab_sheet>.
-
-        IF p_wrks EQ 'X'.
-          LOOP AT <ls_itab> ASSIGNING <f_line>.
-            ASSIGN COMPONENT 'SHEET' OF STRUCTURE <f_line> TO <f_field>.
-            ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<f_hiera>).
-            " Genel toplam yoksa en üst kategori satırı yok
-            IF <f_field> NE 0 AND <f_field> EQ lv_sheet_num .
-              APPEND INITIAL LINE TO <fs_itab_sheet> ASSIGNING <s_line>.
-              MOVE-CORRESPONDING <f_line> TO <s_line>.
-            ENDIF.
-          ENDLOOP.
-        ELSE.
-          <fs_itab_sheet>[] = <ls_itab>[].
-        ENDIF.
-
-        " fcat ve filtre ile SALV table
-        cl_salv_table=>factory( IMPORTING
-                                  r_salv_table = lo_table
-                                CHANGING
-                                  t_table = <fs_itab_sheet> ).
-
-        " FUNC
-        lo_table->get_functions( )->set_all( abap_true ).
-
-        " Kolonları gizle / göster
-        lo_columns = lo_table->get_columns( ).
-        lt_cols = lo_columns->get( ).
-
-        LOOP AT lt_cols ASSIGNING FIELD-SYMBOL(<ls_col>).
-
-          lo_column ?= <ls_col>-r_column.
-
-          LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<ls_fcat>).
-            IF <ls_fcat>-fieldname EQ <ls_col>-columnname AND ( <ls_fcat>-no_out EQ 'X' OR <ls_fcat>-tech EQ 'X' ).
-              IF p_layo IS NOT INITIAL OR NOT ( p_disp EQ '3' AND <ls_fcat>-key EQ 'X' ).
-                lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
-              ENDIF.
-            ENDIF.
-          ENDLOOP.
-
-          IF <ls_col>-columnname EQ 'HIERA' AND ( p_disp EQ '3' OR group_count EQ 1 ).
-            lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
-          ENDIF.
-
-          IF VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-key OPTIONAL ) IS NOT INITIAL.
-            IF p_nolb EQ 'X'.
-              IF VALUE #( gt_fieldlist[ grpx1 = <ls_col>-columnname ]-fname OPTIONAL ) IS NOT INITIAL.
-                lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
-              ENDIF.
-            ENDIF.
-            IF p_nolb EQ 'Y'.
-              IF VALUE #( gt_fieldlist[ fname = <ls_col>-columnname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
-                lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
-              ENDIF.
-            ENDIF.
-          ENDIF.
-
-          IF lo_column->is_visible( ) = if_salv_c_bool_sap=>true.
-
-            DATA(datatype) = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-datatype OPTIONAL ).
-            DATA(inttype)  = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-inttype  OPTIONAL ).
-            DATA(decimals) = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-decimals_o OPTIONAL ).
-            IF decimals IS INITIAL.
-              decimals = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-decimals OPTIONAL ).
-            ENDIF.
-
-            lo_column->set_short_text( ' ' ).
-            lo_column->set_medium_text( ' ' ).
-            lo_column->set_long_text( VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-scrtext_l OPTIONAL ) ).
-
-            CASE inttype.
-              WHEN 'P'.
-                IF datatype = 'QUAN' OR decimals EQ 3.
-                  INSERT 'Q' INTO TABLE lt_ctyp.   " Quantity
-                ELSEIF datatype = 'CURR' OR decimals EQ 2.
-                  INSERT 'C' INTO TABLE lt_ctyp.   " Currency
-                ELSE.  "'DEC' OR 'FLTP'.
-                  IF decimals EQ 0.
-                    INSERT 'I' INTO TABLE lt_ctyp. " Integer
-                  ELSE.
-                    INSERT 'F' INTO TABLE lt_ctyp. " Decimal
-                  ENDIF.
-                ENDIF.
-              WHEN 'X' OR 'I' OR '8' OR '4'.
-                INSERT 'I' INTO TABLE lt_ctyp.     " Integer
-              WHEN 'D'.
-                INSERT 'D' INTO TABLE lt_ctyp.     " Date
-              WHEN 'T'.
-                INSERT 'T' INTO TABLE lt_ctyp.     " Time
-              WHEN OTHERS.
-                INSERT 'S' INTO TABLE lt_ctyp.     " String
-            ENDCASE.
-
-            INSERT CONV #( lo_column->get_ddic_intlen( ) ) INTO TABLE lt_clen.
-
-            IF VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-key OPTIONAL ) IS NOT INITIAL.
-              INSERT 'X' INTO TABLE lt_ckey.
-            ELSE.
-              INSERT ' ' INTO TABLE lt_ckey.
-            ENDIF.
-
-          ENDIF.
-
         ENDLOOP.
 
-        lv_xstring = lo_table->to_xml( if_salv_bs_xml=>c_type_xlsx ).
+        DATA: wa_fieldcat LIKE LINE OF ls_meta-t_fcat.
+        wa_fieldcat-fieldname = 'SCOL_TAB'.
+        wa_fieldcat-ref_field = 'COLTAB'.
+        wa_fieldcat-ref_table = 'CALENDAR_TYPE'.
+        APPEND wa_fieldcat TO ls_meta-t_fcat.
+
+        " Grup data
+        CALL METHOD cl_alv_table_create=>create_dynamic_table
+          EXPORTING
+            "i_style_table            = 'X'
+            it_fieldcatalog           = ls_meta-t_fcat
+          IMPORTING
+            ep_table                  = lr_table
+          EXCEPTIONS
+            generate_subpool_dir_full = 1
+            OTHERS                    = 2.
+
+        ASSIGN lr_table->* TO <ls_itab>.
+        MOVE-CORRESPONDING <fs_itab> TO <ls_itab>.
+        " Boş satır
+        CREATE DATA new_line LIKE LINE OF <ls_itab>.
+        ASSIGN new_line->* TO <f_line>.
+
+        " Grup data sheet
+        CALL METHOD cl_alv_table_create=>create_dynamic_table
+          EXPORTING
+            "i_style_table             = 'X'
+            it_fieldcatalog           = ls_meta-t_fcat
+          IMPORTING
+            ep_table                  = ls_table
+          EXCEPTIONS
+            generate_subpool_dir_full = 1
+            OTHERS                    = 2.
+
+    ENDIF.
+
+
+    " EXPORT TO EXCEL
+    IF p_excl EQ 'X'.
+
+      IF s_fnams[] IS INITIAL.
+
+        " ********************************************************************************
+        " Seçilen çalışma sayfası alanı için sheet no ve sıralama önceden yapıldı
+        " Her bir sheet'teki satır sayısı ile sheet1.xml bölünerek yeni sayfalara taşınır.
+        " ********************************************************************************
+
+        DATA: row_start    TYPE int4.
+        DATA: row_end      TYPE int4.
+
+        DATA: lv_header  TYPE string.
+        DATA: lv_temp    TYPE string.
+        DATA: lv_base    TYPE string.
+        DATA: lv_body    TYPE string.
+        DATA: lv_footer  TYPE string.
+
+        DATA: rownum_str TYPE string.
+        DATA: cell_rval  TYPE string.
+        DATA: col_width  TYPE int4.
+
+        DATA: st_string TYPE string,
+              en_string TYPE string.
+
+        DATA s_val TYPE c.
+
+        " Result Salv Data
+        DATA(go_salv_ex_res) = cl_salv_ex_util=>factory_result_data_table( r_data          = REF #( <fs_itab> )
+                                                                           t_fieldcatalog  = ls_meta-t_fcat
+                                                                           s_layout        = ls_meta-s_layout
+                                                                           t_sort          = ls_meta-t_sort
+                                                                           t_filter        = ls_meta-t_filter ).
+
+        cl_salv_bs_tt_util=>if_salv_bs_tt_util~transform(
+          EXPORTING
+            xml_type      = if_salv_bs_xml=>c_type_xlsx
+            xml_version   = cl_salv_bs_a_xml_base=>get_version( )
+            r_result_data = go_salv_ex_res
+            xml_flavour   = if_salv_bs_c_tt=>c_tt_xml_flavour_export
+            gui_type      = if_salv_bs_xml=>c_gui_type_gui
+          IMPORTING
+            xml           = lv_xstring ).
 
         lr_xlzip->load( lv_xstring ).
-
-        "********************************************
-        lr_xlzip->get( EXPORTING name = 'xl/sharedStrings.xml' IMPORTING content = lv_file ).
-        lr_xlshstrfile->parse_xstring( lv_file ).
-        lr_xlnode = lr_xlshstrfile->find_node( 'sst' ).
-        lr_xlstrings = lr_xlnode->get_children( ).
-        "********************************************
-
         lr_xlzip->get( EXPORTING name = 'xl/worksheets/sheet1.xml' IMPORTING content = lv_file ).
 
-        IF p_wrks EQ 'X' AND lv_sheet_num = 1.
+        IF p_wrks IS NOT INITIAL.
           lr_xlzip_new->load( lv_xstring ).
           lr_xlzip_new->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
         ENDIF.
 
-        " xstring oku
-        lr_xlfile->parse_xstring( lv_file ).
+        cl_bcs_convert=>xstring_to_string(
+               EXPORTING
+                 iv_xstr   = lv_file
+                 iv_cp     =  1100     " SAP character set identification
+               RECEIVING
+                 rv_string = lv_xml
+             ).
 
-        """""""""""""""""""""""""""""""""""""""""""""""""""
-        " Excel gizlenecek kolon başlangıç-bitiş bul
+        lv_header = substring_before( val = lv_xml sub = |<row r="2"| ).
+        lv_temp = substring_from( val = lv_xml sub = |<row r="2"| ).
+        lv_base = substring_before( val = lv_temp sub = |</sheetData>| ).
+        lv_footer = substring_from( val = lv_xml sub = |</sheetData>| ).
+
+        IF p_zero IS NOT INITIAL.
+          REPLACE ALL OCCURRENCES OF '<v>0</v>' IN lv_base WITH '<v></v>'.
+        ENDIF.
+
+        lv_sheet_num = 1.
+        row_end = 2.
+
+        DO lv_sheet_count TIMES.
+
+          IF p_wrks IS NOT INITIAL.
+
+            READ TABLE gt_sheets INDEX lv_sheet_num ASSIGNING FIELD-SYMBOL(<ls_sheets>).
+
+            lv_sheet_title = <ls_sheets>-title.
+
+            row_start = row_end.
+            st_string = |<row r="| && row_end && |"| .
+
+            row_end = row_end + <ls_sheets>-count.
+            en_string = |<row r="| && row_end && |"| .
+
+            lv_temp = substring_from( val = lv_base sub = st_string ).
+            lv_body = substring_before( val = lv_temp sub = en_string ).
+            IF lv_body IS INITIAL.
+              lv_body = lv_temp.
+            ENDIF.
+
+            lv_sheet = lv_header && lv_body && lv_footer.
+          ELSE.
+            lv_sheet = lv_header && lv_base && lv_footer.
+          ENDIF.
+
+          CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
+            EXPORTING
+              text   = lv_sheet
+            IMPORTING
+              buffer = lv_file.
+
+          lr_xlfile->parse_xstring( lv_file ).
+
+          lr_xlsheetview ?= lr_xlfile->find_node( 'sheetView' ).
+          lr_xlsheetview->set_attribute_ns( name = 'zoomScale' value = condense( CONV string( gv_xl_zoomscale ) ) ).
+          lr_xlsheetview->set_attribute_ns( name = 'zoomScaleNormal' value = condense( CONV string( gv_xl_zoomscale ) ) ).
+
+          IF lv_sheet_num GT 1.
+            " selected tab kaldır
+            lr_xlsheetview->remove_attribute_ns( name = 'tabSelected' ).
+
+            " Satır ve hücre yeniden numaralandır
+            lr_xlnode = lr_xlfile->find_node( 'sheetData' ).
+            lr_xlrows = lr_xlnode->get_children( ).
+            DO lr_xlrows->get_length( ) TIMES.
+              lr_xlrow ?= lr_xlrows->get_item( sy-index - 1 ).
+              rownum_str = sy-index.
+              lr_xlrow->set_attribute_ns( name = 'r' value = rownum_str ).
+              lr_xlcells = lr_xlrow->get_elements_by_tag_name( name = 'c' ).
+              DO lr_xlcells->get_length( ) TIMES.
+                lr_xlcell ?= lr_xlcells->get_item( sy-index - 1 ).
+                cell_rval = lr_xlcell->get_attribute_ns( name = 'r' ).
+                REPLACE ALL OCCURRENCES OF REGEX '[\d]' IN cell_rval WITH ''.
+                cell_rval = cell_rval && rownum_str.
+                lr_xlcell->set_attribute_ns( name = 'r' value = cell_rval ).
+              ENDDO.
+            ENDDO.
+          ENDIF.
+
+          " autofilter ekle
+          lr_xlworksheet ?= lr_xlfile->find_node( 'worksheet' ).
+          lr_xldimension ?= lr_xlfile->find_node( 'dimension' ).
+          lv_dim = lr_xlfile->get_node_attribute( name = 'ref' node = lr_xldimension ).
+          IF p_wrks EQ 'X'.
+            DATA(tmp_value) = substring_after( val = lv_dim sub = ':' ).
+            REPLACE ALL OCCURRENCES OF REGEX '[^0-9]' IN tmp_value WITH ''.
+            REPLACE ALL OCCURRENCES OF tmp_value IN lv_dim WITH CONV string( <ls_sheets>-count + 1 ).
+            CONDENSE lv_dim NO-GAPS.
+          ENDIF.
+          lr_xlautofilter = cl_ixml=>create( )->create_document( )->create_element( name = 'autoFilter' ).
+          lr_xlautofilter->set_attribute( name = 'ref' value = lv_dim ).
+          lr_xlphoneticpr ?= lr_xlfile->find_node( 'phoneticPr' ).
+          lr_xlworksheet->if_ixml_node~insert_child( new_child = lr_xlautofilter ref_child = lr_xlphoneticpr ).
+
+          "  tekrar xstring e dönüştür
+          lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
+
+          " geri yaz
+          """"""""""""""""
+          IF p_wrks IS INITIAL.
+            lr_xlzip->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
+            lr_xlzip->add( EXPORTING name = 'xl/worksheets/sheet1.xml' content = lv_file ).
+          ELSE.
+            lv_sheet_name =  'xl/worksheets/sheet' && lv_sheet_num && '.xml'.
+            lr_xlzip_new->add( EXPORTING name = lv_sheet_name content = lv_file ).
+          ENDIF.
+
+          lv_sheet_num += 1.
+
+        ENDDO.
+
+      ELSE.
+
+        " ***********************************************************
+        " Gruplanmış rapor için ilk kolon bazında itab->xml oluştur
+        " elde edilen sheet'ler ayrı bir zip dosyaya kopyalanır
+        " ***********************************************************
+
+        ASSIGN ls_table->* TO <fs_itab_sheet>.
+        " Boş satır
+        CREATE DATA nsh_line LIKE LINE OF <fs_itab_sheet>.
+        ASSIGN nsh_line->* TO <s_line>.
+
+        """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+        " Gruplanmış
+        DATA(group_count) = gv_group_count.
+
         IF p_wrks EQ 'X'.
-          DATA(hide_stc) = 1.
-          IF group_count GT 1 AND p_disp NE '3'.
-            hide_stc += 1.
-          ENDIF.
-          DATA(hide_enc) = hide_stc.
-          IF p_nolb IS INITIAL.
-            IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx1 OPTIONAL ) IS NOT INITIAL.
-              hide_enc += 1.
-            ENDIF.
-            IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx2 OPTIONAL ) IS NOT INITIAL.
-              hide_enc += 1.
-            ENDIF.
-            IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx3 OPTIONAL ) IS NOT INITIAL.
-              hide_enc += 1.
-            ENDIF.
-          ENDIF.
-        ENDIF.
-        """"""""""""""""""""""""""""""""""""""""""""""""""""
-
-        " kolon genişlikleri sabitle
-        lr_xlnode = lr_xlfile->find_node( 'cols' ).
-        lr_xlcols = lr_xlnode->get_children( ).
-        DO lr_xlcols->get_length( ) TIMES.
-          lr_xlcol ?= lr_xlcols->get_item( sy-index - 1 ).
-
-          """"""""""""""""""""""""""""""""""""
-          """"""""""""""""""""""""""""""""""""
-          IF p_wrks EQ 'X' AND p_layo IS INITIAL AND ( sy-index GE hide_stc AND sy-index LE hide_enc ).
-            lr_xlcol->set_attribute_ns( name = 'hidden' value = '1' ).
-            lr_xlcol->set_attribute_ns( name = 'bestFit' value = '' ).
-          ENDIF.
-          """"""""""""""""""""""""""""""""""""
-          """"""""""""""""""""""""""""""""""""
-          IF p_colr IS NOT INITIAL.
-            col_width = lr_xlcol->get_attribute_ns( name = 'width' ).
-            IF col_width GT 40.
-              lr_xlcol->set_attribute_ns( name = 'width' value = '40' ).
-            ENDIF.
-
-            CASE lt_ctyp[ sy-index ].
-              WHEN 'Q'.
-                lr_xlcol->set_attribute_ns( name = 'width' value = '14' ).
-              WHEN 'C'.
-                lr_xlcol->set_attribute_ns( name = 'width' value = '15' ).
-              WHEN 'D'.
-                lr_xlcol->set_attribute_ns( name = 'width' value = '10' ).
-              WHEN 'T'.
-                lr_xlcol->set_attribute_ns( name = 'width' value = '8' ).
-            ENDCASE.
-          ENDIF.
-        ENDDO.
-
-        " Başlık biçimlendir
-        lr_xlnode = lr_xlfile->find_node( 'sheetData' ).
-        lr_xlrows = lr_xlnode->get_children( ).
-        DATA(color_variant) = 5.
-        lr_xlrow ?= lr_xlrows->get_item( 0 ).
-        lr_xlcells = lr_xlrow->get_elements_by_tag_name( name = 'c' ).
-        DO lr_xlcells->get_length( ) TIMES.
-          lr_xlcell ?= lr_xlcells->get_item( sy-index - 1 ).
-          lr_xlcell->set_attribute_ns( name = 's' value = condense( CONV string( color_variant ) ) ).
-          DATA(t_val) = lr_xlcell->get_attribute_ns( name = 't' ).
-          IF t_val IS NOT INITIAL.
-            lr_xlcell->remove_attribute_ns( name = 't' ).
-            lr_xlcell->set_attribute_ns( name = 't' value = 's' ).
-          ENDIF.
-
-          IF t_val EQ 's'.
-            DATA(cval) = lr_xlcell->get_value( ).
-            lv_num = cval.
-
-            lr_xlstring ?= lr_xlstrings->get_item( ( lv_num ) ).
-            lr_xlstringcell ?= lr_xlstring->get_children( )->get_item( 0 ).
-
-            DATA(lv_string2) = lr_xlstringcell->get_value( ).
-            lr_xlcell->get_last_child( )->remove_node( ).
-
-            " t değeri sonda olması için kaldır ve tekrar oluştur
-            lr_xlcell->remove_attribute_ns( name = 't' ).
-            lr_xlcell->set_attribute_ns( name = 't' value = 'inlineStr' ).
-
-            DATA(lr_xlcell_is2) = lr_xlshstrfile->create_simple_element( name = 'is' ).
-            lr_xlcell->append_child( lr_xlcell_is2 ) .
-
-            DATA(lr_xlcell_t2) = lr_xlshstrfile->create_simple_element( name = 't' ).
-            lr_xlcell_is2->append_child( lr_xlcell_t2 ) .
-
-            lr_xlcell_t2->set_value( lv_string2 ).
-          ENDIF.
-
-        ENDDO.
-
-        lr_xlsheetview ?= lr_xlfile->find_node( 'sheetView' ).
-        lr_xlsheetview->set_attribute_ns( name = 'zoomScale' value = condense( CONV string( gv_xl_zoomscale ) ) ).
-        lr_xlsheetview->set_attribute_ns( name = 'zoomScaleNormal' value = condense( CONV string( gv_xl_zoomscale ) ) ).
-
-        IF lv_sheet_num GT 1.
-          " selected tab kaldır
-          lr_xlsheetview->remove_attribute_ns( name = 'tabSelected' ).
+          group_count -= 1.
         ENDIF.
 
-        " autofilter ekle
-        lr_xlworksheet ?= lr_xlfile->find_node( 'worksheet' ).
-        lr_xldimension ?= lr_xlfile->find_node( 'dimension' ).
-        lv_dim = lr_xlfile->get_node_attribute( name = 'ref' node = lr_xldimension ).
-        lr_xlautofilter = cl_ixml=>create( )->create_document( )->create_element( name = 'autoFilter' ).
-        lr_xlautofilter->set_attribute( name = 'ref' value = lv_dim ).
-        lr_xlphoneticpr ?= lr_xlfile->find_node( 'phoneticPr' ).
-        lr_xlworksheet->if_ixml_node~insert_child( new_child = lr_xlautofilter ref_child = lr_xlphoneticpr ).
+        IF p_yval IS NOT INITIAL.
+          group_count -= 1.
+        ENDIF.
+        """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-        " Grup renk-level vs.
-        IF group_count GT 0.
+        lv_sheet_num = 1.
 
-          LOOP AT <fs_itab_sheet> ASSIGNING <s_line>.
+        DO lv_sheet_count TIMES.
 
-            ASSIGN COMPONENT 'HIERA' OF STRUCTURE <s_line> TO <f_field>.
+          CLEAR <fs_itab_sheet>.
 
-            IF p_wrks EQ 'X'.
-              <f_field> -= 1.
+          IF p_wrks EQ 'X'.
+            LOOP AT <ls_itab> ASSIGNING <f_line>.
+              ASSIGN COMPONENT 'SHEET' OF STRUCTURE <f_line> TO <f_field>.
+              ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<f_hiera>).
+              " Genel toplam yoksa en üst kategori satırı yok
+              IF <f_field> NE 0 AND <f_field> EQ lv_sheet_num .
+                APPEND INITIAL LINE TO <fs_itab_sheet> ASSIGNING <s_line>.
+                MOVE-CORRESPONDING <f_line> TO <s_line>.
+              ENDIF.
+            ENDLOOP.
+          ELSE.
+            <fs_itab_sheet>[] = <ls_itab>[].
+          ENDIF.
+
+          " fcat ve filtre ile SALV table
+          cl_salv_table=>factory( IMPORTING
+                                    r_salv_table = lo_table
+                                  CHANGING
+                                    t_table = <fs_itab_sheet> ).
+
+          " FUNC
+          lo_table->get_functions( )->set_all( abap_true ).
+
+          " Kolonları gizle / göster
+          lo_columns = lo_table->get_columns( ).
+          lt_cols = lo_columns->get( ).
+
+          LOOP AT lt_cols ASSIGNING FIELD-SYMBOL(<ls_col>).
+
+            lo_column ?= <ls_col>-r_column.
+
+            LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<ls_fcat>).
+              IF <ls_fcat>-fieldname EQ <ls_col>-columnname AND ( <ls_fcat>-no_out EQ 'X' OR <ls_fcat>-tech EQ 'X' ).
+                IF p_layo IS NOT INITIAL OR NOT ( p_disp EQ '3' AND <ls_fcat>-key EQ 'X' ).
+                  lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
+                ENDIF.
+              ENDIF.
+            ENDLOOP.
+
+            IF <ls_col>-columnname EQ 'HIERA' AND ( p_disp EQ '3' OR group_count EQ 1 ).
+              lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
             ENDIF.
 
-            color_variant = 0.
-
-            lr_xlrow ?= lr_xlrows->get_item( sy-tabix ).
-            lr_xlcells = lr_xlrow->get_elements_by_tag_name( name = 'c' ).
-
-            DO lr_xlcells->get_length( ) TIMES.
-              lr_xlcell ?= lr_xlcells->get_item( sy-index - 1 ).
-
-              DATA(ngtf) = ' '.
-              DATA(rval) = lr_xlcell->get_value( ).
-              DATA(dumb) = lt_ctyp[ sy-index ].
-              IF dumb NE 'S' AND rval CA '-'.
-                ngtf = 'X'.
-              ENDIF.
-
-              IF p_zero IS NOT INITIAL.
-                IF dumb NE 'S' AND rval NA '123456789'.
-                  lr_xlcell->set_value( '' ).
+            IF VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-key OPTIONAL ) IS NOT INITIAL.
+              IF p_nolb EQ 'X'.
+                IF VALUE #( gt_fieldlist[ grpx1 = <ls_col>-columnname ]-fname OPTIONAL ) IS NOT INITIAL.
+                  lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
                 ENDIF.
               ENDIF.
-
-              "***************************************
-              " Hücre biçimlendir
-              "***************************************
-              "  s_val = lr_xlcell->get_attribute_ns( name = 's' ).
-              IF p_cdec IS INITIAL.
-                IF dumb EQ 'Q' AND (
-                      rval CS '.1' OR
-                      rval CS '.2' OR
-                      rval CS '.3' OR
-                      rval CS '.4' OR
-                      rval CS '.5' OR
-                      rval CS '.6' OR
-                      rval CS '.7' OR
-                      rval CS '.8' OR
-                      rval CS '.9' ).
-                  s_val = 'X'.
-                ELSE.
-                  s_val = ''.
+              IF p_nolb EQ 'Y'.
+                IF VALUE #( gt_fieldlist[ fname = <ls_col>-columnname ]-grpx1 OPTIONAL ) IS NOT INITIAL.
+                  lo_column->set_visible( value  = if_salv_c_bool_sap=>false ).
                 ENDIF.
-              ELSE.
-                s_val = 'X'.
+              ENDIF.
+            ENDIF.
+
+            IF lo_column->is_visible( ) = if_salv_c_bool_sap=>true.
+
+              DATA(f_datatype) = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-datatype OPTIONAL ).
+              DATA(f_inttype)  = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-inttype  OPTIONAL ).
+              DATA(f_decimals) = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-decimals_o OPTIONAL ).
+              IF f_decimals IS INITIAL.
+                f_decimals = VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-decimals OPTIONAL ).
               ENDIF.
 
-              IF CONV i( <f_field> ) EQ CONV i( max_hiera ).
-                CASE dumb.
-                  WHEN 'I'.
-                    IF ngtf IS INITIAL.
-                      color_variant = 2.
+              lo_column->set_short_text( ' ' ).
+              lo_column->set_medium_text( ' ' ).
+              lo_column->set_long_text( VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-scrtext_l OPTIONAL ) ).
+
+              CASE f_inttype.
+                WHEN 'P'.
+                  IF f_datatype = 'QUAN' OR f_decimals EQ 3.
+                    INSERT 'Q' INTO TABLE lt_ctyp.   " Quantity
+                  ELSEIF f_datatype = 'CURR' OR f_decimals EQ 2.
+                    INSERT 'C' INTO TABLE lt_ctyp.   " Currency
+                  ELSE.  "'DEC' OR 'FLTP'.
+                    IF f_decimals EQ 0.
+                      INSERT 'I' INTO TABLE lt_ctyp. " Integer
                     ELSE.
-                      color_variant = 7.
+                      INSERT 'F' INTO TABLE lt_ctyp. " Decimal
                     ENDIF.
-                  WHEN 'Q'.
-                    IF s_val EQ 'X'.
-                      IF ngtf IS INITIAL.
-                        color_variant = 3.
-                      ELSE.
-                        color_variant = 8.
-                      ENDIF.
-                    ELSE.
+                  ENDIF.
+                WHEN 'X' OR 'I' OR '8' OR '4'.
+                  INSERT 'I' INTO TABLE lt_ctyp.     " Integer
+                WHEN 'D'.
+                  INSERT 'D' INTO TABLE lt_ctyp.     " Date
+                WHEN 'T'.
+                  INSERT 'T' INTO TABLE lt_ctyp.     " Time
+                WHEN OTHERS.
+                  INSERT 'S' INTO TABLE lt_ctyp.     " String
+              ENDCASE.
+
+              INSERT CONV #( lo_column->get_ddic_intlen( ) ) INTO TABLE lt_clen.
+
+              IF VALUE #( ls_meta-t_fcat[ fieldname = <ls_col>-columnname ]-key OPTIONAL ) IS NOT INITIAL.
+                INSERT 'X' INTO TABLE lt_ckey.
+              ELSE.
+                INSERT ' ' INTO TABLE lt_ckey.
+              ENDIF.
+
+            ENDIF.
+
+          ENDLOOP.
+
+          lv_xstring = lo_table->to_xml( if_salv_bs_xml=>c_type_xlsx ).
+
+          lr_xlzip->load( lv_xstring ).
+
+          "********************************************
+          lr_xlzip->get( EXPORTING name = 'xl/sharedStrings.xml' IMPORTING content = lv_file ).
+          lr_xlshstrfile->parse_xstring( lv_file ).
+          lr_xlnode = lr_xlshstrfile->find_node( 'sst' ).
+          lr_xlstrings = lr_xlnode->get_children( ).
+          "********************************************
+
+          lr_xlzip->get( EXPORTING name = 'xl/worksheets/sheet1.xml' IMPORTING content = lv_file ).
+
+          IF p_wrks EQ 'X' AND lv_sheet_num = 1.
+            lr_xlzip_new->load( lv_xstring ).
+            lr_xlzip_new->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
+          ENDIF.
+
+          " xstring oku
+          lr_xlfile->parse_xstring( lv_file ).
+
+          """""""""""""""""""""""""""""""""""""""""""""""""""
+          " Excel gizlenecek kolon başlangıç-bitiş bul
+          IF p_wrks EQ 'X'.
+            DATA(hide_stc) = 1.
+            IF group_count GT 1 AND p_disp NE '3'.
+              hide_stc += 1.
+            ENDIF.
+            DATA(hide_enc) = hide_stc.
+            IF p_nolb IS INITIAL.
+              IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx1 OPTIONAL ) IS NOT INITIAL.
+                hide_enc += 1.
+              ENDIF.
+              IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx2 OPTIONAL ) IS NOT INITIAL.
+                hide_enc += 1.
+              ENDIF.
+              IF VALUE #( gt_fieldlist[ fname = lv_x_field ]-grpx3 OPTIONAL ) IS NOT INITIAL.
+                hide_enc += 1.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+          """"""""""""""""""""""""""""""""""""""""""""""""""""
+
+          " kolon genişlikleri sabitle
+          lr_xlnode = lr_xlfile->find_node( 'cols' ).
+          lr_xlcols = lr_xlnode->get_children( ).
+          DO lr_xlcols->get_length( ) TIMES.
+            lr_xlcol ?= lr_xlcols->get_item( sy-index - 1 ).
+
+            """"""""""""""""""""""""""""""""""""
+            """"""""""""""""""""""""""""""""""""
+            IF p_wrks EQ 'X' AND p_layo IS INITIAL AND ( sy-index GE hide_stc AND sy-index LE hide_enc ).
+              lr_xlcol->set_attribute_ns( name = 'hidden' value = '1' ).
+              lr_xlcol->set_attribute_ns( name = 'bestFit' value = '' ).
+            ENDIF.
+            """"""""""""""""""""""""""""""""""""
+            """"""""""""""""""""""""""""""""""""
+            IF p_colr IS NOT INITIAL.
+              col_width = lr_xlcol->get_attribute_ns( name = 'width' ).
+              IF col_width GT 40.
+                lr_xlcol->set_attribute_ns( name = 'width' value = '40' ).
+              ENDIF.
+
+              CASE lt_ctyp[ sy-index ].
+                WHEN 'Q'.
+                  lr_xlcol->set_attribute_ns( name = 'width' value = '15' ).
+                WHEN 'C'.
+                  lr_xlcol->set_attribute_ns( name = 'width' value = '15' ).
+                WHEN 'D'.
+                  lr_xlcol->set_attribute_ns( name = 'width' value = '10' ).
+                WHEN 'T'.
+                  lr_xlcol->set_attribute_ns( name = 'width' value = '8' ).
+              ENDCASE.
+            ENDIF.
+          ENDDO.
+
+          " Başlık biçimlendir
+          lr_xlnode = lr_xlfile->find_node( 'sheetData' ).
+          lr_xlrows = lr_xlnode->get_children( ).
+          DATA(color_variant) = 5.
+          lr_xlrow ?= lr_xlrows->get_item( 0 ).
+          lr_xlcells = lr_xlrow->get_elements_by_tag_name( name = 'c' ).
+          DO lr_xlcells->get_length( ) TIMES.
+            lr_xlcell ?= lr_xlcells->get_item( sy-index - 1 ).
+            lr_xlcell->set_attribute_ns( name = 's' value = condense( CONV string( color_variant ) ) ).
+            DATA(t_val) = lr_xlcell->get_attribute_ns( name = 't' ).
+            IF t_val IS NOT INITIAL.
+              lr_xlcell->remove_attribute_ns( name = 't' ).
+              lr_xlcell->set_attribute_ns( name = 't' value = 's' ).
+            ENDIF.
+
+            IF t_val EQ 's'.
+              DATA(cval) = lr_xlcell->get_value( ).
+              lv_num = cval.
+
+              lr_xlstring ?= lr_xlstrings->get_item( ( lv_num ) ).
+              lr_xlstringcell ?= lr_xlstring->get_children( )->get_item( 0 ).
+
+              DATA(lv_string2) = lr_xlstringcell->get_value( ).
+              lr_xlcell->get_last_child( )->remove_node( ).
+
+              " t değeri sonda olması için kaldır ve tekrar oluştur
+              lr_xlcell->remove_attribute_ns( name = 't' ).
+              lr_xlcell->set_attribute_ns( name = 't' value = 'inlineStr' ).
+
+              DATA(lr_xlcell_is2) = lr_xlshstrfile->create_simple_element( name = 'is' ).
+              lr_xlcell->append_child( lr_xlcell_is2 ) .
+
+              DATA(lr_xlcell_t2) = lr_xlshstrfile->create_simple_element( name = 't' ).
+              lr_xlcell_is2->append_child( lr_xlcell_t2 ) .
+
+              lr_xlcell_t2->set_value( lv_string2 ).
+            ENDIF.
+
+          ENDDO.
+
+          lr_xlsheetview ?= lr_xlfile->find_node( 'sheetView' ).
+          lr_xlsheetview->set_attribute_ns( name = 'zoomScale' value = condense( CONV string( gv_xl_zoomscale ) ) ).
+          lr_xlsheetview->set_attribute_ns( name = 'zoomScaleNormal' value = condense( CONV string( gv_xl_zoomscale ) ) ).
+
+          IF lv_sheet_num GT 1.
+            " selected tab kaldır
+            lr_xlsheetview->remove_attribute_ns( name = 'tabSelected' ).
+          ENDIF.
+
+          " autofilter ekle
+          lr_xlworksheet ?= lr_xlfile->find_node( 'worksheet' ).
+          lr_xldimension ?= lr_xlfile->find_node( 'dimension' ).
+          lv_dim = lr_xlfile->get_node_attribute( name = 'ref' node = lr_xldimension ).
+          lr_xlautofilter = cl_ixml=>create( )->create_document( )->create_element( name = 'autoFilter' ).
+          lr_xlautofilter->set_attribute( name = 'ref' value = lv_dim ).
+          lr_xlphoneticpr ?= lr_xlfile->find_node( 'phoneticPr' ).
+          lr_xlworksheet->if_ixml_node~insert_child( new_child = lr_xlautofilter ref_child = lr_xlphoneticpr ).
+
+          " Grup renk-level vs.
+          IF group_count GT 0.
+
+            LOOP AT <fs_itab_sheet> ASSIGNING <s_line>.
+
+              ASSIGN COMPONENT 'HIERA' OF STRUCTURE <s_line> TO <f_field>.
+
+              IF p_wrks EQ 'X'.
+                <f_field> -= 1.
+              ENDIF.
+
+              color_variant = 0.
+
+              lr_xlrow ?= lr_xlrows->get_item( sy-tabix ).
+              lr_xlcells = lr_xlrow->get_elements_by_tag_name( name = 'c' ).
+
+              DO lr_xlcells->get_length( ) TIMES.
+                lr_xlcell ?= lr_xlcells->get_item( sy-index - 1 ).
+
+                DATA(ngtf) = ' '.
+                DATA(rval) = lr_xlcell->get_value( ).
+                DATA(dumb) = lt_ctyp[ sy-index ].
+                IF dumb NE 'S' AND rval CA '-'.
+                  ngtf = 'X'.
+                ENDIF.
+
+                IF p_zero IS NOT INITIAL.
+                  IF dumb NE 'S' AND rval NA '123456789'.
+                    lr_xlcell->set_value( '' ).
+                  ENDIF.
+                ENDIF.
+
+                "***************************************
+                " Hücre biçimlendir
+                "***************************************
+                "  s_val = lr_xlcell->get_attribute_ns( name = 's' ).
+                IF p_cdec IS INITIAL.
+                  IF dumb EQ 'Q' AND (
+                        rval CS '.1' OR
+                        rval CS '.2' OR
+                        rval CS '.3' OR
+                        rval CS '.4' OR
+                        rval CS '.5' OR
+                        rval CS '.6' OR
+                        rval CS '.7' OR
+                        rval CS '.8' OR
+                        rval CS '.9' ).
+                    s_val = 'X'.
+                  ELSE.
+                    s_val = ''.
+                  ENDIF.
+                ELSE.
+                  s_val = 'X'.
+                ENDIF.
+
+                IF CONV i( <f_field> ) EQ CONV i( max_hiera ).
+                  CASE dumb.
+                    WHEN 'I'.
                       IF ngtf IS INITIAL.
                         color_variant = 2.
                       ELSE.
                         color_variant = 7.
                       ENDIF.
-                    ENDIF.
-                  WHEN 'C' OR 'F'.
-                    IF ngtf IS INITIAL.
-                      color_variant = 4.
-                    ELSE.
-                      color_variant = 9.
-                    ENDIF.
-                  WHEN 'D'.
-                    IF lt_ckey[ sy-index ] IS NOT INITIAL.
-                      color_variant = 15.
-                    ELSE.
-                      color_variant = 12.
-                    ENDIF.
-                  WHEN 'T'.
-                    IF lt_ckey[ sy-index ] IS NOT INITIAL.
-                      color_variant = 16.
-                    ELSE.
-                      color_variant = 13.
-                    ENDIF.
-                  WHEN OTHERS.
-                    IF lt_ckey[ sy-index ] IS NOT INITIAL.
-                      color_variant = 14.
-                    ELSE.
-                      IF ngtf IS INITIAL.
-                        color_variant = 0.
+                    WHEN 'Q'.
+                      IF s_val EQ 'X'.
+                        IF ngtf IS INITIAL.
+                          color_variant = 3.
+                        ELSE.
+                          color_variant = 8.
+                        ENDIF.
                       ELSE.
-                        color_variant = 6.
+                        IF ngtf IS INITIAL.
+                          color_variant = 2.
+                        ELSE.
+                          color_variant = 7.
+                        ENDIF.
                       ENDIF.
-                    ENDIF.
-                ENDCASE.
-              ELSE.
-                CASE dumb.
-                  WHEN 'I'.
-                    color_variant = <f_field> + 30.
-                  WHEN 'Q'.
-                    IF s_val EQ 'X'.
-                      color_variant = <f_field> + 43.
-                    ELSE.
+                    WHEN 'C' OR 'F'.
+                      IF ngtf IS INITIAL.
+                        color_variant = 4.
+                      ELSE.
+                        color_variant = 9.
+                      ENDIF.
+                    WHEN 'D'.
+                      IF lt_ckey[ sy-index ] IS NOT INITIAL.
+                        color_variant = 15.
+                      ELSE.
+                        color_variant = 12.
+                      ENDIF.
+                    WHEN 'T'.
+                      IF lt_ckey[ sy-index ] IS NOT INITIAL.
+                        color_variant = 16.
+                      ELSE.
+                        color_variant = 13.
+                      ENDIF.
+                    WHEN OTHERS.
+                      IF lt_ckey[ sy-index ] IS NOT INITIAL.
+                        color_variant = 14.
+                      ELSE.
+                        IF ngtf IS INITIAL.
+                          color_variant = 0.
+                        ELSE.
+                          color_variant = 6.
+                        ENDIF.
+                      ENDIF.
+                  ENDCASE.
+                ELSE.
+                  CASE dumb.
+                    WHEN 'I'.
                       color_variant = <f_field> + 30.
-                    ENDIF.
-                  WHEN 'C' OR 'F'.
-                    color_variant = <f_field> + 56.
-                  WHEN 'D'.
-                    color_variant = <f_field> + 69.
-                  WHEN OTHERS.
-                    color_variant = <f_field> + 17.
-                ENDCASE.
+                    WHEN 'Q'.
+                      IF s_val EQ 'X'.
+                        color_variant = <f_field> + 43.
+                      ELSE.
+                        color_variant = <f_field> + 30.
+                      ENDIF.
+                    WHEN 'C' OR 'F'.
+                      color_variant = <f_field> + 56.
+                    WHEN 'D'.
+                      color_variant = <f_field> + 69.
+                    WHEN OTHERS.
+                      color_variant = <f_field> + 17.
+                  ENDCASE.
+                ENDIF.
+
+                lr_xlcell->set_attribute_ns( name = 's' value = condense( CONV string( color_variant ) ) ).
+
+                IF p_wrks EQ 'X'.
+
+                  t_val = lr_xlcell->get_attribute_ns( name = 't' ).
+                  IF t_val EQ 's'.
+                    lv_num = rval.
+
+                    lr_xlstring ?= lr_xlstrings->get_item( ( lv_num ) ).
+
+                    lr_xlstringcells = lr_xlstring->get_children( ).
+                    lr_xlstringcell ?= lr_xlstringcells->get_item( 0 ).
+
+                    DATA(lv_string) = lr_xlstringcell->get_value( ).
+                    DATA(lr_xlcell_v) = lr_xlcell->get_last_child( ).
+                    lr_xlcell_v->remove_node( ).
+
+                    " t değeri sonda olması için kaldır ve tekrar oluştur
+                    lr_xlcell->remove_attribute_ns( name = 't' ).
+                    lr_xlcell->set_attribute_ns( name = 't' value = 'inlineStr' ).
+
+                    DATA(lr_xlcell_is) = lr_xlshstrfile->create_simple_element( name = 'is' ).
+                    lr_xlcell->append_child( lr_xlcell_is ) .
+
+                    DATA(lr_xlcell_t) = lr_xlshstrfile->create_simple_element( name = 't' ).
+                    lr_xlcell_is->append_child( lr_xlcell_t ) .
+
+                    lr_xlcell_t->set_value( lv_string ).
+                  ENDIF.
+
+                ENDIF.
+
+              ENDDO.
+
+              " Excel hiyerarşi oluştur
+              CHECK <f_field> NE 0.
+              DATA(level) = 0.
+
+              level = <f_field>.
+              IF p_addt IS INITIAL.
+                level -= 1.
+              ENDIF.
+              IF p_yval IS NOT INITIAL.
+                level -= 1.
               ENDIF.
 
-              lr_xlcell->set_attribute_ns( name = 's' value = condense( CONV string( color_variant ) ) ).
-
+              " Renk için bir eksi değer kullanıldı, seviye için orjinale geri döndür
               IF p_wrks EQ 'X'.
-
-                t_val = lr_xlcell->get_attribute_ns( name = 't' ).
-                IF t_val EQ 's'.
-                  lv_num = rval.
-
-                  lr_xlstring ?= lr_xlstrings->get_item( ( lv_num ) ).
-
-                  lr_xlstringcells = lr_xlstring->get_children( ).
-                  lr_xlstringcell ?= lr_xlstringcells->get_item( 0 ).
-
-                  DATA(lv_string) = lr_xlstringcell->get_value( ).
-                  DATA(lr_xlcell_v) = lr_xlcell->get_last_child( ).
-                  lr_xlcell_v->remove_node( ).
-
-                  " t değeri sonda olması için kaldır ve tekrar oluştur
-                  lr_xlcell->remove_attribute_ns( name = 't' ).
-                  lr_xlcell->set_attribute_ns( name = 't' value = 'inlineStr' ).
-
-                  DATA(lr_xlcell_is) = lr_xlshstrfile->create_simple_element( name = 'is' ).
-                  lr_xlcell->append_child( lr_xlcell_is ) .
-
-                  DATA(lr_xlcell_t) = lr_xlshstrfile->create_simple_element( name = 't' ).
-                  lr_xlcell_is->append_child( lr_xlcell_t ) .
-
-                  lr_xlcell_t->set_value( lv_string ).
-                ENDIF.
-
+                <f_field> += 1.
               ENDIF.
 
-            ENDDO.
-
-            " Excel hiyerarşi oluştur
-            CHECK <f_field> NE 0.
-            DATA(level) = 0.
-
-            level = <f_field>.
-            IF p_addt IS INITIAL.
-              level -= 1.
-            ENDIF.
-            IF p_yval IS NOT INITIAL.
-              level -= 1.
-            ENDIF.
-
-            " Renk için bir eksi değer kullanıldı, seviye için orjinale geri döndür
-            IF p_wrks EQ 'X'.
-              <f_field> += 1.
-            ENDIF.
-
-            IF group_count GT 1 AND p_disp EQ '3'.
-              lr_xlrow->set_attribute_ns( name = 'outlineLevel' value = condense( CONV string( level ) ) ).
-              " Varsayılan açık grubu belirle
-              IF p_hlev IS NOT INITIAL.
-                IF <f_field> GT CONV int2( p_hlev ) AND <f_field> GT 1.
-                  lr_xlrow->set_attribute_ns( name = 'hidden' value = 'true' ).
+              IF group_count GT 1 AND p_disp EQ '3'.
+                lr_xlrow->set_attribute_ns( name = 'outlineLevel' value = condense( CONV string( level ) ) ).
+                " Varsayılan açık grubu belirle
+                IF p_hlev IS NOT INITIAL.
+                  IF <f_field> GT CONV int2( p_hlev ) AND <f_field> GT 1.
+                    lr_xlrow->set_attribute_ns( name = 'hidden' value = 'true' ).
+                  ENDIF.
                 ENDIF.
               ENDIF.
-            ENDIF.
 
+            ENDLOOP.
+
+          ENDIF.
+
+          IF group_count GT 1 AND p_disp EQ '3' .
+            DATA(lr_xlsheetpr)   = cl_ixml=>create( )->create_document( )->create_element( name = 'sheetPr' ).
+            DATA(lr_xloutlinepr) = cl_ixml=>create( )->create_document( )->create_element( name = 'outlinePr' ).
+            lr_xlsheetpr->if_ixml_node~append_child( lr_xloutlinepr ).
+            lr_xloutlinepr->set_attribute_ns( name = 'summaryBelow' value = 'false' ).
+            lr_xlworksheet->if_ixml_node~insert_child( new_child = lr_xlsheetpr ref_child = lr_xldimension ).
+            lr_xlsheetformatpr ?= lr_xlfile->find_node( 'sheetFormatPr' ).
+            DATA(open_level) = CONV int2( p_hlev ) ."- ( gv_group_count - gv_max_level ).
+            lr_xlsheetformatpr->set_attribute_ns( name = 'outlineLevelRow' value = CONV string( open_level ) ).
+          ENDIF.
+
+          "  tekrar xstring e dönüştür
+          lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
+
+          " geri yaz
+          """"""""""""""""
+          IF p_wrks IS INITIAL.
+            lr_xlzip->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
+            lr_xlzip->add( EXPORTING name = 'xl/worksheets/sheet1.xml' content = lv_file ).
+          ELSE.
+            lv_sheet_name =  'xl/worksheets/sheet' && lv_sheet_num && '.xml'.
+            lr_xlzip_new->add( EXPORTING name = lv_sheet_name content = lv_file ).
+          ENDIF.
+
+          lv_sheet_num += 1.
+
+        ENDDO.
+
+      ENDIF.
+
+      IF lv_xstring IS NOT INITIAL.
+
+        " styles.xml düzenle
+        IF s_fnams[] IS INITIAL.
+          IF p_wrks IS INITIAL.
+            lr_xlzip->get( EXPORTING name = 'xl/styles.xml' IMPORTING content = lv_file ).
+          ELSE.
+            lr_xlzip_new->get( EXPORTING name = 'xl/styles.xml' IMPORTING content = lv_file ).
+          ENDIF.
+          lr_xlfile->parse_xstring( lv_file ).
+          cl_bcs_convert=>xstring_to_string(
+             EXPORTING
+               iv_xstr   = lv_file
+               iv_cp     = 1100  " SAP character set identification
+             RECEIVING
+               rv_string = lv_xml
+           ).
+
+        ELSE.
+
+          lv_xml = ret_styles_string( ).
+
+        ENDIF.
+
+        IF p_cdec IS INITIAL.
+          REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.###"| .
+          "REPLACE ALL OCCURRENCES OF |<xf numFmtId="169"| IN lv_xml WITH |<xf numFmtId="0"| .
+          "REPLACE ALL OCCURRENCES OF |<xf numFmtId="180"| IN lv_xml WITH |<xf numFmtId="0"| .
+          " Tutarları da değişken ondalık istersen aşağıdaki satırı aç
+          " REPLACE ALL OCCURRENCES OF |numFmtId="4"| IN lv_xml WITH |numFmtId="0"| .
+        ENDIF.
+
+        CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
+          EXPORTING
+            text   = lv_xml
+          IMPORTING
+            buffer = lv_file.
+
+        IF p_wrks IS INITIAL.
+          lr_xlzip->delete( EXPORTING name = 'xl/styles.xml' ).
+          lr_xlzip->add( EXPORTING name = 'xl/styles.xml' content = lv_file ).
+        ELSE.
+          lr_xlzip_new->delete( EXPORTING name = 'xl/styles.xml' ).
+          lr_xlzip_new->add( EXPORTING name = 'xl/styles.xml' content = lv_file ).
+        ENDIF.
+
+        " son halini kaydet
+        IF p_wrks IS INITIAL.
+
+          " lr_xlsheet ?= lr_xlfile->find_node( 'sheet' ).
+          " lr_xlsheet->set_attribute_ns( name = 'name' value = lv_sheet_title ).
+
+          lv_xstring = lr_xlzip->save( ).
+        ELSE.
+          lv_sheet_num = 0.
+          LOOP AT gt_sheets ASSIGNING FIELD-SYMBOL(<ls_sheet>).
+            lv_sheet_num += 1.
+            lv_sheet_no = |{ lv_sheet_num }| .
+            lv_sheet_id = 'rId' && |{ lv_sheet_num }| .
+            lv_sheet_title = <ls_sheet>-title.
+            lv_sheet_file = 'worksheets/sheet' && lv_sheet_num && '.xml'.
+            CONDENSE lv_sheet_file NO-GAPS.
+
+            "ZIP_NEW workbook oku
+            lr_xlzip_new->get( EXPORTING name = 'xl/workbook.xml' IMPORTING content = lv_file ).
+            lr_xlfile->parse_xstring( lv_file ).
+            lr_xlsheets ?= lr_xlfile->find_node( 'sheets' ).
+            IF lv_sheet_num = 1.
+              lr_xlsheet ?= lr_xlfile->find_node( 'sheet' ).
+              lr_xlsheets->remove_child( lr_xlsheet ).
+            ENDIF.
+            lr_xlsheet = cl_ixml=>create( )->create_document( )->create_element( name = 'sheet' ).
+            lr_xlsheets->if_ixml_node~append_child( lr_xlsheet ).
+            lr_xlsheet->set_attribute_ns( name = 'name' value = lv_sheet_title ).
+            lr_xlsheet->set_attribute_ns( name = 'sheetId' value = lv_sheet_no ) .
+            lr_xlsheet->set_attribute_ns( name = 'r:id' value = lv_sheet_id ).
+            " Geri yaz
+            lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
+            lr_xlzip_new->delete( EXPORTING name = 'xl/workbook.xml' ).
+            lr_xlzip_new->add( EXPORTING name = 'xl/workbook.xml' content = lv_file ).
+
+            "ZIP_NEW rels oku
+            lr_xlzip_new->get( EXPORTING name = 'xl/_rels/workbook.xml.rels' IMPORTING content = lv_file ).
+            lr_xlfile->parse_xstring( lv_file ).
+            lr_xlrels ?= lr_xlfile->find_node( 'Relationships' ).
+            IF lv_sheet_num = 1.
+              WHILE lr_xlfile->find_node( 'Relationship' ) IS NOT INITIAL.
+                lr_xlrel ?= lr_xlfile->find_node( 'Relationship' ).
+                lr_xlrels->remove_child( lr_xlrel ).
+              ENDWHILE.
+            ENDIF.
+            lr_xlrel = cl_ixml=>create( )->create_document( )->create_element( name = 'Relationship' ).
+            lr_xlrels->if_ixml_node~append_child( lr_xlrel ).
+            lr_xlrel->set_attribute_ns( name = 'Id' value = lv_sheet_id ).
+            lr_xlrel->set_attribute_ns( name = 'Target' value = lv_sheet_file ).
+            lr_xlrel->set_attribute_ns( name = 'Type' value = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet' ).
+            " Geri yaz
+            lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
+            lr_xlzip_new->delete( EXPORTING name = 'xl/_rels/workbook.xml.rels' ).
+            lr_xlzip_new->add( EXPORTING name = 'xl/_rels/workbook.xml.rels' content = lv_file ).
           ENDLOOP.
 
-        ENDIF.
-
-        IF group_count GT 1 AND p_disp EQ '3' .
-          DATA(lr_xlsheetpr)   = cl_ixml=>create( )->create_document( )->create_element( name = 'sheetPr' ).
-          DATA(lr_xloutlinepr) = cl_ixml=>create( )->create_document( )->create_element( name = 'outlinePr' ).
-          lr_xlsheetpr->if_ixml_node~append_child( lr_xloutlinepr ).
-          lr_xloutlinepr->set_attribute_ns( name = 'summaryBelow' value = 'false' ).
-          lr_xlworksheet->if_ixml_node~insert_child( new_child = lr_xlsheetpr ref_child = lr_xldimension ).
-          lr_xlsheetformatpr ?= lr_xlfile->find_node( 'sheetFormatPr' ).
-          DATA(open_level) = CONV int2( p_hlev ) ."- ( gv_group_count - gv_max_level ).
-          lr_xlsheetformatpr->set_attribute_ns( name = 'outlineLevelRow' value = CONV string( open_level ) ).
-        ENDIF.
-
-        "  tekrar xstring e dönüştür
-        lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
-
-        " geri yaz
-        """"""""""""""""
-        IF p_wrks IS INITIAL.
-          lr_xlzip->delete( EXPORTING name = 'xl/worksheets/sheet1.xml' ).
-          lr_xlzip->add( EXPORTING name = 'xl/worksheets/sheet1.xml' content = lv_file ).
-        ELSE.
-          lv_sheet_name =  'xl/worksheets/sheet' && lv_sheet_num && '.xml'.
-          lr_xlzip_new->add( EXPORTING name = lv_sheet_name content = lv_file ).
-        ENDIF.
-
-        lv_sheet_num += 1.
-
-      ENDDO.
-
-    ENDIF.
-
-    IF lv_xstring IS NOT INITIAL.
-
-      " styles.xml düzenle
-      IF s_fnams[] IS INITIAL.
-        IF p_wrks IS INITIAL.
-          lr_xlzip->get( EXPORTING name = 'xl/styles.xml' IMPORTING content = lv_file ).
-        ELSE.
-          lr_xlzip_new->get( EXPORTING name = 'xl/styles.xml' IMPORTING content = lv_file ).
-        ENDIF.
-        lr_xlfile->parse_xstring( lv_file ).
-        cl_bcs_convert=>xstring_to_string(
-           EXPORTING
-             iv_xstr   = lv_file
-             iv_cp     = 1100  " SAP character set identification
-           RECEIVING
-             rv_string = lv_xml
-         ).
-
-      ELSE.
-
-        lv_xml = ret_styles_string( ).
-
-      ENDIF.
-
-      IF p_cdec IS INITIAL.
-        "REPLACE ALL OCCURRENCES OF |formatCode="#,##0.000"| IN lv_xml WITH |formatCode="#,##0.###"| .
-        REPLACE ALL OCCURRENCES OF |<xf numFmtId="169"| IN lv_xml WITH |<xf numFmtId="0"| .
-        REPLACE ALL OCCURRENCES OF |<xf numFmtId="180"| IN lv_xml WITH |<xf numFmtId="0"| .
-        " Tutarları da değişken ondalık istersen aşağıdaki satırı aç
-        " REPLACE ALL OCCURRENCES OF |numFmtId="4"| IN lv_xml WITH |numFmtId="0"| .
-      ENDIF.
-
-      CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
-        EXPORTING
-          text   = lv_xml
-        IMPORTING
-          buffer = lv_file.
-
-      IF p_wrks IS INITIAL.
-        lr_xlzip->delete( EXPORTING name = 'xl/styles.xml' ).
-        lr_xlzip->add( EXPORTING name = 'xl/styles.xml' content = lv_file ).
-      ELSE.
-        lr_xlzip_new->delete( EXPORTING name = 'xl/styles.xml' ).
-        lr_xlzip_new->add( EXPORTING name = 'xl/styles.xml' content = lv_file ).
-      ENDIF.
-
-      " son halini kaydet
-      IF p_wrks IS INITIAL.
-
-        " lr_xlsheet ?= lr_xlfile->find_node( 'sheet' ).
-        " lr_xlsheet->set_attribute_ns( name = 'name' value = lv_sheet_title ).
-
-        lv_xstring = lr_xlzip->save( ).
-      ELSE.
-        lv_sheet_num = 0.
-        LOOP AT gt_sheets ASSIGNING FIELD-SYMBOL(<ls_sheet>).
-          lv_sheet_num += 1.
-          lv_sheet_no = |{ lv_sheet_num }| .
-          lv_sheet_id = 'rId' && |{ lv_sheet_num }| .
-          lv_sheet_title = <ls_sheet>-title.
-          lv_sheet_file = 'worksheets/sheet' && lv_sheet_num && '.xml'.
-          CONDENSE lv_sheet_file NO-GAPS.
-
-          "ZIP_NEW workbook oku
-          lr_xlzip_new->get( EXPORTING name = 'xl/workbook.xml' IMPORTING content = lv_file ).
-          lr_xlfile->parse_xstring( lv_file ).
-          lr_xlsheets ?= lr_xlfile->find_node( 'sheets' ).
-          IF lv_sheet_num = 1.
-            lr_xlsheet ?= lr_xlfile->find_node( 'sheet' ).
-            lr_xlsheets->remove_child( lr_xlsheet ).
-          ENDIF.
-          lr_xlsheet = cl_ixml=>create( )->create_document( )->create_element( name = 'sheet' ).
-          lr_xlsheets->if_ixml_node~append_child( lr_xlsheet ).
-          lr_xlsheet->set_attribute_ns( name = 'name' value = lv_sheet_title ).
-          lr_xlsheet->set_attribute_ns( name = 'sheetId' value = lv_sheet_no ) .
-          lr_xlsheet->set_attribute_ns( name = 'r:id' value = lv_sheet_id ).
-          " Geri yaz
-          lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
-          lr_xlzip_new->delete( EXPORTING name = 'xl/workbook.xml' ).
-          lr_xlzip_new->add( EXPORTING name = 'xl/workbook.xml' content = lv_file ).
-
-          "ZIP_NEW rels oku
+          " çalışma sayfalı için rels dosyasını düzelt
           lr_xlzip_new->get( EXPORTING name = 'xl/_rels/workbook.xml.rels' IMPORTING content = lv_file ).
           lr_xlfile->parse_xstring( lv_file ).
           lr_xlrels ?= lr_xlfile->find_node( 'Relationships' ).
-          IF lv_sheet_num = 1.
-            WHILE lr_xlfile->find_node( 'Relationship' ) IS NOT INITIAL.
-              lr_xlrel ?= lr_xlfile->find_node( 'Relationship' ).
-              lr_xlrels->remove_child( lr_xlrel ).
-            ENDWHILE.
-          ENDIF.
+
+          lv_sheet_id = 'rId' && |{ lv_sheet_num + 1 }| .
           lr_xlrel = cl_ixml=>create( )->create_document( )->create_element( name = 'Relationship' ).
           lr_xlrels->if_ixml_node~append_child( lr_xlrel ).
           lr_xlrel->set_attribute_ns( name = 'Id' value = lv_sheet_id ).
-          lr_xlrel->set_attribute_ns( name = 'Target' value = lv_sheet_file ).
-          lr_xlrel->set_attribute_ns( name = 'Type' value = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet' ).
-          " Geri yaz
+          lr_xlrel->set_attribute_ns( name = 'Target' value = 'styles.xml' ).
+          lr_xlrel->set_attribute_ns( name = 'Type' value = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles' ).
+
+          lv_sheet_id = 'rId' && |{ lv_sheet_num + 2 }| .
+          lr_xlrel = cl_ixml=>create( )->create_document( )->create_element( name = 'Relationship' ).
+          lr_xlrels->if_ixml_node~append_child( lr_xlrel ).
+          lr_xlrel->set_attribute_ns( name = 'Id' value = lv_sheet_id ).
+          lr_xlrel->set_attribute_ns( name = 'Target' value = 'sharedStrings.xml' ).
+          lr_xlrel->set_attribute_ns( name = 'Type' value = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings' ).
+
           lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
           lr_xlzip_new->delete( EXPORTING name = 'xl/_rels/workbook.xml.rels' ).
           lr_xlzip_new->add( EXPORTING name = 'xl/_rels/workbook.xml.rels' content = lv_file ).
-        ENDLOOP.
 
-        " çalışma sayfalı için rels dosyasını düzelt
-        lr_xlzip_new->get( EXPORTING name = 'xl/_rels/workbook.xml.rels' IMPORTING content = lv_file ).
-        lr_xlfile->parse_xstring( lv_file ).
-        lr_xlrels ?= lr_xlfile->find_node( 'Relationships' ).
-
-        lv_sheet_id = 'rId' && |{ lv_sheet_num + 1 }| .
-        lr_xlrel = cl_ixml=>create( )->create_document( )->create_element( name = 'Relationship' ).
-        lr_xlrels->if_ixml_node~append_child( lr_xlrel ).
-        lr_xlrel->set_attribute_ns( name = 'Id' value = lv_sheet_id ).
-        lr_xlrel->set_attribute_ns( name = 'Target' value = 'styles.xml' ).
-        lr_xlrel->set_attribute_ns( name = 'Type' value = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles' ).
-
-        lv_sheet_id = 'rId' && |{ lv_sheet_num + 2 }| .
-        lr_xlrel = cl_ixml=>create( )->create_document( )->create_element( name = 'Relationship' ).
-        lr_xlrels->if_ixml_node~append_child( lr_xlrel ).
-        lr_xlrel->set_attribute_ns( name = 'Id' value = lv_sheet_id ).
-        lr_xlrel->set_attribute_ns( name = 'Target' value = 'sharedStrings.xml' ).
-        lr_xlrel->set_attribute_ns( name = 'Type' value = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings' ).
-
-        lr_xlfile->render_2_xstring( IMPORTING stream = lv_file ).
-        lr_xlzip_new->delete( EXPORTING name = 'xl/_rels/workbook.xml.rels' ).
-        lr_xlzip_new->add( EXPORTING name = 'xl/_rels/workbook.xml.rels' content = lv_file ).
-
-        lv_xstring = lr_xlzip_new->save( ).
-      ENDIF.
-    ENDIF.
-
-
-    IF sy-batch IS INITIAL AND sy-binpt IS INITIAL AND
-          p_excl EQ 'X' AND lv_xstring IS NOT INITIAL.
-
-      CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
-        EXPORTING
-          buffer        = lv_xstring
-        IMPORTING
-          output_length = lv_size
-        TABLES
-          binary_tab    = lt_bintab.
-
-      CALL METHOD cl_gui_frontend_services=>gui_download
-        EXPORTING
-          bin_filesize            = lv_size
-          filename                = lv_full_path
-          filetype                = 'BIN'
-        CHANGING
-          data_tab                = lt_bintab
-        EXCEPTIONS
-          file_write_error        = 1
-          no_batch                = 2
-          gui_refuse_filetransfer = 3
-          invalid_type            = 4
-          no_authority            = 5
-          unknown_error           = 6
-          header_not_allowed      = 7
-          separator_not_allowed   = 8
-          filesize_not_allowed    = 9
-          header_too_long         = 10
-          dp_error_create         = 11
-          dp_error_send           = 12
-          dp_error_write          = 13
-          unknown_dp_error        = 14
-          access_denied           = 15
-          dp_out_of_memory        = 16
-          disk_full               = 17
-          dp_timeout              = 18
-          file_not_found          = 19
-          dataprovider_exception  = 20
-          control_flush_error     = 21
-          not_supported_by_gui    = 22
-          error_no_gui            = 23
-          OTHERS                  = 24.
-
-      IF sy-subrc <> 0.
-        "MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
-        "           WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+          lv_xstring = lr_xlzip_new->save( ).
+        ENDIF.
       ENDIF.
 
-    ENDIF.
+
+      IF p_excl EQ 'X' AND lv_xstring IS NOT INITIAL AND gv_gui_available = abap_true.
+
+        CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+          EXPORTING
+            buffer        = lv_xstring
+          IMPORTING
+            output_length = lv_size
+          TABLES
+            binary_tab    = lt_bintab.
+
+        CALL METHOD cl_gui_frontend_services=>gui_download
+          EXPORTING
+            bin_filesize            = lv_size
+            filename                = lv_full_path
+            filetype                = 'BIN'
+          CHANGING
+            data_tab                = lt_bintab
+          EXCEPTIONS
+            file_write_error        = 1
+            no_batch                = 2
+            gui_refuse_filetransfer = 3
+            invalid_type            = 4
+            no_authority            = 5
+            unknown_error           = 6
+            header_not_allowed      = 7
+            separator_not_allowed   = 8
+            filesize_not_allowed    = 9
+            header_too_long         = 10
+            dp_error_create         = 11
+            dp_error_send           = 12
+            dp_error_write          = 13
+            unknown_dp_error        = 14
+            access_denied           = 15
+            dp_out_of_memory        = 16
+            disk_full               = 17
+            dp_timeout              = 18
+            file_not_found          = 19
+            dataprovider_exception  = 20
+            control_flush_error     = 21
+            not_supported_by_gui    = 22
+            error_no_gui            = 23
+            OTHERS                  = 24.
+
+        IF sy-subrc <> 0.
+          "MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+          "           WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ENDIF.
+
+      ENDIF.
+
+    ENDIF.  " Create Excel
+
+
 
     " Mail Gönder
     IF p_mail IS NOT INITIAL AND p_mlto[] IS NOT INITIAL.
@@ -7921,67 +8068,347 @@ CLASS lcl_main IMPLEMENTATION.
             lv_address  TYPE string,
             lv_filesize TYPE int8.
 
-      LOOP AT gt_functions ASSIGNING <fs_functions>.
-        REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_subj WITH <fs_functions>-modval.
-      ENDLOOP.
+      DATA:	lv_length	  TYPE so_obj_len.
+      DATA: t_html      TYPE soli_tab.
+      DATA: t_body      TYPE soli_tab.
+      DATA: t_text      TYPE soli_tab.
+      DATA: mail_type   TYPE c LENGTH 3.
+      DATA: lt_fcat     TYPE lvc_t_fcat.
 
       lv_filesize = CONV #( xstrlen( lv_xstring ) ).
 
       IF lv_filesize GT gv_max_filesize.
         MESSAGE VALUE #( gt_textlist[ sym = 'A04' ]-text OPTIONAL ) TYPE 'I'.
       ELSE.
-        TRY.
-            "Create send request
-            DATA(lo_send_request) = cl_bcs=>create_persistent( ).
 
-            "Create mail body
-            DATA:	lv_length	 TYPE so_obj_len.
-            DATA: lt_body	TYPE soli_tab. " catsxt_longtext_itab. ?
-            DATA: mail_type TYPE c LENGTH 3.
+        " Subject
+        LOOP AT gt_functions ASSIGNING <fs_functions>.
+          REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_subj WITH <fs_functions>-modval.
+        ENDLOOP.
 
-            LOOP AT gt_functions ASSIGNING <fs_functions>.
-              REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_info WITH <fs_functions>-modval.
-            ENDLOOP.
+        "Create mail body
+        LOOP AT gt_functions ASSIGNING <fs_functions>.
+          REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_info WITH <fs_functions>-modval.
+        ENDLOOP.
 
-            lv_length = strlen( p_info ).
-            mail_type = 'RAW'.
+        lv_length = 0.
+        mail_type = 'HTM'.
 
-            IF p_body EQ 'X'.
-              CALL FUNCTION 'SCMS_STRING_TO_FTEXT'
-                EXPORTING
-                  text      = p_info
-                TABLES
-                  ftext_tab = lt_body.
+        IF p_body EQ 'X'.
+          REPLACE ALL OCCURRENCES OF REGEX '<!DOCTYPE*>' IN p_info with space.
+          REPLACE ALL OCCURRENCES OF REGEX '<html*>' IN p_info with space.
+          REPLACE ALL OCCURRENCES OF REGEX '<head*>' IN p_info with space.
+          REPLACE ALL OCCURRENCES OF REGEX '<body*>' IN p_info with space.
+          REPLACE ALL OCCURRENCES OF REGEX '</html>' IN p_info with space.
+          REPLACE ALL OCCURRENCES OF REGEX '</head>' IN p_info with space.
+          REPLACE ALL OCCURRENCES OF REGEX '</body>' IN p_info with space.
+        ENDIF.
 
-              IF p_info CA '/>'.
-                mail_type = 'HTM'.
+        t_html = VALUE #( base t_html ( line = |{ '<!DOCTYPE html>' }| ) ).
+        CASE sy-langu.
+          WHEN 'T'.
+            t_html = VALUE #( base t_html ( line = |{ '<html lang="tr" ' }| ) ).
+          WHEN 'D'.
+            t_html = VALUE #( base t_html ( line = |{ '<html lang="de" ' }| ) ).
+          WHEN OTHERS.
+            t_html = VALUE #( base t_html ( line = |{ '<html lang="en" ' }| ) ).
+        ENDCASE.
+        t_html = VALUE #( base t_html ( line = |{ 'xmlns="http://www.w3.org/1999/xhtml" ' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ 'xmlns:v="urn:schemas-microsoft-com:vml" ' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ 'xmlns:o="urn:schemas-microsoft-com:office:office"' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<head>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<meta http-equiv="Content-Type" content="text/html; charset="UTF-8">' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<meta name="x-apple-disable-message-reformatting">' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<title></title>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<!--[if mso]>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<noscript>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<xml>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<o:OfficeDocumentSettings>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<o:PixelsPerInch>96</o:PixelsPerInch>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '</o:OfficeDocumentSettings>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '</xml>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '</noscript>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '<![endif]-->' }| ) ).
+
+
+        " Create HTML Table
+        IF p_excl IS INITIAL.
+
+          LOOP AT ls_meta-t_fcat ASSIGNING FIELD-SYMBOL(<l_fcat>) WHERE fieldname NE 'SCOL_TAB'.
+            IF <l_fcat>-no_out IS INITIAL AND <l_fcat>-tech IS INITIAL.
+              APPEND INITIAL LINE TO lt_fcat ASSIGNING FIELD-SYMBOL(<new_col>).
+              MOVE-CORRESPONDING <l_fcat> TO <new_col>.
+            ENDIF.
+          ENDLOOP.
+
+          IF lines( lt_fcat ) GT gv_max_mailcols.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A15' ]-text OPTIONAL ) && | | && CONV string( gv_max_mailcols ) TYPE 'S' DISPLAY LIKE 'E'. " max kolon sayısı:
+            RETURN.
+          ENDIF.
+
+          IF lines( <fs_itab> ) GT gv_max_mailrows.
+            MESSAGE VALUE #( gt_textlist[ sym = 'A16' ]-text OPTIONAL ) && | | && CONV string( gv_max_mailrows ) TYPE 'S' DISPLAY LIKE 'E'. " max satır sayısı:
+            RETURN.
+          ENDIF.
+
+          " Convert to HTML
+          t_html = VALUE #( base t_html ( line = |{ '<style>' }| )
+                                        ( line = |{ 'table, th, td {' }| ) ).
+
+          t_html = VALUE #( BASE t_html ( line = |{ 'border: 1px solid;' }| ) ).
+          t_html = VALUE #( BASE t_html ( line = |{ 'border-color: #cbc9c3;' }| ) ).
+          t_html = VALUE #( BASE t_html ( line = |{ 'border-collapse: collapse;' }| ) ).
+          t_html = VALUE #( BASE t_html ( line = |{ 'font-family: Arial, sans-serif;' }| ) ).
+          t_html = VALUE #( BASE t_html ( line = |{ 'font-size: 12px;' }| ) ).
+          IF p_colr EQ 'X'.
+            "t_html = VALUE #( BASE t_html ( line = |{ 'table-layout: fixed;' }| ) ).
+            "t_html = VALUE #( BASE t_html ( line = |{ 'display: inline-block;' }| ) ).
+            "t_html = VALUE #( BASE t_html ( line = |{ 'overflow:hidden;' }| ) ).
+          ENDIF.
+          t_html = VALUE #( BASE t_html ( line = |{ '}' }| ) ).
+
+          t_html = VALUE #( BASE t_html ( line = |{ 'table th {' }| )
+                                        ( line = |{ 'background-color: #D5DADF;' }| )
+                                        ( line = |{ 'padding: 3px;' }| )
+                                        ( line = |{ '}' }| ) ).
+
+          t_html = VALUE #( BASE t_html ( line = |{ 'table td {' }| )
+                                        ( line = |{ 'padding: 3px;' }| )
+                                        ( line = |{ '}' }| ) ).
+
+          t_html = VALUE #( BASE t_html ( line = |{ '</style>' }| )
+                                        ( line = |{ '</head>' }| ) ).
+
+          t_html = VALUE #( base t_html ( line = |{ '<body margin:0; padding:0;>' }| ) ).
+
+          " Variant info ekle
+          IF p_body EQ 'X'.
+            CALL FUNCTION 'SCMS_STRING_TO_FTEXT'
+              EXPORTING
+                text      = p_info
+              TABLES
+                ftext_tab = t_body.
+
+            t_html = VALUE #( base t_html ( line = |{ '<div><p>' }| ) ).
+            t_html = VALUE #( BASE t_html FOR ls_body IN t_body ( line = |{ ls_body-line }| ) ).
+            t_html = VALUE #( base t_html ( line = |{ '</div></p>' }| ) ).
+          ENDIF.
+
+          t_html = VALUE #( BASE t_html ( line = |{ '<table style="width:95%">' }| ) ).
+          t_html = VALUE #( BASE t_html ( line = |{ '<tr>' }| ) ).
+
+          DO lines( lt_fcat ) TIMES.
+           "IF p_colr EQ 'X'.
+           "  CASE VALUE #( lt_fcat[ sy-index ]-datatype OPTIONAL ).
+           "    WHEN 'QUAN'.
+           "      t_html = VALUE #( BASE t_html ( LINE = |{ '<th width="30">' } { lt_fcat[ sy-index ]-scrtext_l } { '</th>' } | ) ).
+           "    WHEN 'CURR'.
+           "      t_html = VALUE #( BASE t_html ( LINE = |{ '<th width="40">' } { lt_fcat[ sy-index ]-scrtext_l } { '</th>' } | ) ).
+           "    WHEN 'DEC'.
+           "      t_html = VALUE #( BASE t_html ( LINE = |{ '<th width:"15">' } { lt_fcat[ sy-index ]-scrtext_l } { '</th>' } | ) ).
+           "    WHEN OTHERS.
+           "      t_html = VALUE #( BASE t_html ( LINE = |{ '<th>' } { lt_fcat[ sy-index ]-scrtext_l } { '</th>' } | ) ).
+           "  ENDCASE.
+           "ELSE.
+              t_html = VALUE #( BASE t_html ( LINE = |{ '<th>' } { lt_fcat[ sy-index ]-scrtext_l } { '</th>' } | ) ).
+           "ENDIF.
+          ENDDO.
+
+
+          LOOP AT <fs_itab> ASSIGNING FIELD-SYMBOL(<ls_out>).
+            """"""""""""""""""""""""""""""""""""""""""
+            "  Hiyerarşi değerine göre renk değiştir
+            t_html = VALUE #( BASE t_html ( line = |{ '<tr style="' }| ) ).
+
+            ASSIGN COMPONENT 'hiera' OF STRUCTURE <ls_out> TO FIELD-SYMBOL(<hiera>).
+
+            IF <hiera> IS ASSIGNED.
+              IF CONV i( <hiera> ) NE CONV i( max_hiera ).
+                CASE <hiera>.
+                  WHEN 0.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #FF988C;' }| ) ).
+                  WHEN 1.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #FFFDBF;' }| ) ).
+                  WHEN 2.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #C6F9C1;' }| ) ).
+                  WHEN 3.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #A6E5F4;' }| ) ).
+                  WHEN 4.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #F8E5C8;' }| ) ).
+                  WHEN 5.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #CCE3E3;' }| ) ).
+                  WHEN 6.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #D4DFEF;' }| ) ).
+                  WHEN 7.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #DFEBF5;' }| ) ).
+                  WHEN 8.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #FF6758;' }| ) ).
+                  WHEN 9.  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #FFF843;' }| ) ).
+                  WHEN 10. t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #94D88F;' }| ) ).
+                  WHEN 11. t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #C5EAEE;' }| ) ).
+                  WHEN 12. t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #FDBB71;' }| ) ).
+                ENDCASE.
               ELSE.
-                mail_type = 'RAW'.
+                IF s_fnams[] IS INITIAL AND p_colr EQ 'X' AND ( sy-tabix mod 2 ) EQ 0.
+                  t_html = VALUE #( BASE t_html ( line = |{ ' background-color: #F5FCFF;' }| ) ).
+                ENDIF.
               ENDIF.
             ENDIF.
 
+            t_html = VALUE #( BASE t_html ( line = |{ '">' }| ) ).
+
+            DO lines( lt_fcat ) TIMES.
+              DATA(lv_field) = VALUE lvc_txtcol( lt_fcat[ sy-index ]-fieldname OPTIONAL ).
+              CONDENSE lv_field NO-GAPS.
+              ASSIGN COMPONENT lv_field OF STRUCTURE <ls_out> TO FIELD-SYMBOL(<lfs>).
+
+              f_datatype = VALUE #( lt_fcat[ sy-index ]-datatype OPTIONAL ).
+              f_inttype  = VALUE #( lt_fcat[ sy-index ]-inttype  OPTIONAL ).
+              f_decimals = VALUE #( lt_fcat[ sy-index ]-decimals_o OPTIONAL ).
+              IF f_decimals IS INITIAL.
+                f_decimals = VALUE #( lt_fcat[ sy-index ]-decimals OPTIONAL ).
+              ENDIF.
+
+              " Hücreler
+              DATA d_text TYPE string.
+              DATA(d_stil) = |{ '<td style="' }|.
+
+              IF p_colr EQ 'X' AND VALUE #( lt_fcat[ sy-index ]-key OPTIONAL ) EQ 'X' AND CONV i( <hiera> ) EQ CONV i( max_hiera ).
+                d_stil = d_stil && |{ ' background-color: #fafcfb;' }|.
+              ENDIF.
+
+              DATA tmp_p TYPE p DECIMALS 3.
+              CASE f_inttype.
+                WHEN 'P' OR 'X' OR 'I' OR '8' OR '4'.
+                  d_stil = d_stil && |{ ' text-align: right;' }|.
+                  tmp_p = CONV f( <lfs> ).
+                  IF tmp_p LT 0.
+                    d_stil = d_stil && |{ ' color: red;' }|.
+                  ENDIF.
+              ENDCASE.
+
+              CASE f_inttype.
+                WHEN 'P'.
+                  IF f_datatype = 'QUAN' or f_decimals EQ 3.
+                    d_text = |{ tmp_p NUMBER = USER DECIMALS = 3 SIGN = LEFT }|.   " Quantity
+                    "d_stil = d_stil && |{ '" width="30">' }|.
+                  ELSEIF f_datatype = 'CURR' or f_decimals EQ 2.
+                    d_text = |{ tmp_p NUMBER = USER DECIMALS = 2 SIGN = LEFT }|.   " Currency
+                    "d_stil = d_stil && |{ '" width="40">' }|.
+                  ELSEIF f_datatype = 'DEC'.
+                    d_text = |{ tmp_p NUMBER = USER DECIMALS = 2 SIGN = LEFT }|.   " Decimal
+                    "d_stil = d_stil && |{ '" width="15">' }|.
+                  ELSE.
+                    d_text = |{ tmp_p NUMBER = USER }|.
+                    "d_stil = d_stil && |{ '">' }|.
+                  ENDIF.
+                WHEN 'X' OR 'I' OR '8' OR '4'.
+                  d_text = |{ tmp_p NUMBER = USER DECIMALS = 0 SIGN = LEFT }|.   " Integer
+                  "d_stil = d_stil && |{ '">' }|.
+                WHEN 'D'.
+                  d_text = |{ CONV d( <lfs> ) DATE = USER }|.      " Date
+                  "d_stil = d_stil && |{ '">' }|.
+                WHEN 'T'.
+                  d_text = |{ CONV t( <lfs> ) TIME = USER }|.      " Time
+                  "d_stil = d_stil && |{ '">' }|.
+                WHEN OTHERS.
+                  d_text = CONV string( <lfs> ).
+                  """"""""""""""""""""""""""""""""""""""""""
+                  IF f_datatype = 'UNIT'.
+                    CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+                      EXPORTING
+                        input          = d_text
+                        language       = sy-langu
+                      IMPORTING
+                        output         = d_text.
+                  ENDIF.
+                  "d_stil = d_stil && |{ '">' }|.
+              ENDCASE.
+
+              d_stil = d_stil && |{ '">' }|.
+
+              CASE f_inttype.
+                WHEN 'P' OR 'X' OR 'I' OR '8' OR '4'.
+                  " Ondalık sıfırları at
+                  IF p_cdec IS INITIAL and f_datatype EQ 'QUAN'.
+                    SHIFT d_text RIGHT DELETING TRAILING '0'.
+                    SHIFT d_text RIGHT DELETING TRAILING gv_decs.
+                    CONDENSE d_text NO-GAPS.
+                  ENDIF.
+                  " Sıfırları gizle
+                  IF p_zero IS NOT INITIAL AND CONV f( <lfs> ) EQ 0.
+                    d_text = ''.
+                  ENDIF.
+              ENDCASE.
+
+              t_html = VALUE #( BASE t_html ( LINE = |{ d_stil } { d_text } { '</td>' }| ) ).
+            ENDDO.
+
+            t_html = VALUE #( BASE t_html ( line = |{ '</tr>' }| ) ).
+          ENDLOOP.
+
+          t_html = VALUE #( BASE t_html ( line = |{ '</table>' }| ) ).
+
+        ELSE.
+
+          t_html = VALUE #( BASE t_html ( line = |{ '</head>' }| ) ).
+
+          IF p_body EQ 'X'.
+            CALL FUNCTION 'SCMS_STRING_TO_FTEXT'
+              EXPORTING
+                text      = p_info
+              TABLES
+                ftext_tab = t_html.
+          ENDIF.
+
+        ENDIF.
+
+        t_html = VALUE #( base t_html ( line = |{ '</body>' }| ) ).
+        t_html = VALUE #( base t_html ( line = |{ '</html>' }| ) ).
+
+        lv_length += 256 * lines( t_html ).
+
+        " Multipart Mail için Text
+        IF p_body EQ 'X'.
+          REPLACE ALL OCCURRENCES OF REGEX '<[a-zA-Z\/][^>]*>' IN p_info with space.
+          CALL FUNCTION 'SCMS_STRING_TO_FTEXT'
+            EXPORTING
+              text      = p_info
+            TABLES
+              ftext_tab = t_text.
+        ENDIF.
+
+
+        TRY.
+
             "Set up document object
-            DATA(lo_document) = cl_document_bcs=>create_document(
-                                  i_type = mail_type
-                                  i_text = lt_body
-                                  i_length  = lv_length
-                                  i_subject = CONV #( p_subj ) ).
+            DATA:  mime_helper   TYPE REF TO cl_gbt_multirelated_service.
+            CREATE OBJECT mime_helper.
+            mime_helper->set_main_text( content = t_text ).
+            mime_helper->set_main_html( content = t_html ).
 
+            DATA(lo_document) = cl_document_bcs=>create_from_multirelated(
+                                  i_subject          = CONV #( p_subj )
+                                  i_multirel_service = mime_helper ).
 
-            DATA lt_att_head    TYPE soli_tab.
-            DATA lv_text_line   TYPE soli.
-
-            CONCATENATE '&SO_FILENAME=' lv_file_name INTO lv_text_line.
-            APPEND lv_text_line TO lt_att_head.
+          " DATA(lo_document) = cl_document_bcs=>create_document(
+          "                       i_type = mail_type
+          "                       i_text = t_html
+          "                       i_length  = lv_length
+          "                       i_subject = CONV #( p_subj ) ).
 
             "Add attachment
-            lo_document->add_attachment(
-                i_attachment_type    = 'BIN'
-                i_attachment_size    = CONV #( xstrlen( lv_xstring ) )
-                i_attachment_subject = CONV #( lv_file_name )
-                i_attachment_header  = lt_att_head
-                i_att_content_hex    = cl_bcs_convert=>xstring_to_solix( lv_xstring )
-             ).
+            IF p_excl EQ 'X'.
+              DATA lt_att_head    TYPE soli_tab.
+              DATA lv_text_line   TYPE soli.
+
+              CONCATENATE '&SO_FILENAME=' lv_file_name INTO lv_text_line.
+              APPEND lv_text_line TO lt_att_head.
+
+              "Add attachment
+              lo_document->add_attachment(
+                  i_attachment_type    = 'BIN'
+                  i_attachment_size    = CONV #( xstrlen( lv_xstring ) )
+                  i_attachment_subject = CONV #( lv_file_name )
+                  i_attachment_header  = lt_att_head
+                  i_att_content_hex    = cl_bcs_convert=>xstring_to_solix( lv_xstring )
+               ).
+            ENDIF.
+
+            "Create send request
+            DATA(lo_send_request) = cl_bcs=>create_persistent( ).
 
             "Add document to send request
             lo_send_request->set_document( lo_document ).
@@ -8361,9 +8788,6 @@ CLASS lcl_main IMPLEMENTATION.
     REFRESH: gt_aggregation_fields.
 
     LOOP AT s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggrs>).
-      "IF VALUE #( gt_fieldlist[ fname = <f_aggrs>-low ]-cumty OPTIONAL ) IS INITIAL OR <f_aggrs>-high IS INITIAL.
-      "  DELETE s_aggrs WHERE low = <f_aggrs>-low .
-      "ENDIF.
       IF VALUE #( gt_allfields_text[ name = <f_aggrs>-low ]-text OPTIONAL ) IS INITIAL.
         DELETE s_aggrs WHERE low = <f_aggrs>-low .
       ENDIF.
@@ -8382,7 +8806,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       READ TABLE s_aggrs ASSIGNING FIELD-SYMBOL(<f_aggr>) WITH KEY low = <ls_fieldlist>-fname.
 
-      IF NOT <f_aggr> IS ASSIGNED.
+      IF NOT <f_aggr> IS ASSIGNED OR <f_aggr>-high IS INITIAL .
         <ls_aggregation_fields>-type = <ls_fieldlist>-cumty.
       ELSE.
         <ls_aggregation_fields>-type = <f_aggr>-high.
@@ -8674,6 +9098,20 @@ CLASS lcl_main IMPLEMENTATION.
     set_aggrs( ).
     fill_subts( ).
     set_subts( ).
+
+
+    DATA(hlev) = 1.
+    LOOP AT gt_group_key_columns ASSIGNING <ls_group_key_columns>.
+      <ls_group_key_columns>-ctot = VALUE #( gt_subtotal_fields[ fnam = <ls_group_key_columns>-fnam ]-ctot OPTIONAL ).
+      IF <ls_group_key_columns>-fnam EQ 'DUMMY'.
+        <ls_group_key_columns>-hlev = 0.
+      ELSE.
+        <ls_group_key_columns>-hlev = hlev.
+      ENDIF.
+      IF <ls_group_key_columns>-ctot = 'X'.
+        hlev += 1.
+      ENDIF.
+    ENDLOOP.
 
     " Açık hiyerarşi düzelt
     IF CONV int2( p_hlev ) GT gv_max_level.
@@ -9038,9 +9476,7 @@ CLASS lcl_main IMPLEMENTATION.
 
     DATA: new_line TYPE REF TO data.
     FIELD-SYMBOLS: <f_line>   TYPE any.
-    FIELD-SYMBOLS: <f_field>  TYPE any.
-    FIELD-SYMBOLS: <f_field2>  TYPE any.
-    FIELD-SYMBOLS: <f_field3>  TYPE any.
+
 
     IF gv_detail_view = abap_false.
       IF s_fnams[] IS INITIAL.
@@ -9251,7 +9687,7 @@ CLASS lcl_main IMPLEMENTATION.
            iv_column NE '&Hierarchy'   AND
            VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
 
-          ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO <f_field>.
+          ASSIGN COMPONENT 'HIERA' OF STRUCTURE <f_line> TO FIELD-SYMBOL(<f_field>).
           hiera = <f_field>.
           IF hiera IS NOT INITIAL.
             h_num = hiera.
@@ -9259,96 +9695,75 @@ CLASS lcl_main IMPLEMENTATION.
 
           gv_filter_where = ' '.
 
-          IF VALUE #( gt_group_key_columns[ fnam = iv_column ]-fnam OPTIONAL ) IS INITIAL.
-
-            LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
-
-              IF hiera IS NOT INITIAL AND hiera NE 0 AND <fs_group_key_columns>-ikey = 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'.
-
-                IF VALUE #( gt_subtotal_fields[ fnam = <fs_group_key_columns>-fnam ]-ctot OPTIONAL ) EQ 'X' OR
-                   VALUE #( gt_subtotal_fields[ fnam = <fs_group_key_columns>-fnam ]-fnam OPTIONAL ) EQ ' '.
-                  l_num += 1.
-                ENDIF.
-
-                IF ( p_addp IS INITIAL AND p_disp NE '3' )  OR ( h_num NE 0 AND l_num LE h_num ).
-                  ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
-                  CONDENSE <fs_group_key_columns>-fnam NO-GAPS .
-                  IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-                  IF <comp> IS INITIAL.
-                    gv_filter_where = gv_filter_where && <fs_group_key_columns>-fnam && | IS INITIAL|.
-                  ELSE.
-                    gv_filter_where = gv_filter_where && <fs_group_key_columns>-fnam && | EQ '| && <comp> && |'|.
-                  ENDIF.
-                ENDIF.
+          LOOP AT gt_group_key_columns ASSIGNING FIELD-SYMBOL(<fs_group_key_columns>).
+            IF <fs_group_key_columns>-ikey EQ 'X' AND <fs_group_key_columns>-fnam NE 'DUMMY'
+             AND ( <fs_group_key_columns>-hlev LE h_num OR ( p_addt IS INITIAL AND h_num EQ 0 ) ).
+              ASSIGN COMPONENT <fs_group_key_columns>-fnam OF STRUCTURE <f_line> TO <comp>.
+              CONDENSE <fs_group_key_columns>-fnam NO-GAPS .
+              IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+              IF <comp> IS INITIAL.
+                gv_filter_where = gv_filter_where && <fs_group_key_columns>-fnam && | IS INITIAL|.
+              ELSE.
+                gv_filter_where = gv_filter_where && <fs_group_key_columns>-fnam && | EQ '| && <comp> && |'|.
               ENDIF.
+            ENDIF.
+          ENDLOOP.
 
+          IF gv_pivot_fieldname IS NOT INITIAL.
+            gt_fcat = go_main->set_fieldcatalog( ).
+            " Son kolon is y field where koşulunda yok
+            DATA(lv_col_suffix) = 100.
+            LOOP AT gt_group_data_columns ASSIGNING FIELD-SYMBOL(<fs_group_data_columns>).
+              ADD 1 TO lv_col_suffix.
+              DATA(last_field_name) = 'MENGE' && lv_col_suffix.
             ENDLOOP.
-
-            IF gv_pivot_fieldname IS NOT INITIAL.
-
-              gt_fcat = go_main->set_fieldcatalog( ).
-
-              " Son kolon is y field where koşulunda yok
-              DATA(lv_col_suffix) = 100.
-              LOOP AT gt_group_data_columns ASSIGNING FIELD-SYMBOL(<fs_group_data_columns>).
-                ADD 1 TO lv_col_suffix.
-                DATA(last_field_name) = 'MENGE' && lv_col_suffix.
-              ENDLOOP.
-
-              " Diğer kolonlarda MENGE101, MENGE102 vs. reptext deki değeri oku
-              IF iv_column NE last_field_name.
-                name = VALUE #( gt_fcat[ fieldname = iv_column ]-reptext OPTIONAL ) .
-                ASSIGN name TO <comp>.
-                IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-                IF name EQ '-'.
-                  gv_filter_where = gv_filter_where && gv_pivot_fieldname && | IS INITIAL|.
-                ELSE.
-                  gv_filter_where = gv_filter_where && gv_pivot_fieldname && | EQ '| && <comp> && |'|.
-                ENDIF.
-              ENDIF.
-
-              " Hücre alanı: y alanı
-              k_field = VALUE #( gt_fieldlist[ slynr = p_yval ]-fname OPTIONAL ) .
-
-            ELSE.
-
-              " Hücre alanı: Kolonun kendisi
-              k_field = iv_column.
-
-            ENDIF.
-
-            IF k_field IS NOT INITIAL AND k_field NE '&Hierarchy'.
-              lv_aggrtype = VALUE #( gt_aggregation_fields[ fnam = k_field ]-type OPTIONAL ).
-              " Toplam, ağ.ortalama sıfırdan farklılar; max, min için = hücre değeri
-              IF lv_aggrtype EQ 'M' OR lv_aggrtype EQ 'L'.
-                IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-                ASSIGN COMPONENT iv_column OF STRUCTURE <f_line> TO <f_field>.
-                DATA(cell_value) = CONV string( <f_field> ) .
-                CONDENSE cell_value NO-GAPS.
-                gv_filter_where = gv_filter_where && k_field && | EQ '| && cell_value && |'|.
-              ELSEIF lv_aggrtype EQ 'T' OR lv_aggrtype EQ 'W'.
-                IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
-                gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
+            " Diğer kolonlarda MENGE101, MENGE102 vs. reptext deki değeri oku
+            IF iv_column NE last_field_name.
+              name = VALUE #( gt_fcat[ fieldname = iv_column ]-reptext OPTIONAL ) .
+              ASSIGN name TO <comp>.
+              IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+              IF name EQ '-'.
+                gv_filter_where = gv_filter_where && gv_pivot_fieldname && | IS INITIAL|.
+              ELSE.
+                gv_filter_where = gv_filter_where && gv_pivot_fieldname && | EQ '| && <comp> && |'|.
               ENDIF.
             ENDIF.
-
-            gv_detail_view = abap_true.
-            go_main->fill_data( ).
-
-            IF <gs_itab> IS INITIAL.
-              MESSAGE s208(fz).
-            ELSE.
-              go_main->display_data( ).
-            ENDIF.
-
-            gv_detail_view = abap_false.
-
+            " Hücre alanı: y alanı
+            k_field = VALUE #( gt_fieldlist[ slynr = p_yval ]-fname OPTIONAL ) .
+          ELSE.
+            " Hücre alanı: Kolonun kendisi
+            k_field = iv_column.
           ENDIF.
+
+          IF k_field IS NOT INITIAL AND k_field NE '&Hierarchy'.
+            lv_aggrtype = VALUE #( gt_aggregation_fields[ fnam = k_field ]-type OPTIONAL ).
+            " Toplam, ağ.ortalama sıfırdan farklılar; max, min için = hücre değeri
+            IF lv_aggrtype EQ 'M' OR lv_aggrtype EQ 'L'.
+              IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+              ASSIGN COMPONENT iv_column OF STRUCTURE <f_line> TO <f_field>.
+              DATA(cell_value) = CONV string( <f_field> ) .
+              CONDENSE cell_value NO-GAPS.
+              gv_filter_where = gv_filter_where && k_field && | EQ '| && cell_value && |'|.
+            ELSEIF lv_aggrtype EQ 'T' OR lv_aggrtype EQ 'W'.
+              IF gv_filter_where IS NOT INITIAL. gv_filter_where = gv_filter_where && | AND |. ENDIF.
+              gv_filter_where = gv_filter_where && k_field && | IS NOT INITIAL| .
+            ENDIF.
+          ENDIF.
+
+          gv_detail_view = abap_true.
+          go_main->fill_data( ).
+
+          IF <gs_itab> IS INITIAL.
+            MESSAGE s208(fz).
+          ELSE.
+            go_main->display_data( ).
+          ENDIF.
+
+          gv_detail_view = abap_false.
 
         ENDIF.
 
     ENDCASE.
-
 
   ENDMETHOD.
 
@@ -10493,6 +10908,8 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'A12' text = 'Saat geçerli değil. Saat dakika saniye ardışık rakam girin !' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A13' text = 'Nümerik değer girin !' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A14' text = 'Girilebilecek maksimum karakter sayısı : ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A15' text = 'Mail içeriğinde gönderilebilecek maksimum kolon sayısı: ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A16' text = 'Mail içeriğinde gönderilebilecek maksimum satır sayısı: ' ) TO gt_textlist.
 
   APPEND VALUE #( sym = 'B01' text = 'Seçimleri sıfırla' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Dili Değiştir' ) TO gt_textlist.
@@ -10837,6 +11254,8 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'A12' text = 'Saat geçerli değil. Saat dakika saniye ardışık rakam girin !' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A13' text = 'Time is not valid. Enter consecutive digits for hours minutes seconds !' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A14' text = 'Maximum number of characters that can be entered : ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A15' text = 'Maximum number of columns that can be sent in the email content: ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A16' text = 'Maximum number of rows that can be sent in the email content: ' ) TO gt_textlist.
 
   APPEND VALUE #( sym = 'B01' text = 'Clear Selection' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Change Language' ) TO gt_textlist.
@@ -11181,6 +11600,8 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'A12' text = 'Die Uhrzeit ist ungültig. Geben Sie fortlaufende Ziffern für Stunden, Minuten und Sekunden ein !' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A13' text = 'Zahlenwert eingeben !' ) TO gt_textlist.
   APPEND VALUE #( sym = 'A14' text = 'Maximale Anzahl der Zeichen, die eingegeben werden können : ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A15' text = 'Maximale Anzahl von Spalten, die im E-Mail-Inhalt gesendet werden können: ' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'A16' text = 'Maximale Zeilen, die im E-Mail-Inhalt gesendet werden können: ' ) TO gt_textlist.
 
   APPEND VALUE #( sym = 'B01' text = 'Auswahl löschen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'B02' text = 'Sprache ändern' ) TO gt_textlist.
