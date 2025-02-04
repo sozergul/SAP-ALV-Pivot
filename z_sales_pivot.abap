@@ -3303,7 +3303,7 @@ CLASS lcl_main IMPLEMENTATION.
             screen-input = 0.
           ENDIF.
         WHEN 'P_ASDE'.
-          IF p_sort IS INITIAL.
+          IF p_sort IS INITIAL AND s_fnams[] IS INITIAL.
             p_asde = ' '.
             screen-input = 0.
           ENDIF.
@@ -5129,8 +5129,18 @@ CLASS lcl_main IMPLEMENTATION.
 
     ENDLOOP.
 
-    SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
-                            ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+    IF p_asde IS INITIAL.
+      SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
+                              ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+    ELSE.
+      IF p_addt EQ 'X'.
+        SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT DESCENDING ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
+                                ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+      ELSE.
+        SORT <gs_group_data> BY ('sort0001') AS TEXT DESCENDING ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
+                                ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+      ENDIF.
+    ENDIF.
 
     IF p_wrks EQ 'X'.
 
@@ -5539,8 +5549,18 @@ CLASS lcl_main IMPLEMENTATION.
 
     ENDLOOP.
 
-    SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
-                            ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+    IF p_asde IS INITIAL.
+      SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
+                              ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+    ELSE.
+      IF p_addt EQ 'X'.
+        SORT <gs_group_data> BY ('sort0001') AS TEXT ('sort0002') AS TEXT DESCENDING ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
+                                ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+      ELSE.
+        SORT <gs_group_data> BY ('sort0001') AS TEXT DESCENDING ('sort0002') AS TEXT ('sort0003') AS TEXT ('sort0004') AS TEXT ('sort0005') AS TEXT ('sort0006') AS TEXT ('sort0007') AS TEXT
+                                ('sort0008') AS TEXT ('sort0009') AS TEXT ('sort0010') AS TEXT ('sort0011') AS TEXT ('sort0012') AS TEXT ('sort0013') AS TEXT ('hiera') AS TEXT.
+      ENDIF.
+    ENDIF.
 
     IF p_wrks EQ 'X'.
 
