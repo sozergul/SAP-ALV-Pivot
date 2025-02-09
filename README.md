@@ -29,6 +29,16 @@ SEND EXCEL EXPORT<br>
 CREATE WORKSHEETS<br>
 ![image](https://github.com/sozergul/SAP-ALV-Pivot/assets/76847359/8a95c107-6361-4361-8370-19242ce3963e)
 ![image](https://github.com/sozergul/SAP-ALV-Pivot/assets/76847359/30a2f254-f0ca-4d2f-8d3b-43e1b1f8071d)
+ <br>
+SEND AS HTML TABLE<br>
+![mail](https://github.com/user-attachments/assets/75fc93a4-6e17-4675-87d1-db5c1d5f8247)
+ <br>
+ALTERNATE SELECTION SCREEN<br>
+![1](https://github.com/user-attachments/assets/c5717fb8-d805-46f9-887b-63b0c1e2bf9f)
+![saplogon_Y15n8c5Z5n](https://github.com/user-attachments/assets/ba5cd127-f2f5-446f-909c-369fa63e2193)
+
+
+
 
 
 
