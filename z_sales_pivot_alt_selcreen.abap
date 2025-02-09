@@ -1768,6 +1768,8 @@ CLASS lcl_main IMPLEMENTATION.
       lo_column->set_output_length( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-outputlen OPTIONAL ) ).
       lo_column->set_decimals( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-decimals_o OPTIONAL ) ).
 
+      lo_column->set_fixed_header_text( 'L' ).
+
       " Kolonları gizle
       IF VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-no_out OPTIONAL ) EQ 'X'.
         lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
