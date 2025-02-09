@@ -37,7 +37,8 @@ USE OF STRING VARIABLES (FILE NAME, MAIL SUBJECT AND MAIL BODY text/html)<br>
  ![5](https://github.com/user-attachments/assets/f48e1cca-f990-45ac-a6b3-8adb47dbc5cc)
 ![6](https://github.com/user-attachments/assets/a6cb7807-12f9-401f-a703-52034882e146)
  <br>
-ALTERNATE SELECTION SCREEN<br>
+ALTERNATE SELECTION SCREEN VERSION (z_sales_pivot_alt_slct_screen.abap)
+<br>
 ![1](https://github.com/user-attachments/assets/c5717fb8-d805-46f9-887b-63b0c1e2bf9f)
 ![saplogon_Y15n8c5Z5n](https://github.com/user-attachments/assets/ba5cd127-f2f5-446f-909c-369fa63e2193)
 
