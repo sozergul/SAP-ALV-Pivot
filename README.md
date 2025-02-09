@@ -33,6 +33,10 @@ CREATE WORKSHEETS<br>
 SEND AS HTML TABLE<br>
 ![mail](https://github.com/user-attachments/assets/75fc93a4-6e17-4675-87d1-db5c1d5f8247)
  <br>
+USE OF STRING VARIABLES (FILE NAME, MAIL SUBJECT AND MAIL BODY text/html)<br>
+ ![5](https://github.com/user-attachments/assets/f48e1cca-f990-45ac-a6b3-8adb47dbc5cc)
+![6](https://github.com/user-attachments/assets/a6cb7807-12f9-401f-a703-52034882e146)
+ <br>
 ALTERNATE SELECTION SCREEN<br>
 ![1](https://github.com/user-attachments/assets/c5717fb8-d805-46f9-887b-63b0c1e2bf9f)
 ![saplogon_Y15n8c5Z5n](https://github.com/user-attachments/assets/ba5cd127-f2f5-446f-909c-369fa63e2193)
