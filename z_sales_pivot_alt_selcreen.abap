@@ -480,8 +480,9 @@ DATA: gt_functions  TYPE TABLE OF ty_functions WITH EMPTY KEY.
   SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE TEXT-003.
     SELECT-OPTIONS  : s_vkbur  FOR vbak-vkbur,
                       s_auart  FOR vbak-auart,
-                      s_kdgrp  FOR vbkd-kdgrp,
-                      s_kunnr  FOR vbak-kunnr,
+                      s_kunnr  FOR vbak-kunnr.
+    PARAMETERS:       s_parvw TYPE vbpa-parvw MATCHCODE OBJECT sh_tpar_ku.
+    SELECT-OPTIONS:   s_partn  FOR vbpa-kunnr,
                       s_matkl FOR mara-matkl,
                       s_matnr FOR vbap-matnr,
                       s_vbeln  FOR vbak-vbeln,
@@ -789,9 +790,8 @@ SELECTION-SCREEN BEGIN OF SCREEN 2100 AS SUBSCREEN.
                   s_waers  FOR vbap-waerk.
   SELECT-OPTIONS: s_kunwe  FOR vbrp-kunwe_ana,
                   s_kunre  FOR vbrp-kunre_ana,
-                  s_kunrg  FOR vbrp-kunrg_ana.
-  PARAMETERS:     s_parvw TYPE vbpa-parvw MATCHCODE OBJECT sh_tpar_ku.
-  SELECT-OPTIONS: s_partn  FOR vbpa-kunnr.
+                  s_kunrg  FOR vbrp-kunrg_ana,
+                  s_kdgrp  FOR vbkd-kdgrp.
   SELECT-OPTIONS: s_werks  FOR vbap-werks,
                   s_lgort  FOR t001l-lgort,
                   s_vstel  FOR wvfb-vstel,
