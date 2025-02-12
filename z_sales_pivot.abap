@@ -403,11 +403,17 @@ DATA: ivrm_val_d TYPE vrm_values,
       xvrm_val_d LIKE LINE OF ivrm_val_d,
       vrm_name_d TYPE vrm_id.
 
-" Dropdown show lable fields
+" Dropdown show label fields
 TYPE-POOLS: vrm_f.
 DATA: ivrm_val_f TYPE vrm_values,
       xvrm_val_f LIKE LINE OF ivrm_val_f,
       vrm_name_f TYPE vrm_id.
+
+" Column label options
+TYPE-POOLS: vrm_l.
+DATA: ivrm_val_l TYPE vrm_values,
+      xvrm_val_l LIKE LINE OF ivrm_val_l,
+      vrm_name_l TYPE vrm_id.
 
 " Function value table
 TYPES: BEGIN OF ty_functions,
@@ -667,6 +673,11 @@ SELECTION-SCREEN BEGIN OF SCREEN 1500 AS SUBSCREEN.
   SELECTION-SCREEN END OF LINE .
 
   SELECTION-SCREEN BEGIN OF LINE.
+    SELECTION-SCREEN COMMENT (33) ptc FOR FIELD p_tech.
+    PARAMETERS: p_tech TYPE char25 AS LISTBOX VISIBLE LENGTH 12.
+  SELECTION-SCREEN END OF LINE .
+
+  SELECTION-SCREEN BEGIN OF LINE.
     SELECTION-SCREEN COMMENT 1(33) pdm FOR FIELD p_layo.
     PARAMETERS: p_layo TYPE disvariant-variant  MODIF ID d1.
     SELECTION-SCREEN COMMENT (2) lyt_flts.
@@ -703,9 +714,6 @@ SELECTION-SCREEN BEGIN OF SCREEN 1600 AS SUBSCREEN.
     PARAMETERS : p_wrks AS CHECKBOX DEFAULT ' ' USER-COMMAND srt MODIF ID e1.
     SELECTION-SCREEN COMMENT 3(31) pws FOR FIELD p_xval.
     PARAMETERS : p_xval(3) AS LISTBOX VISIBLE LENGTH 22 MODIF ID c1 .
-    SELECTION-SCREEN COMMENT 58(1) l_spa5 .
-    PARAMETERS :  p_tech  AS CHECKBOX DEFAULT ' ' MODIF ID d1.
-    SELECTION-SCREEN COMMENT 74(32) ptc FOR FIELD p_tech.
   SELECTION-SCREEN END   OF LINE .
 
   SELECTION-SCREEN BEGIN OF LINE.
@@ -1827,7 +1835,9 @@ CLASS lcl_main IMPLEMENTATION.
       lo_column->set_output_length( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-outputlen OPTIONAL ) ).
       lo_column->set_decimals( VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-decimals_o OPTIONAL ) ).
 
-      lo_column->set_fixed_header_text( 'L' ).
+      IF p_tech NE 'S'.
+        lo_column->set_fixed_header_text( 'L' ).
+      ENDIF.
 
       " Kolonları gizle
       IF VALUE #( gt_fcat[ fieldname = <fs_col>-columnname ]-no_out OPTIONAL ) EQ 'X'.
@@ -5744,7 +5754,7 @@ CLASS lcl_main IMPLEMENTATION.
       ENDIF.
 
       " Alanları adlandır
-      IF p_tech EQ 'X'.
+      IF p_tech EQ 'T'.
         lv_dtext = VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-techl OPTIONAL ) .
       ELSE.
         lv_dtexs = VALUE #( gt_fieldlist[ fname = <fs_fcat>-fieldname ]-texts OPTIONAL ) .
@@ -5757,35 +5767,35 @@ CLASS lcl_main IMPLEMENTATION.
       IF s_fnams[] IS NOT INITIAL AND gv_detail_view = abap_false.
 
         IF lv_aggrtype EQ 'A'.
-          IF p_tech IS INITIAL.
+          IF p_tech NE 'T'.
             lv_dtexs = VALUE #( gt_textlist[ sym = 'TW1' ]-text OPTIONAL ) && lv_dtexs.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TW2' ]-text OPTIONAL ) && | | && lv_dtext.
           ELSE.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TZ1' ]-text OPTIONAL ) && lv_dtext.
           ENDIF.
         ELSEIF lv_aggrtype EQ 'W'.
-          IF p_tech IS INITIAL.
+          IF p_tech NE 'T'.
             lv_dtexs = VALUE #( gt_textlist[ sym = 'TW4' ]-text OPTIONAL ) && lv_dtexs.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TW5' ]-text OPTIONAL ) && | | && lv_dtext.
           ELSE.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TZ3' ]-text OPTIONAL ) && lv_dtext.
           ENDIF.
         ELSEIF lv_aggrtype EQ 'M'.
-          IF p_tech IS INITIAL.
+          IF p_tech NE 'T'.
             lv_dtexs = VALUE #( gt_textlist[ sym = 'TW8' ]-text OPTIONAL ) && lv_dtexs.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TW6' ]-text OPTIONAL ) && | | && lv_dtext.
           ELSE.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TZM' ]-text OPTIONAL ) && lv_dtext.
           ENDIF.
         ELSEIF lv_aggrtype EQ 'L'.
-          IF p_tech IS INITIAL.
+          IF p_tech NE 'T'.
             lv_dtexs = VALUE #( gt_textlist[ sym = 'TW9' ]-text OPTIONAL ) && lv_dtexs.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TW7' ]-text OPTIONAL ) && | | && lv_dtext.
           ELSE.
             lv_dtext = VALUE #( gt_textlist[ sym = 'TZL' ]-text OPTIONAL ) && lv_dtext.
           ENDIF.
         ELSEIF lv_aggrtype EQ 'P'.
-          IF p_tech IS INITIAL.
+          IF p_tech NE 'T'.
             lv_dtexs = |% | && lv_dtexs.
             lv_dtext = |% | && lv_dtext.
           ELSE.
@@ -5795,7 +5805,7 @@ CLASS lcl_main IMPLEMENTATION.
 
       ENDIF.
 
-      IF p_tech EQ 'X'.
+      IF p_tech EQ 'T'.
         IF lv_dtext IS NOT INITIAL. MOVE lv_dtext TO : <fs_fcat>-scrtext_s, <fs_fcat>-scrtext_m, <fs_fcat>-scrtext_l, <fs_fcat>-reptext, <fs_fcat>-coltext. ENDIF.
       ELSE.
         IF lv_dtexs IS NOT INITIAL. MOVE lv_dtexs TO : <fs_fcat>-scrtext_s. ENDIF.
@@ -5873,7 +5883,7 @@ CLASS lcl_main IMPLEMENTATION.
             DATA(curdat_sym) = 'M' && p_cur2.
             DATA(curdat_txt) = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
 
-            IF p_tech IS INITIAL.
+            IF p_tech NE 'T'.
               <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s && ' [' && p_wah2 && ' ¤' && curdat_txt && ']'.
               <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l && ' [' && p_wah2 && ' ¤' && curdat_txt && ']'.
             ELSE.
@@ -5895,7 +5905,7 @@ CLASS lcl_main IMPLEMENTATION.
               curdat_txt = VALUE #( gt_textlist[ sym = curdat_sym ]-text OPTIONAL ).
             "ENDIF.
 
-            IF p_tech IS INITIAL.
+            IF p_tech NE 'T'.
               IF <fs_fcat>-fieldname EQ 'EC_AMNT' OR <fs_fcat>-fieldname EQ 'EC_TAMN' .
                 <fs_fcat>-scrtext_s = <fs_fcat>-scrtext_s  && ' [' && p_wahr && ']'.
                 <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_l  && ' [' && p_wahr && ']'.
@@ -5962,8 +5972,13 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
       ENDIF.
 
-      IF p_tech EQ 'X'.
-        <fs_fcat>-colddictxt = 'L'.
+      IF p_tech EQ 'L'." OR p_tech EQ 'T'.
+        <fs_fcat>-scrtext_s = ''.
+        "<fs_fcat>-colddictxt = 'L'.
+      ELSEIF p_tech EQ 'S'.
+        <fs_fcat>-scrtext_l = ''.
+        <fs_fcat>-scrtext_m = ''.
+        "<fs_fcat>-colddictxt = 'S'.
       ENDIF.
 
       " Pivot kolon için alan tipi
@@ -6080,7 +6095,7 @@ CLASS lcl_main IMPLEMENTATION.
 
         " Column Text
         IF lv_col_suffix EQ ( 100 + col_count ).
-          IF p_tech EQ 'X'.
+          IF p_tech EQ 'T'.
             CASE lv_aggrtype .
               WHEN 'W'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZ4' ]-text OPTIONAL ).
               WHEN 'A'.    lv_coltext = VALUE #( gt_textlist[ sym = 'TZ2' ]-text OPTIONAL ).
@@ -9152,7 +9167,7 @@ CLASS lcl_main IMPLEMENTATION.
     """""""""""""""
     DATA: text_val TYPE string.
     DATA: lv_aggrtype TYPE string.
-    CLEAR: ivrm_val, ivrm_val_f, ivrm_val_c, ivrm_val_t, ivrm_val_s, ivrm_val_d.
+    CLEAR: ivrm_val, ivrm_val_f, ivrm_val_c, ivrm_val_t, ivrm_val_s, ivrm_val_d, ivrm_val_l.
 
     " Y Field
     vrm_name = 'p_yval'.
@@ -9296,6 +9311,25 @@ CLASS lcl_main IMPLEMENTATION.
       EXPORTING
         id     = vrm_name_f
         values = ivrm_val_f.
+
+    " Column label options
+    CLEAR: ivrm_val_l.
+
+    xvrm_val_l-key = 'L'.
+    xvrm_val_l-text = VALUE #( gt_textlist[ sym = 'PLL' ]-text OPTIONAL ).
+    APPEND xvrm_val_l TO ivrm_val_l.
+    xvrm_val_l-key = 'S'.
+    xvrm_val_l-text = VALUE #( gt_textlist[ sym = 'PLS' ]-text OPTIONAL ).
+    APPEND xvrm_val_l TO ivrm_val_l.
+    xvrm_val_l-key = 'T'.
+    xvrm_val_l-text = VALUE #( gt_textlist[ sym = 'PLT' ]-text OPTIONAL ).
+    APPEND xvrm_val_l TO ivrm_val_l.
+
+    vrm_name_l = 'p_tech'.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = vrm_name_l
+        values = ivrm_val_l.
 
     " Sheet Fields
     vrm_name_x = 'p_xval'.
@@ -11014,6 +11048,10 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'PML' text = 'E-Posta gönder -> Alıcı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PNL' text = 'Tanımlar yok' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PZL' text = 'Grup başlıkları sadece tanım ile' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLL' text = 'Uzun' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLM' text = 'Orta' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLS' text = 'Kısa' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLT' text = 'Teknik' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POA' text = 'Onaylı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POC' text = 'Sıralanan eş değerleri birleştirme' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PON' text = 'Onay bekleyen' ) TO gt_textlist.
@@ -11025,7 +11063,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'PSR' text = 'Sıralama' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PST' text = 'Durumu' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PSV' text = 'Seçim varyantı' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'PTC' text = 'Başlıklarda teknik adları kullan' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PTC' text = 'Kolon başlıkları' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTP' text = 'Termin tipi' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTR' text = 'Gösterim yapısı' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTW' text = 'Belge birimini referans olarak kullan' ) TO gt_textlist.
@@ -11360,6 +11398,10 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'PML' text = 'Send Email -> Recipient' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PNL' text = 'No definition fields' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PZL' text = 'Definition only on group labels' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLL' text = 'Long' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLM' text = 'Medium' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLS' text = 'Short' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLT' text = 'Technic' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POA' text = 'Approved' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POC' text = 'Without cell merging during sorts' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PON' text = 'Pending Approval' ) TO gt_textlist.
@@ -11371,7 +11413,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'PSR' text = 'Sorting' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PST' text = 'Status' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PSV' text = 'Selection Variant' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'PTC' text = 'Use technical names in headers' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PTC' text = 'Column Labels' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTP' text = 'Termin Type' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTR' text = 'Display as' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTW' text = 'Use document unit/currency as reference' ) TO gt_textlist.
@@ -11706,6 +11748,10 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'PML' text = 'E-Mail senden -> Empfänger' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PNL' text = 'Keine Definition Felder' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PZL' text = 'Nur Definition auf Gruppenetiketten' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLL' text = 'Lang' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLM' text = 'Mitte' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLS' text = 'Kurz' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PLT' text = 'Technik' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POA' text = 'Genehmigt' ) TO gt_textlist.
   APPEND VALUE #( sym = 'POC' text = 'ohne Zusammenfassen von Eintragen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PON' text = 'Genehmigung ausstehend' ) TO gt_textlist.
@@ -11717,7 +11763,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'PSR' text = 'Sortierung' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PST' text = 'Status' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PSV' text = 'Selektionvarianten' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'PTC' text = 'Technische Namen in Überschriften verwenden' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'PTC' text = 'Spaltenbeschriftungen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTP' text = 'Terminart' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTR' text = 'Ausgabe als' ) TO gt_textlist.
   APPEND VALUE #( sym = 'PTW' text = 'Auftragseinheit/währung als Referenz' ) TO gt_textlist.
