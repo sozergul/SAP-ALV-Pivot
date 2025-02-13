@@ -5887,13 +5887,13 @@ CLASS lcl_main IMPLEMENTATION.
         ENDIF.
       ENDIF.
 
-      IF p_tech EQ 'L'." OR p_tech EQ 'T'.
+      IF p_tech EQ 'L'.
         <fs_fcat>-scrtext_s = ''.
-        "<fs_fcat>-colddictxt = 'L'.
+        <fs_fcat>-colddictxt = 'L'.
       ELSEIF p_tech EQ 'S'.
-        <fs_fcat>-scrtext_l = ''.
-        <fs_fcat>-scrtext_m = ''.
-        "<fs_fcat>-colddictxt = 'S'.
+        <fs_fcat>-scrtext_l = <fs_fcat>-scrtext_s.
+        <fs_fcat>-scrtext_m = <fs_fcat>-scrtext_s.
+        <fs_fcat>-colddictxt = 'S'.
       ENDIF.
 
       " Pivot kolon için alan tipi
