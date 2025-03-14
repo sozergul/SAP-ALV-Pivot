@@ -8786,7 +8786,7 @@ CLASS lcl_main IMPLEMENTATION.
 
   METHOD get_variant_slc.
 
-    DATA: lt_return TYPE sfw_ddshretval_t.
+    DATA: lt_return TYPE TABLE OF DDSHRETVAL.
 
     SELECT it~variant,it~vtext
       INTO TABLE @DATA(lt_varit)
