@@ -418,7 +418,7 @@ DATA: ivrm_val_l TYPE vrm_values,
 " Function value table
 TYPES: BEGIN OF ty_functions,
          modtext TYPE c LENGTH 18,
-         modval  TYPE c LENGTH 40,
+         modval  TYPE c LENGTH 128,
        END OF ty_functions.
 
 " Dropdown logic operator
@@ -1728,7 +1728,7 @@ CLASS lcl_main IMPLEMENTATION.
         IF name IS NOT INITIAL.
           name = '<f_line>-' && name.
           ASSIGN (name) TO <comp>.
-          IF p_nolb EQ 'Y'.
+          IF p_nolb EQ 'Z'.
             lv_node_text = <comp>.
           ELSE.
             lv_node_text = lv_node_text && | | && <comp>.
@@ -2067,6 +2067,23 @@ CLASS lcl_main IMPLEMENTATION.
 
     IF p_lang NE gv_lang OR p_loca NE gv_loca OR gv_variant_changed = abap_true.
 
+      IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
+        IF sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
+          gv_gui_available = abap_true.
+        ELSE.
+          SELECT tcode
+            FROM tstc
+           WHERE pgmna  = @sy-cprog
+          INTO TABLE @DATA(lt_tcode).
+
+          LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
+            IF <fs_tcode>-tcode = sy-tcode.
+              gv_gui_available = abap_true.
+            ENDIF.
+          ENDLOOP.
+        ENDIF.
+      ENDIF.
+
       ret_function_values( ).
 
       IF gv_change_locale EQ abap_true AND p_loca NE gv_loca.
@@ -2135,19 +2152,6 @@ CLASS lcl_main IMPLEMENTATION.
         gv_decs = ','.
       ELSE.
         gv_decs = '.'.
-      ENDIF.
-
-      IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
-        SELECT tcode
-          FROM tstc
-         WHERE pgmna  = @sy-cprog
-        INTO TABLE @DATA(lt_tcode).
-
-        LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
-          IF <fs_tcode>-tcode = sy-tcode OR sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
-            gv_gui_available = abap_true.
-          ENDIF.
-        ENDLOOP.
       ENDIF.
 
       gv_variant_changed = abap_false.
@@ -3262,7 +3266,6 @@ CLASS lcl_main IMPLEMENTATION.
           IF p_fov5 NE 'FIELD'.
             screen-input = 0.
           ENDIF.
-
         WHEN 'P_WAHR'.
           IF p_wahr IS NOT INITIAL AND p_cur1 EQ space.
             p_cur1 = '01'.
@@ -3405,19 +3408,18 @@ CLASS lcl_main IMPLEMENTATION.
           ENDIF.
       ENDCASE.
 
-      CASE p_lang.
-        WHEN 'T'.
-          PERFORM set_screen_tr.
-        WHEN 'D'.
-          PERFORM set_screen_de.
-        WHEN OTHERS.
-          PERFORM set_screen_en.
-      ENDCASE.
-
       MODIFY SCREEN.
 
     ENDLOOP.
 
+    CASE p_lang.
+      WHEN 'T'.
+        PERFORM set_screen_tr.
+      WHEN 'D'.
+        PERFORM set_screen_de.
+      WHEN OTHERS.
+        PERFORM set_screen_en.
+    ENDCASE.
 
     IF sy-dynnr = 1000.
       DATA : lv_error(1) TYPE c.
@@ -3587,6 +3589,7 @@ CLASS lcl_main IMPLEMENTATION.
                                WHEN 'h' THEN division( - rfmng * sk~umvkn, sk~umvkz, 3 ) END ) AS wa_quan,
 
            SUM( CASE f~vbtyp_n WHEN 'M' THEN division(   rfmng * sk~umvkn, sk~umvkz, 3 )
+                               WHEN 'N' THEN division( - rfmng * sk~umvkn, sk~umvkz, 3 )
                                WHEN 'O' THEN division(   rfmng * sk~umvkn, sk~umvkz, 3 )
                                WHEN 'P' THEN division(   rfmng * sk~umvkn, sk~umvkz, 3 ) END ) AS fk_quan,
 
@@ -4410,12 +4413,12 @@ CLASS lcl_main IMPLEMENTATION.
 
       " Tutar
       IF <fs_items>-tm_quan NE 0 AND <fs_items>-vp_quan NE 0 AND <fs_items>-vp_amnt NE 0.
-        <fs_items>-tm_amnt = <fs_items>-tm_quan  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt + <fs_items>-tx_amnt ).  " Termin Tutarı
-        <fs_items>-lf_amnt = <fs_items>-lf_quan  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt + <fs_items>-tx_amnt ).  " Teslim Tutarı
-        <fs_items>-lf_bamn = <fs_items>-lf_bqua  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt + <fs_items>-tx_amnt ).  " Teslim Bakiye Tutarı
-        <fs_items>-fk_amnt = <fs_items>-fk_quan  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt + <fs_items>-tx_amnt ).  " Fatura Tutarı
-        <fs_items>-fk_bamn = <fs_items>-fk_bqua  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt + <fs_items>-tx_amnt ).  " Fatura Bakiye Tutarı
-        <fs_items>-fk_wamn = <fs_items>-fk_wqua  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt + <fs_items>-tx_amnt ).  " Fatura Bekleyen Tutar
+        <fs_items>-tm_amnt = <fs_items>-tm_quan  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt ) . "+ <fs_items>-tx_amnt ).  " Termin Tutarı
+        <fs_items>-lf_amnt = <fs_items>-lf_quan  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt ) . "+ <fs_items>-tx_amnt ).  " Teslim Tutarı
+        <fs_items>-lf_bamn = <fs_items>-lf_bqua  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt ) . "+ <fs_items>-tx_amnt ).  " Teslim Bakiye Tutarı
+        <fs_items>-fk_amnt = <fs_items>-fk_quan  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt ) . "+ <fs_items>-tx_amnt ).  " Fatura Tutarı
+        <fs_items>-fk_bamn = <fs_items>-fk_bqua  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt ) . "+ <fs_items>-tx_amnt ).  " Fatura Bakiye Tutarı
+        <fs_items>-fk_wamn = <fs_items>-fk_wqua  / <fs_items>-vp_quan * ( <fs_items>-vp_amnt ) . "+ <fs_items>-tx_amnt ).  " Fatura Bekleyen Tutar
       ENDIF.
 
       " Termin Vergi Tutarları
@@ -6910,16 +6913,20 @@ CLASS lcl_main IMPLEMENTATION.
     CREATE OBJECT lr_xlshstrfile.
 
     IF sy-batch IS INITIAL AND sy-binpt IS INITIAL.
-      SELECT tcode
-        FROM tstc
-       WHERE pgmna  = @sy-cprog
-      INTO TABLE @DATA(lt_tcode).
+      IF sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
+        gv_gui_available = abap_true.
+      ELSE.
+        SELECT tcode
+          FROM tstc
+         WHERE pgmna  = @sy-cprog
+        INTO TABLE @DATA(lt_tcode).
 
-      LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
-        IF <fs_tcode>-tcode = sy-tcode OR sy-tcode = 'SE38' OR sy-tcode = 'SEU_INT'.
-          gv_gui_available = abap_true.
-        ENDIF.
-      ENDLOOP.
+        LOOP AT lt_tcode ASSIGNING FIELD-SYMBOL(<fs_tcode>).
+          IF <fs_tcode>-tcode = sy-tcode.
+            gv_gui_available = abap_true.
+          ENDIF.
+        ENDLOOP.
+      ENDIF.
     ENDIF.
 
     " FILE NAME
@@ -6967,7 +6974,7 @@ CLASS lcl_main IMPLEMENTATION.
           REPLACE ALL OCCURRENCES OF <fs_functions>-modtext IN p_path WITH <fs_functions>-modval.
         ENDLOOP.
 
-        REPLACE ALL OCCURRENCES OF REGEX '[\!\@\#\$\%\^\&\*\+\-\=\?\<\>\,\~\;\|\(\)\{\}\''\""]' IN p_path WITH '\_'.
+        REPLACE ALL OCCURRENCES OF REGEX '[\*\/\*\?\""\<\>\|\(\)\{\}]' IN p_path WITH '\_'.
         lv_full_path = p_path .
 
         CALL FUNCTION 'SO_SPLIT_FILE_AND_PATH'
@@ -10558,7 +10565,7 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'WE_REGN'   techl = 'TESLIMALANILADI'              texts = 'MT İl'                textl = 'Teslim Alan İl Adı'            emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WE_CNTY'   techl = 'TESLIMALANULKESI'             texts = 'MT Ülke'              textl = 'Teslim Alan Ülkesi'            emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '58' grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WE_ADRS'   techl = 'TESLIMALANADRES'              texts = 'MT Adres'             textl = 'Teslim Alan Adres'             emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'TM_QUAN'   techl = 'TERMINMIKTARI'                texts = 'Termin Mik.'          textl = 'Termin Miktarı'                emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '01' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'TM_QUAN'   techl = 'MIKTAR'                       texts = 'Miktar'               textl = 'Miktar'                        emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '01' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_QUAN'   techl = 'TESLIMMIKTARI'                texts = 'Teslim Mik.'          textl = 'Teslim Miktarı'                emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '02' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BQUA'   techl = 'TESLIMEDILMEMISMIKTAR'        texts = 'Teslim Bak.'          textl = 'Teslim Edilmemiş Miktar'       emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '03' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WA_QUAN'   techl = 'MALCIKISMIKTARI'              texts = 'Çıkış Mik.'           textl = 'Mal Çıkış Miktarı'             emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '04' ) TO gt_fieldlist.
@@ -10571,7 +10578,7 @@ FORM fill_parameters_tr.
   APPEND VALUE #( fname = 'NT_PRIC'   techl = 'SATISFIYATI'                  texts = 'Satış Fiyatı'         textl = 'Satış Fiyatı'                  emphs = 'C100' shide = ' ' spgrp = 7 cumty = 'W' slynr = '09' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_TXPR'   techl = 'VERGIDAHILSATISFIYATI'        texts = 'Vrg.Dhl.Sat.Fyt.'     textl = 'Vergi Dahil Satış Fiyatı'      emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'W' slynr = '10' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'TX_AMNT'   techl = 'VERGITUTARI'                  texts = 'Vergi Tut.'           textl = 'Vergi Tutarı'                  emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'T' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'TM_AMNT'   techl = 'TERMINTUTARI'                 texts = 'Termin Tutarı'        textl = 'Termin Tutarı'                 emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'TM_AMNT'   techl = 'TUTAR'                        texts = 'Tutar'                textl = 'Tutar'                         emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_AMNT'   techl = 'TESLIMEDILENTUTAR'            texts = 'Teslim Tutarı'        textl = 'Teslim Edilen Tutar'           emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '12' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BAMN'   techl = 'TESLIMEDILMEMISTUTAR'         texts = 'Teslim Bak. Tut.'     textl = 'Teslim Bakiye Tutarı'          emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '13' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_WAMN'   techl = 'FATURALAMABEKLEYENTUTAR'      texts = 'Faturalama Bek.Tut.'  textl = 'Faturalama Bekleyen Tutar'     emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '14' ) TO gt_fieldlist.
@@ -10730,7 +10737,7 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'WE_REGN'   techl = 'SHIPTOREGIONNAME'               texts = 'STP Region Name'      textl = 'Ship-to Region Name'           emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WE_CNTY'   techl = 'SHIPTOCOUNTRY'                  texts = 'STP Country'          textl = 'Ship-to Country'               emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '58' grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WE_ADRS'   techl = 'SHIPTOADDRESS'                  texts = 'STP Address'          textl = 'Ship-to Address'               emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'TM_QUAN'   techl = 'TERMINQUANTITY'                 texts = 'Term. Qty.'           textl = 'Termin Quantity'               emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '01' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'TM_QUAN'   techl = 'QUANTITY'                       texts = 'Quantity'             textl = 'Quantity'                      emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '01' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_QUAN'   techl = 'DELIVERYQUANTITY'               texts = 'Del. Qty.'            textl = 'Delivery Quantity'             emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '02' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BQUA'   techl = 'UNDELIVEREDQUANTITY'            texts = 'Undeliv. Qty.'        textl = 'Undelivered Quantity'          emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '03' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WA_QUAN'   techl = 'GOODSISSUEQUANTITY'             texts = 'Issue Qty.'           textl = 'Goods Issue Quantity'          emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '04' ) TO gt_fieldlist.
@@ -10743,7 +10750,7 @@ FORM fill_parameters_en.
   APPEND VALUE #( fname = 'NT_PRIC'   techl = 'SALESPRICE'                     texts = 'Sales Pr.'            textl = 'Sales Price'                   emphs = 'C100' shide = ' ' spgrp = 7 cumty = 'W' slynr = '09' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_TXPR'   techl = 'TAXINCLUSIVESALESPRICE'         texts = 'Tax-Incl.Sales Pr.'   textl = 'Tax-Inclusive Sales Price'     emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'W' slynr = '10' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'TX_AMNT'   techl = 'TAXAMOUNT'                      texts = 'Tax Amt.'             textl = 'Tax Amount'                    emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'T' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'TM_AMNT'   techl = 'TERMINAMOUNT'                   texts = 'Term. Amt.'           textl = 'Termin Amount'                 emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'TM_AMNT'   techl = 'AMOUNT'                         texts = 'Amount'               textl = 'Amount'                        emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_AMNT'   techl = 'DELIVEREDAMOUNT'                texts = 'Del. Amt.'            textl = 'Delivered Amount'              emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '12' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BAMN'   techl = 'UNDELIVEREDAMOUNT'              texts = 'Undlv. Amt.'          textl = 'Undelivered Amount'            emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '13' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_WAMN'   techl = 'PENDINGBILLINGAMOUNT'           texts = 'Pend. Bil. Amt.'      textl = 'Pending Billing Amount'        emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '14' ) TO gt_fieldlist.
@@ -10901,7 +10908,7 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'WE_REGN'   techl = 'EMPFANGERSREGIONNAME'           texts = 'Empf.Regionname'     textl = 'Empfängersregionname'           emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WE_CNTY'   techl = 'EMPFANGERSLAND'                 texts = 'Empf.Land'           textl = 'Empfängersland'                 emphs = 'C200' shide = 'X' spgrp = 2 isgrp = '58' grpx1 = ' '       ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WE_ADRS'   techl = 'EMPFANGERSADRESSE'              texts = 'Empf.Adresse'        textl = 'Empfängersadresse'              emphs = 'C200' shide = 'X' spgrp = 2 isgrp = ' '  grpx1 = ' '       ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'TM_QUAN'   techl = 'TERMINMENGE'                    texts = 'Terminmenge'         textl = 'Terminmenge'                    emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '01' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'TM_QUAN'   techl = 'MENGE'                          texts = 'Menge'               textl = 'Menge'                          emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '01' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_QUAN'   techl = 'LIEFERMENGE'                    texts = 'Liefermenge'         textl = 'Liefermenge'                    emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '02' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BQUA'   techl = 'NICHTGELIEFERTEMENGE'           texts = 'Nicht gel.Menge '    textl = 'Nicht gelieferte Menge'         emphs = 'C700' shide = ' ' spgrp = 6 cumty = 'T' slynr = '03' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'WA_QUAN'   techl = 'WARENAUSGANGSMENGE'             texts = 'WA Menge'            textl = 'Warenausgangsmenge'             emphs = 'C700' shide = 'X' spgrp = 6 cumty = 'T' slynr = '04' ) TO gt_fieldlist.
@@ -10914,7 +10921,7 @@ FORM fill_parameters_de.
   APPEND VALUE #( fname = 'NT_PRIC'   techl = 'VERKAUFSPREIS'                  texts = 'Verkaufspreis'       textl = 'Verkaufspreis'                  emphs = 'C100' shide = ' ' spgrp = 7 cumty = 'W' slynr = '09' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'NT_TXPR'   techl = 'VERKAUFSPREISINKLSTEUERN'       texts = 'VP inkl.MwSt.'       textl = 'Verkaufspreis inkl. Steuern'    emphs = 'C100' shide = 'X' spgrp = 7 cumty = 'W' slynr = '10' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'TX_AMNT'   techl = 'STEUERBETRAG'                   texts = 'Steuerbetrag'        textl = 'Steuerbetrag'                   emphs = 'C400' shide = 'X' spgrp = 8 cumty = 'T' ) TO gt_fieldlist.
-  APPEND VALUE #( fname = 'TM_AMNT'   techl = 'TERMINBETRAG'                   texts = 'Terminbetrag'        textl = 'Termin Betrag'                  emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
+  APPEND VALUE #( fname = 'TM_AMNT'   techl = 'BETRAG'                         texts = 'Betrag'              textl = 'Betrag'                         emphs = 'C300' shide = ' ' spgrp = 8 cumty = 'T' slynr = '11' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_AMNT'   techl = 'GELIEFERTERBETRAG'              texts = 'Gel. Betrag'         textl = 'Gelieferter Betrag'             emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '12' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'LF_BAMN'   techl = 'NICHTGELIEFERTERBETRAG'         texts = 'NG-Betrag'           textl = 'Nicht Gelieferter Betrag'       emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '13' ) TO gt_fieldlist.
   APPEND VALUE #( fname = 'FK_WAMN'   techl = 'AUSSTEHENDERRECHNUNGSBETRAG'    texts = 'Ausst. R-Betrag'     textl = 'Ausstehender Rechnungsbetrag'   emphs = 'C300' shide = 'X' spgrp = 8 cumty = 'T' slynr = '14' ) TO gt_fieldlist.
@@ -10992,7 +10999,7 @@ FORM set_text_tr.
   APPEND VALUE #( sym = 'DSZ' text = 'Demo seçimi' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT1' text = 'Sipariş kalemleri' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT2' text = 'Teslimat ve Fatura' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'L11' text = 'Kaynak' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'L11' text = 'Seçim' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L12' text = 'Seçenekler' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L13' text = 'Grup' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L14' text = 'Düzen' ) TO gt_textlist.
@@ -11342,7 +11349,7 @@ FORM set_text_en.
   APPEND VALUE #( sym = 'DSZ' text = 'Select Demo' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT1' text = 'Order Item' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT2' text = 'Delivery and Billing' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'L11' text = 'Order' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'L11' text = 'Selection' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L12' text = 'Options' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L13' text = 'Grouping' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L14' text = 'Display' ) TO gt_textlist.
@@ -11692,7 +11699,7 @@ FORM set_text_de.
   APPEND VALUE #( sym = 'DSZ' text = 'Demo auswählen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT1' text = 'Auftragposition' ) TO gt_textlist.
   APPEND VALUE #( sym = 'DT2' text = 'Lieferung und Rechnung' ) TO gt_textlist.
-  APPEND VALUE #( sym = 'L11' text = 'Auftrag' ) TO gt_textlist.
+  APPEND VALUE #( sym = 'L11' text = 'Auswahl' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L12' text = 'Optionen' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L13' text = 'Gruppe' ) TO gt_textlist.
   APPEND VALUE #( sym = 'L14' text = 'Layout' ) TO gt_textlist.
